@@ -1,2 +1,14 @@
 .DS_Store
+
+# Python environment and generated files
 .venv/
+__pycache__/
+*.py[cod]
+
+# Development tool caches
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Package build output
+dist/
