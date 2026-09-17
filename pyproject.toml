@@ -1,9 +1,16 @@
+[build-system]
+requires = ["uv_build>=0.12.15,<0.13"]
+build-backend = "uv_build"
+
 [project]
 name = "sec-edgar-financial-data-lakehouse"
 version = "0.1.0"
 description = "Ingests, validates, and processes SEC EDGAR filings and XBRL financial data."
 requires-python = ">=3.14,<3.15"
 dependencies = []
+
+[tool.uv.build-backend]
+module-name = "sec_edgar_lakehouse"
 
 [dependency-groups]
 dev = [
