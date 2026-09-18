@@ -33,8 +33,6 @@ class FilingReference:
                 "accession number must exactly match ##########-##-###### "
                 "using ASCII digits"
             )
-        if self.accession_number[:10] != normalized_cik:
-            raise ValueError("accession number CIK component must match the CIK")
 
         object.__setattr__(self, "cik", normalized_cik)
 

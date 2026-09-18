@@ -64,9 +64,13 @@ def test_rejects_malformed_accession_numbers(accession_number: str) -> None:
         FilingReference("320193", accession_number)
 
 
-def test_rejects_cik_accession_mismatch() -> None:
-    with pytest.raises(ValueError, match="must match"):
-        FilingReference("320193", "0000789019-24-000123")
+def test_accepts_accession_prefix_different_from_filing_cik() -> None:
+    reference = FilingReference("1122304", "0001193125-15-118890")
+
+    assert reference.cik == "0001122304"
+    assert reference.cik_unpadded == "1122304"
+    assert reference.accession_number == "0001193125-15-118890"
+    assert reference.accession_compact == "000119312515118890"
 
 
 @pytest.mark.parametrize(
