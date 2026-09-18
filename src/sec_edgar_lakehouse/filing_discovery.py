@@ -1,4 +1,4 @@
-"""Discover submitted documents from an SEC filing index."""
+"""Discover files listed on an SEC filing index."""
 
 import re
 from dataclasses import dataclass
@@ -24,13 +24,28 @@ class FilingDocument:
     document_type: str | None
 
 
+@dataclass(frozen=True, slots=True)
+class CompleteSubmissionFile:
+    """The complete-submission text file listed for a filing."""
+
+    document_name: str
+
+
+@dataclass(frozen=True, slots=True)
+class FilingDiscovery:
+    """Files discovered from one filing index response."""
+
+    submitted_documents: tuple[FilingDocument, ...]
+    complete_submission: CompleteSubmissionFile
+
+
 def discover_filing(
     reference: FilingReference,
     *,
     user_agent: str,
     client: httpx.Client | None = None,
-) -> tuple[FilingDocument, ...]:
-    """Fetch one filing index and return its submitted documents in table order.
+) -> FilingDiscovery:
+    """Fetch one filing index and return its listed filing files.
 
     User-Agent must include an application identity and contact email.
     An injected client remains open and belongs to the caller.
@@ -48,7 +63,7 @@ def discover_filing(
             html = _fetch_index(owned_client, url, user_agent)
     else:
         html = _fetch_index(client, url, user_agent)
-    return _parse_documents(html)
+    return _parse_discovery(html)
 
 
 def _validate_user_agent(user_agent: str) -> None:
@@ -86,7 +101,7 @@ def _fetch_index(client: httpx.Client, url: str, user_agent: str) -> bytes:
     return response.content
 
 
-def _parse_documents(html: bytes) -> tuple[FilingDocument, ...]:
+def _parse_discovery(html: bytes) -> FilingDiscovery:
     soup = BeautifulSoup(html, "html.parser")
     table = soup.find("table", attrs={"summary": "Document Format Files"})
     if table is None:
@@ -100,16 +115,43 @@ def _parse_documents(html: bytes) -> tuple[FilingDocument, ...]:
             "Document Format Files table is missing its Document column"
         )
 
-    documents: list[FilingDocument] = []
+    rows = []
+    complete_submission_rows = []
     for row in table.find_all("tr"):
         cells = row.find_all("td", recursive=False)
         if not cells:
             continue
-        # SEC puts this package link in the same table as individual documents.
+        rows.append((row, cells))
+        # SEC's package row can use colspan, so ordinary column mapping is unreliable.
         if any(
             cell.get_text(" ", strip=True).lower() == "complete submission text file"
             for cell in cells
         ):
+            complete_submission_rows.append(row)
+
+    if not complete_submission_rows:
+        raise DiscoveryError(
+            "Document Format Files table is missing the complete submission text file"
+        )
+    if len(complete_submission_rows) > 1:
+        raise DiscoveryError(
+            "Document Format Files table has multiple complete submission text files"
+        )
+
+    complete_submission_row = complete_submission_rows[0]
+    complete_submission_link = complete_submission_row.find("a")
+    if complete_submission_link is None:
+        raise DiscoveryError("Complete submission text file row is missing its link")
+    complete_submission_name = complete_submission_link.get_text(strip=True)
+    if not complete_submission_name:
+        raise DiscoveryError("Complete submission text file link has no filename")
+    _validate_filename(complete_submission_name, subject="complete submission")
+    if not complete_submission_name.lower().endswith(".txt"):
+        raise DiscoveryError("Complete submission filename must end in .txt")
+
+    documents: list[FilingDocument] = []
+    for row, cells in rows:
+        if row is complete_submission_row:
             continue
 
         values = dict(zip(columns, cells, strict=False))
@@ -125,14 +167,7 @@ def _parse_documents(html: bytes) -> tuple[FilingDocument, ...]:
             raise DiscoveryError(
                 "Document Format Files row is missing a document filename"
             )
-        decoded_name = unquote(name)
-        if (
-            decoded_name in {".", ".."}
-            or "/" in decoded_name
-            or "\\" in decoded_name
-            or any(ord(char) < 32 or ord(char) == 127 for char in decoded_name)
-        ):
-            raise DiscoveryError(f"Unsafe document filename: {name!r}")
+        _validate_filename(name, subject="document")
 
         text_values = {
             key: cell.get_text(" ", strip=True) or None for key, cell in values.items()
@@ -147,4 +182,18 @@ def _parse_documents(html: bytes) -> tuple[FilingDocument, ...]:
         )
     if not documents:
         raise DiscoveryError("Document Format Files table contains no document rows")
-    return tuple(documents)
+    return FilingDiscovery(
+        submitted_documents=tuple(documents),
+        complete_submission=CompleteSubmissionFile(complete_submission_name),
+    )
+
+
+def _validate_filename(name: str, *, subject: str) -> None:
+    decoded_name = unquote(name)
+    if (
+        decoded_name in {".", ".."}
+        or "/" in decoded_name
+        or "\\" in decoded_name
+        or any(ord(char) < 32 or ord(char) == 127 for char in decoded_name)
+    ):
+        raise DiscoveryError(f"Unsafe {subject} filename: {name!r}")

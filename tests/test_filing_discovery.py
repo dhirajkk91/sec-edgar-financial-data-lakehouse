@@ -5,7 +5,9 @@ import httpx
 import pytest
 
 from sec_edgar_lakehouse import (
+    CompleteSubmissionFile,
     DiscoveryError,
+    FilingDiscovery,
     FilingDocument,
     FilingReference,
     discover_filing,
@@ -16,7 +18,7 @@ REFERENCE = FilingReference("1122304", "0001193125-15-118890")
 USER_AGENT = "DiscoveryTests contact@example.org"
 
 
-def discover(html: bytes = HTML) -> tuple[FilingDocument, ...]:
+def discover(html: bytes = HTML) -> FilingDiscovery:
     requests: list[httpx.Request] = []
 
     def handle(request: httpx.Request) -> httpx.Response:
@@ -59,22 +61,43 @@ def test_one_get_with_correct_url_user_agent_and_timeouts(
 
 
 def test_submitted_documents_preserve_optional_fields_and_unknown_types() -> None:
-    assert discover() == (
+    result = discover()
+
+    assert result.submitted_documents == (
         FilingDocument("1", "Quarterly report", "report.htm", "10-Q"),
         FilingDocument("2", "Exhibit", "exhibit.htm", "NEW-SEC-TYPE"),
         FilingDocument(None, None, "other.htm", None),
     )
+    assert result.complete_submission == CompleteSubmissionFile(
+        "0001193125-15-118890.txt"
+    )
 
 
 def test_optional_columns_may_be_absent() -> None:
-    html = b'<table summary="Document Format Files"><tr><th>Document</th></tr><tr><td>report.htm</td></tr></table>'
-    assert discover(html) == (FilingDocument(None, None, "report.htm", None),)
+    html = b'<table summary="Document Format Files"><tr><th>Document</th></tr><tr><td>report.htm</td></tr><tr><td>Complete submission text file</td><td><a href="package.txt">package.txt</a></td></tr></table>'
+    assert discover(html).submitted_documents == (
+        FilingDocument(None, None, "report.htm", None),
+    )
 
 
 def test_document_is_immutable() -> None:
-    document = discover()[0]
+    document = discover().submitted_documents[0]
     with pytest.raises(FrozenInstanceError):
         document.document_name = "changed.htm"  # type: ignore[misc]
+
+
+def test_discovery_is_immutable() -> None:
+    result = discover()
+
+    with pytest.raises(FrozenInstanceError):
+        result.submitted_documents = ()  # type: ignore[misc]
+
+
+def test_complete_submission_is_immutable() -> None:
+    complete_submission = discover().complete_submission
+
+    with pytest.raises(FrozenInstanceError):
+        complete_submission.document_name = "changed.txt"  # type: ignore[misc]
 
 
 def test_default_client_is_closed(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -82,7 +105,8 @@ def test_default_client_is_closed(monkeypatch: pytest.MonkeyPatch) -> None:
         transport=httpx.MockTransport(lambda _: httpx.Response(200, content=HTML))
     )
     monkeypatch.setattr(httpx, "Client", lambda: client)
-    assert len(discover_filing(REFERENCE, user_agent=USER_AGENT)) == 3
+    result = discover_filing(REFERENCE, user_agent=USER_AGENT)
+    assert len(result.submitted_documents) == 3
     assert client.is_closed
 
 
@@ -172,6 +196,73 @@ def test_package_link_alone_is_not_a_submitted_document() -> None:
         discover(html)
 
 
+def test_missing_complete_submission_row() -> None:
+    html = b'<table summary="Document Format Files"><tr><th>Document</th></tr><tr><td>report.htm</td></tr></table>'
+
+    with pytest.raises(DiscoveryError, match="missing the complete submission"):
+        discover(html)
+
+
+def test_duplicate_complete_submission_rows() -> None:
+    package_row = b'<tr><td>Complete submission text file</td><td><a href="package.txt">package.txt</a></td></tr>'
+    html = (
+        b'<table summary="Document Format Files"><tr><th>Document</th></tr>'
+        b"<tr><td>report.htm</td></tr>" + package_row + package_row + b"</table>"
+    )
+
+    with pytest.raises(DiscoveryError, match="multiple complete submission"):
+        discover(html)
+
+
+def test_complete_submission_row_without_link() -> None:
+    html = b'<table summary="Document Format Files"><tr><th>Document</th></tr><tr><td>report.htm</td></tr><tr><td>Complete submission text file</td><td>package.txt</td></tr></table>'
+
+    with pytest.raises(DiscoveryError, match="missing its link"):
+        discover(html)
+
+
+def test_complete_submission_link_with_empty_text() -> None:
+    html = b'<table summary="Document Format Files"><tr><th>Document</th></tr><tr><td>report.htm</td></tr><tr><td>Complete submission text file</td><td><a href="package.txt"></a></td></tr></table>'
+
+    with pytest.raises(DiscoveryError, match="link has no filename"):
+        discover(html)
+
+
+def test_complete_submission_filename_comes_from_link_text() -> None:
+    html = b'<table summary="Document Format Files"><tr><th>Document</th></tr><tr><td>report.htm</td></tr><tr><td colspan="3">Complete submission text file</td><td><a href="not-the-filename.txt">package-from-text.txt</a></td></tr></table>'
+
+    assert discover(html).complete_submission.document_name == "package-from-text.txt"
+
+
+@pytest.mark.parametrize(
+    "name",
+    [
+        b"../package.txt",
+        b"folder/package.txt",
+        b"folder\\package.txt",
+        b"%2e%2e%2fpackage.txt",
+    ],
+)
+def test_unsafe_complete_submission_filename(name: bytes) -> None:
+    html = (
+        b'<table summary="Document Format Files"><tr><th>Document</th></tr>'
+        b"<tr><td>report.htm</td></tr>"
+        b'<tr><td>Complete submission text file</td><td><a href="package.txt">'
+        + name
+        + b"</a></td></tr></table>"
+    )
+
+    with pytest.raises(DiscoveryError, match="Unsafe complete submission filename"):
+        discover(html)
+
+
+def test_complete_submission_filename_must_be_txt() -> None:
+    html = b'<table summary="Document Format Files"><tr><th>Document</th></tr><tr><td>report.htm</td></tr><tr><td>Complete submission text file</td><td><a href="package.htm">package.htm</a></td></tr></table>'
+
+    with pytest.raises(DiscoveryError, match=r"must end in \.txt"):
+        discover(html)
+
+
 @pytest.mark.parametrize(
     "row",
     [
@@ -184,7 +275,7 @@ def test_missing_filename(row: bytes) -> None:
     html = (
         b'<table summary="Document Format Files"><tr><th>Seq</th><th>Description</th><th>Document</th></tr><tr>'
         + row
-        + b"</tr></table>"
+        + b'</tr><tr><td>Complete submission text file</td><td><a href="package.txt">package.txt</a></td></tr></table>'
     )
     with pytest.raises(DiscoveryError, match="missing a document filename"):
         discover(html)
@@ -205,7 +296,16 @@ def test_unsafe_filename(name: bytes) -> None:
     html = (
         b'<table summary="Document Format Files"><tr><th>Document</th></tr><tr><td>'
         + name
-        + b"</td></tr></table>"
+        + b'</td></tr><tr><td>Complete submission text file</td><td><a href="package.txt">package.txt</a></td></tr></table>'
     )
     with pytest.raises(DiscoveryError, match="Unsafe document filename"):
         discover(html)
+
+
+def test_data_files_table_is_ignored() -> None:
+    result = discover()
+
+    assert all(
+        document.document_name != "issuer.xsd"
+        for document in result.submitted_documents
+    )
