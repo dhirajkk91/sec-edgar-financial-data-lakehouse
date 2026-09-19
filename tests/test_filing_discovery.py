@@ -7,6 +7,7 @@ import pytest
 from sec_edgar_lakehouse import (
     CompleteSubmissionFile,
     DiscoveryError,
+    FilingDataFile,
     FilingDiscovery,
     FilingDocument,
     FilingReference,
@@ -14,6 +15,9 @@ from sec_edgar_lakehouse import (
 )
 
 HTML = (Path(__file__).parent / "fixtures" / "filing-index.html").read_bytes()
+HTML_WITHOUT_DATA_FILES = (
+    HTML.split(b'<table summary="Data Files">', maxsplit=1)[0] + b"</body></html>"
+)
 REFERENCE = FilingReference("1122304", "0001193125-15-118890")
 USER_AGENT = "DiscoveryTests contact@example.org"
 
@@ -30,6 +34,11 @@ def discover(html: bytes = HTML) -> FilingDiscovery:
             return discover_filing(REFERENCE, user_agent=USER_AGENT, client=client)
         finally:
             assert len(requests) == 1
+
+
+def with_data_files_table(contents: bytes) -> bytes:
+    table = b'<table summary="Data Files">' + contents + b"</table>"
+    return HTML_WITHOUT_DATA_FILES.replace(b"</body></html>", table + b"</body></html>")
 
 
 @pytest.mark.parametrize(
@@ -73,6 +82,19 @@ def test_submitted_documents_preserve_optional_fields_and_unknown_types() -> Non
     )
 
 
+def test_data_files_preserve_order_fields_and_unknown_types() -> None:
+    assert discover().data_files == (
+        FilingDataFile("4", "XBRL schema", "issuer.xsd", "EX-101.SCH"),
+        FilingDataFile("5", "Calculation linkbase", "issuer_cal.xml", "EX-101.CAL"),
+        FilingDataFile("6", "Extracted XBRL instance", "issuer_htm.xml", "XML"),
+        FilingDataFile(None, None, "future.dat", "NEW-XBRL-TYPE"),
+    )
+
+
+def test_data_file_name_comes_from_link_text() -> None:
+    assert discover().data_files[0].document_name == "issuer.xsd"
+
+
 def test_optional_columns_may_be_absent() -> None:
     html = b'<table summary="Document Format Files"><tr><th>Document</th></tr><tr><td>report.htm</td></tr><tr><td>Complete submission text file</td><td><a href="package.txt">package.txt</a></td></tr></table>'
     assert discover(html).submitted_documents == (
@@ -98,6 +120,13 @@ def test_complete_submission_is_immutable() -> None:
 
     with pytest.raises(FrozenInstanceError):
         complete_submission.document_name = "changed.txt"  # type: ignore[misc]
+
+
+def test_data_file_is_immutable() -> None:
+    data_file = discover().data_files[0]
+
+    with pytest.raises(FrozenInstanceError):
+        data_file.document_name = "changed.xml"  # type: ignore[misc]
 
 
 def test_default_client_is_closed(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -302,10 +331,76 @@ def test_unsafe_filename(name: bytes) -> None:
         discover(html)
 
 
-def test_data_files_table_is_ignored() -> None:
-    result = discover()
+def test_missing_data_files_table_returns_empty_tuple() -> None:
+    assert discover(HTML_WITHOUT_DATA_FILES).data_files == ()
 
-    assert all(
-        document.document_name != "issuer.xsd"
-        for document in result.submitted_documents
+
+def test_empty_data_files_table() -> None:
+    html = with_data_files_table(b"<tr><th>Document</th></tr>")
+
+    with pytest.raises(DiscoveryError, match="Data Files table contains no data rows"):
+        discover(html)
+
+
+def test_data_files_table_without_document_column() -> None:
+    html = with_data_files_table(b"<tr><th>Seq</th></tr><tr><td>4</td></tr>")
+
+    with pytest.raises(DiscoveryError, match="missing its Document column"):
+        discover(html)
+
+
+def test_data_files_row_without_document_cell() -> None:
+    html = with_data_files_table(
+        b"<tr><th>Seq</th><th>Document</th></tr><tr><td>4</td></tr>"
+    )
+
+    with pytest.raises(DiscoveryError, match="missing its document cell"):
+        discover(html)
+
+
+def test_data_files_row_without_link() -> None:
+    html = with_data_files_table(
+        b"<tr><th>Document</th></tr><tr><td>issuer.xsd</td></tr>"
+    )
+
+    with pytest.raises(DiscoveryError, match="missing its document link"):
+        discover(html)
+
+
+def test_data_files_link_with_empty_text() -> None:
+    html = with_data_files_table(
+        b'<tr><th>Document</th></tr><tr><td><a href="issuer.xsd"></a></td></tr>'
+    )
+
+    with pytest.raises(DiscoveryError, match="missing a document filename"):
+        discover(html)
+
+
+@pytest.mark.parametrize(
+    "name",
+    [
+        b"../issuer.xsd",
+        b"folder/issuer.xsd",
+        b"folder\\issuer.xsd",
+        b"%2e%2e%2fissuer.xsd",
+    ],
+)
+def test_unsafe_data_file_name(name: bytes) -> None:
+    html = with_data_files_table(
+        b'<tr><th>Document</th></tr><tr><td><a href="issuer.xsd">'
+        + name
+        + b"</a></td></tr>"
+    )
+
+    with pytest.raises(DiscoveryError, match="Unsafe data file filename"):
+        discover(html)
+
+
+def test_data_file_optional_columns_may_be_absent() -> None:
+    html = with_data_files_table(
+        b'<tr><th>Document</th></tr><tr><td><a href="issuer.xsd">issuer.xsd</a></td></tr>'
+    )
+
+    assert discover(html).data_files == (
+        FilingDataFile(None, None, "issuer.xsd", None),
     )
