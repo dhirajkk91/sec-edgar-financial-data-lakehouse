@@ -13,6 +13,13 @@ from sec_edgar_lakehouse.filing_download import (
     DownloadError,
     download_filing_file,
 )
+from sec_edgar_lakehouse.filing_inventory import (
+    ArtifactSection,
+    FilingInventory,
+    InventoryEntry,
+    InventoryError,
+    build_filing_inventory,
+)
 from sec_edgar_lakehouse.filing_reference import FilingReference
 from sec_edgar_lakehouse.filing_storage import (
     StorageError,
@@ -21,6 +28,7 @@ from sec_edgar_lakehouse.filing_storage import (
 )
 
 __all__ = [
+    "ArtifactSection",
     "CompleteSubmissionFile",
     "DiscoveryError",
     "DownloadError",
@@ -28,9 +36,13 @@ __all__ = [
     "FilingDataFile",
     "FilingDiscovery",
     "FilingDocument",
+    "FilingInventory",
     "FilingReference",
+    "InventoryEntry",
+    "InventoryError",
     "StorageError",
     "StoredFile",
+    "build_filing_inventory",
     "discover_filing",
     "download_filing_file",
     "store_downloaded_file",
