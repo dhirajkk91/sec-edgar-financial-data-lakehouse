@@ -83,6 +83,7 @@ def test_existing_symlink_is_unchanged(tmp_path: Path, dangling: bool) -> None:
     if not dangling:
         target.write_bytes(b"original")
     link = tmp_path / "report.htm"
+    # Symlink creation needs extra privileges on some Windows test machines.
     try:
         link.symlink_to(target)
     except OSError, NotImplementedError:

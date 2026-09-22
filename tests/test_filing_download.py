@@ -61,6 +61,7 @@ def test_uses_filing_cik_when_accession_prefix_differs() -> None:
     assert "/edgar/data/1122304/000119312515118890/" in str(requests[0].url)
 
 
+# These names must stay one path segment, including the reserved URL characters.
 @pytest.mark.parametrize(
     ("document_name", "encoded_name"),
     [

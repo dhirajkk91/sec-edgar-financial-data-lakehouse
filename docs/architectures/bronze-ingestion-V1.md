@@ -63,12 +63,12 @@ Parser requirements belong in configuration rather than downloader code. For Ver
 1. Resolve the filing and read the SEC index.
 2. Build the expected document inventory.
 3. Classify each artifact and assign its completion requirements.
-4. Download each required file to a run-specific temporary directory.
-5. Validate the response and compute its SHA-256 checksum.
-6. Promote verified files to the canonical Bronze directory.
-7. Write the final run manifest and return an exit status.
+4. Download files and store them in a unique filing-level staging directory outside canonical Bronze, on the same filesystem.
+5. Reopen staged files to verify their byte counts and SHA-256 checksums. Require every source-completeness artifact; record missing or failed optional files and remove their unverified bytes before publication.
+6. Prepare the `COMPLETE` or `PARTIAL` run manifest in staging, then publish the verified filing directory to canonical Bronze in one directory move. Refuse an existing canonical filing directory.
+7. Return the published filing path and manifest path.
 
-Files are never written directly to their final path. Promotion happens only after validation, so an interrupted request cannot leave a partial file that looks complete.
+Files are never written directly to their final path. Missing or failed required files leave canonical Bronze untouched; verified files and a failure manifest remain in staging for diagnosis. Reusing a preserved staging directory requires a later increment.
 
 ## Storage layout
 
@@ -100,6 +100,8 @@ The same layout can later be moved under an S3 prefix without changing filing id
 ## Idempotency and content changes
 
 Bronze files are immutable after verification.
+
+The first local publisher refuses an existing canonical filing directory. Later idempotent reruns follow this policy:
 
 - If the destination does not exist, verify and store the file.
 - If it exists with the same checksum, leave it in place and record `SKIPPED_IDENTICAL`.
@@ -148,12 +150,14 @@ run_status:
 RUNNING | COMPLETE | PARTIAL | FAILED
 
 document_status:
-NOT_STARTED | DOWNLOADED | VERIFIED | SKIPPED_IDENTICAL | FAILED | CONTENT_CHANGE_DETECTED
+NOT_STARTED | DOWNLOADED | VERIFIED | MISSING | SKIPPED_IDENTICAL | FAILED | CONTENT_CHANGE_DETECTED
 ```
+
+For the current local publisher, `COMPLETE` means every inventory file was verified and published. `PARTIAL` means all required files were verified and published, while an optional file is `MISSING` or `FAILED`. `FAILED` means the filing was not published and `source_complete` is false. `MISSING` records that no bytes were supplied by the caller; it does not imply a download attempt.
 
 ## Failure and retry behavior
 
-One failed document must not discard files that were already verified. The pipeline continues with unrelated documents when it is safe to do so and retries only the missing or failed items.
+One failed document must not discard files that were already verified. A filing with missing or failed required material remains in staging with a failure record. A failed optional file may be omitted from a `PARTIAL` publication only after its staged bytes are removed. This publisher preserves the staging directory but has no resume API.
 
 Network timeouts, connection resets, and HTTP `429`, `500`, `502`, `503`, and `504` are retryable. Retries use exponential backoff with jitter and honor `Retry-After`. Invalid URLs, invalid hosts, and repeated content-validation failures are not retried indefinitely.
 
@@ -185,7 +189,7 @@ Version 1 is complete when it can ingest a real filing without issuer-specific f
 - rerunning identical content does not duplicate or overwrite data;
 - changed content for the same document is quarantined;
 - a missing exhibit and a missing parser dependency produce the correct completion flags;
-- a partially successful run can resume without downloading verified files again;
+- a partially successful run retains verified staged files and a failure record; resume support is a later increment;
 - every retry creates a new manifest linked to the earlier run.
 
 HTTP behavior is mocked in the test suite. A single controlled integration test uses a real SEC filing after the local suite passes.

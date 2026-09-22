@@ -16,6 +16,7 @@ from sec_edgar_lakehouse import (
 )
 
 REFERENCE = FilingReference("1122304", "0001193125-15-118890")
+# Sequence numbers are deliberately out of order: inventory follows SEC row order.
 DISCOVERY = FilingDiscovery(
     submitted_documents=(
         FilingDocument("2", "Report", "report.htm", "10-Q"),

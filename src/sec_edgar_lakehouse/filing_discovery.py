@@ -133,7 +133,7 @@ def _parse_discovery(html: bytes) -> FilingDiscovery:
         if not cells:
             continue
         rows.append((row, cells))
-        # SEC's package row can use colspan, so ordinary column mapping is unreliable.
+        # SEC sometimes gives the package row a colspan; treat it separately.
         if any(
             cell.get_text(" ", strip=True).lower() == "complete submission text file"
             for cell in cells

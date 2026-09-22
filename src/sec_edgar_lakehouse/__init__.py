@@ -20,6 +20,11 @@ from sec_edgar_lakehouse.filing_inventory import (
     InventoryError,
     build_filing_inventory,
 )
+from sec_edgar_lakehouse.filing_publication import (
+    PublicationError,
+    PublishedFiling,
+    publish_filing,
+)
 from sec_edgar_lakehouse.filing_reference import FilingReference
 from sec_edgar_lakehouse.filing_storage import (
     StorageError,
@@ -27,6 +32,7 @@ from sec_edgar_lakehouse.filing_storage import (
     store_downloaded_file,
 )
 
+# Keep the package root as the stable import surface for callers.
 __all__ = [
     "ArtifactSection",
     "CompleteSubmissionFile",
@@ -40,10 +46,13 @@ __all__ = [
     "FilingReference",
     "InventoryEntry",
     "InventoryError",
+    "PublicationError",
+    "PublishedFiling",
     "StorageError",
     "StoredFile",
     "build_filing_inventory",
     "discover_filing",
     "download_filing_file",
+    "publish_filing",
     "store_downloaded_file",
 ]

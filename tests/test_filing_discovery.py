@@ -15,6 +15,7 @@ from sec_edgar_lakehouse import (
 )
 
 HTML = (Path(__file__).parent / "fixtures" / "filing-index.html").read_bytes()
+# Keep the rest of the fixture intact when testing a missing Data Files table.
 HTML_WITHOUT_DATA_FILES = (
     HTML.split(b'<table summary="Data Files">', maxsplit=1)[0] + b"</body></html>"
 )
