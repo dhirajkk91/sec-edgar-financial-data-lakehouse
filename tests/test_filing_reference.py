@@ -65,6 +65,7 @@ def test_rejects_malformed_accession_numbers(accession_number: str) -> None:
 
 
 def test_accepts_accession_prefix_different_from_filing_cik() -> None:
+    # A filing agent may supply the accession even though the filer owns the CIK.
     reference = FilingReference("1122304", "0001193125-15-118890")
 
     assert reference.cik == "0001122304"

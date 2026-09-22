@@ -31,6 +31,7 @@ def download_filing_file(
     """Download one filing file and return its bytes unchanged."""
     _validate_user_agent(user_agent)
     _validate_document_name(document_name)
+    # Keep '?' and '#' in the filename, not in the URL's query or fragment.
     encoded_document_name = quote(document_name, safe="._-")
 
     # The accession prefix can name a filing agent, so the archive uses the filing CIK.

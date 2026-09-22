@@ -68,6 +68,7 @@ def build_filing_inventory(
             required_for_source=True,
         )
     )
+    # Data Files are useful to keep, but their absence doesn't make the source incomplete.
     for data_file in discovery.data_files:
         entries.append(
             InventoryEntry(

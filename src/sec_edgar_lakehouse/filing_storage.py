@@ -50,7 +50,7 @@ def store_downloaded_file(
             temporary_file.flush()
             os.fsync(temporary_file.fileno())
 
-        # Windows needs the temporary file closed before we can promote it.
+        # Windows needs the temp file closed; check what actually landed on disk.
         size_bytes = temporary_path.stat().st_size
         if size_bytes != len(downloaded.content):
             raise StorageError(f"Stored size does not match content: {temporary_path}")

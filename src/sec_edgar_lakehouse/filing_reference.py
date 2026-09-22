@@ -26,6 +26,7 @@ class FilingReference:
         if int(self.cik) == 0:
             raise ValueError("CIK must represent a value greater than zero")
 
+        # Keep one CIK spelling in memory; SEC archive paths use the unpadded form.
         normalized_cik = self.cik.zfill(10)
 
         if _ACCESSION_NUMBER_PATTERN.fullmatch(self.accession_number) is None:
