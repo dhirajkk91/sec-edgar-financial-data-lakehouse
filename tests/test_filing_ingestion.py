@@ -1,4 +1,5 @@
 import json
+from collections.abc import Mapping
 from dataclasses import FrozenInstanceError
 from pathlib import Path
 from typing import Any, cast
@@ -27,9 +28,9 @@ USER_AGENT = "IngestionTests contact@example.org"
 INDEX_NAME = "0001193125-15-118890-index.html"
 INDEX = b"""<html><body>
 <table summary="Document Format Files">
-<tr><th>Seq</th><th>Document</th></tr>
-<tr><td>1</td><td><a href="report.htm">report.htm</a></td></tr>
-<tr><td>2</td><td><a href="exhibit.htm">exhibit.htm</a></td></tr>
+<tr><th>Seq</th><th>Document</th><th>Type</th></tr>
+<tr><td>1</td><td><a href="report.htm">report.htm</a></td><td>10-Q</td></tr>
+<tr><td>2</td><td><a href="exhibit.htm">exhibit.htm</a></td><td>EX-99</td></tr>
 <tr><td colspan="2">Complete submission text file</td><td><a href="package.txt">package.txt</a></td></tr>
 </table>
 <table summary="Data Files">
@@ -40,10 +41,19 @@ INDEX = b"""<html><body>
 CONTENTS = {
     "report.htm": b"<html>report</html>",
     "exhibit.htm": b"exhibit bytes",
-    "package.txt": b"complete submission",
+    "package.txt": b"<SEC-DOCUMENT>0001193125-15-118890\n<SEC-HEADER>FILING\n",
     "issuer.xsd": b"<schema />",
 }
 REQUEST_ORDER = [INDEX_NAME, *CONTENTS]
+INDEX_WITH_EXTRACTED = INDEX.replace(
+    b'<tr><th>Seq</th><th>Document</th></tr>\n<tr><td>3</td><td><a href="issuer.xsd">issuer.xsd</a></td></tr>',
+    b"<tr><th>Seq</th><th>Description</th><th>Document</th></tr>\n"
+    b'<tr><td>3</td><td>Schema</td><td><a href="issuer.xsd">issuer.xsd</a></td></tr>\n'
+    b'<tr><td>4</td><td>EXTRACTED XBRL INSTANCE DOCUMENT</td><td><a href="issuer_htm.xml">issuer_htm.xml</a></td></tr>',
+)
+CONTENTS_WITH_EXTRACTED = CONTENTS | {
+    "issuer_htm.xml": b'<xbrl xmlns="http://www.xbrl.org/2003/instance" />'
+}
 
 
 @pytest.fixture(autouse=True)
@@ -59,6 +69,7 @@ def mock_client(
     index_status: int = 200,
     request_times: list[float] | None = None,
     clock: list[float] | None = None,
+    contents: Mapping[str, bytes] | None = None,
 ) -> httpx.Client:
     def respond(request: httpx.Request) -> httpx.Response:
         requests.append(request)
@@ -69,7 +80,9 @@ def mock_client(
             return httpx.Response(index_status, content=index_content)
         if name == failed_name:
             return httpx.Response(404)
-        return httpx.Response(200, content=CONTENTS[name])
+        return httpx.Response(
+            200, content=(CONTENTS if contents is None else contents)[name]
+        )
 
     return httpx.Client(transport=httpx.MockTransport(respond))
 
@@ -117,6 +130,7 @@ def test_complete_filing_requests_in_inventory_order_and_publishes(
     assert result.status == "COMPLETE"
     assert result.staging_path is None
     assert result.download_failure is None
+    assert result.parser_ready is False
     assert result.published is not None
     assert result.published.path == canonical_path(bronze_directory)
     assert (
@@ -146,10 +160,231 @@ def test_complete_filing_requests_in_inventory_order_and_publishes(
     manifest = read_manifest(result.published.manifest_path)
     assert manifest["status"] == "COMPLETE"
     assert manifest["source_complete"] is True
+    assert manifest["parser_ready"] is False
+    assert "No EXTRACTED" in manifest["parser_readiness_reason"]
     assert [file["status"] for file in manifest["files"]] == ["VERIFIED"] * 6
     assert [file["document_name"] for file in manifest["files"][-2:]] == [
         "filing-index.html",
         "discovery.json",
+    ]
+
+
+def test_extracted_instance_makes_published_filing_parser_ready(tmp_path: Path) -> None:
+    assert INDEX_WITH_EXTRACTED != INDEX
+    requests: list[httpx.Request] = []
+    with mock_client(
+        requests,
+        index_content=INDEX_WITH_EXTRACTED,
+        contents=CONTENTS_WITH_EXTRACTED,
+    ) as client:
+        result = ingest_filing(
+            REFERENCE,
+            user_agent=USER_AGENT,
+            bronze_directory=tmp_path / "filings",
+            client=client,
+        )
+
+    assert names(requests) == [INDEX_NAME, *CONTENTS_WITH_EXTRACTED]
+    assert result.status == "COMPLETE"
+    assert result.parser_ready is True
+    assert result.published is not None
+    assert (result.published.path / "sec-derived" / "issuer_htm.xml").read_bytes() == (
+        CONTENTS_WITH_EXTRACTED["issuer_htm.xml"]
+    )
+    # The second HTML file is an exhibit, not the primary document.
+    assert (
+        result.published.path / "submitted" / "exhibit.htm"
+    ).read_bytes() == b"exhibit bytes"
+    manifest = read_manifest(result.published.manifest_path)
+    assert manifest["source_complete"] is True
+    assert manifest["parser_ready"] is True
+    assert "parser_readiness_reason" not in manifest
+
+
+@pytest.mark.parametrize(
+    ("name", "body", "reason"),
+    [
+        ("report.htm", b"not an HTML document", "Primary filing HTML"),
+        ("package.txt", b"not an SEC submission", "SEC submission markers"),
+    ],
+)
+def test_invalid_required_content_blocks_publication(
+    tmp_path: Path, name: str, body: bytes, reason: str
+) -> None:
+    requests: list[httpx.Request] = []
+    bronze_directory = tmp_path / "filings"
+    with (
+        mock_client(requests, contents=CONTENTS | {name: body}) as client,
+        pytest.raises(PublicationError) as caught,
+    ):
+        ingest_filing(
+            REFERENCE,
+            user_agent=USER_AGENT,
+            bronze_directory=bronze_directory,
+            client=client,
+        )
+
+    assert names(requests) == REQUEST_ORDER
+    assert not canonical_path(bronze_directory).exists()
+    stage = caught.value.staging_path
+    assert stage is not None
+    assert (stage / "submitted" / "exhibit.htm").read_bytes() == CONTENTS["exhibit.htm"]
+    manifest = read_manifest(next((stage / "manifests").glob("run_id=*.json")))
+    assert manifest["status"] == "FAILED"
+    assert manifest["source_complete"] is False
+    failed = next(file for file in manifest["files"] if file["document_name"] == name)
+    assert failed["status"] == "FAILED"
+    assert reason in failed["error"]
+
+
+def test_malformed_optional_xml_is_removed_from_partial_publication(
+    tmp_path: Path,
+) -> None:
+    requests: list[httpx.Request] = []
+    with mock_client(
+        requests, contents=CONTENTS | {"issuer.xsd": b"<schema>"}
+    ) as client:
+        result = ingest_filing(
+            REFERENCE,
+            user_agent=USER_AGENT,
+            bronze_directory=tmp_path / "filings",
+            client=client,
+        )
+
+    assert names(requests) == REQUEST_ORDER
+    assert result.status == "PARTIAL"
+    assert result.download_failure is None
+    assert result.parser_ready is False
+    assert result.published is not None
+    assert not (result.published.path / "sec-derived" / "issuer.xsd").exists()
+    manifest = read_manifest(result.published.manifest_path)
+    assert manifest["source_complete"] is True
+    assert manifest["files"][3]["status"] == "FAILED"
+    assert "Malformed XML" in manifest["files"][3]["error"]
+
+
+def test_malformed_extracted_instance_is_partial_and_not_parser_ready(
+    tmp_path: Path,
+) -> None:
+    requests: list[httpx.Request] = []
+    with mock_client(
+        requests,
+        index_content=INDEX_WITH_EXTRACTED,
+        contents=CONTENTS_WITH_EXTRACTED | {"issuer_htm.xml": b"<xbrl>"},
+    ) as client:
+        result = ingest_filing(
+            REFERENCE,
+            user_agent=USER_AGENT,
+            bronze_directory=tmp_path / "filings",
+            client=client,
+        )
+
+    assert result.status == "PARTIAL"
+    assert result.parser_ready is False
+    assert result.published is not None
+    assert not (result.published.path / "sec-derived" / "issuer_htm.xml").exists()
+    manifest = read_manifest(result.published.manifest_path)
+    assert manifest["source_complete"] is True
+    assert manifest["parser_ready"] is False
+    assert "issuer_htm.xml is FAILED" in manifest["parser_readiness_reason"]
+    assert "Malformed XML" in manifest["parser_readiness_reason"]
+
+
+def test_http_200_sec_block_stops_document_requests_and_records_reason(
+    tmp_path: Path,
+) -> None:
+    block = b"<html><head><title>SEC.gov | Request Rate Threshold Exceeded</title></head></html>"
+    requests: list[httpx.Request] = []
+    bronze_directory = tmp_path / "filings"
+    with mock_client(requests, contents=CONTENTS | {"exhibit.htm": block}) as client:
+        result = ingest_filing(
+            REFERENCE,
+            user_agent=USER_AGENT,
+            bronze_directory=bronze_directory,
+            client=client,
+        )
+
+    assert names(requests) == REQUEST_ORDER[:3]
+    assert result.status == "FAILED"
+    assert result.download_failure is not None
+    assert "SEC rate-limit page" in result.download_failure.message
+    assert not canonical_path(bronze_directory).exists()
+    assert result.staging_path is not None
+    assert (result.staging_path / "submitted" / "report.htm").read_bytes() == CONTENTS[
+        "report.htm"
+    ]
+    manifest = read_manifest(
+        next((result.staging_path / "manifests").glob("run_id=*.json"))
+    )
+    assert manifest["source_complete"] is False
+    assert manifest["files"][1]["status"] == "FAILED"
+    assert "SEC rate-limit page" in manifest["files"][1]["error"]
+    assert manifest["files"][2]["status"] == "MISSING"
+
+
+def test_normal_filing_text_can_mention_access_denied(tmp_path: Path) -> None:
+    report = b"<html><head><title>10-Q</title></head><body>The request was access denied.</body></html>"
+    requests: list[httpx.Request] = []
+    with mock_client(requests, contents=CONTENTS | {"report.htm": report}) as client:
+        result = ingest_filing(
+            REFERENCE,
+            user_agent=USER_AGENT,
+            bronze_directory=tmp_path / "filings",
+            client=client,
+        )
+    assert result.status == "COMPLETE"
+    assert result.published is not None
+    assert (result.published.path / "submitted" / "report.htm").read_bytes() == report
+
+
+def test_ambiguous_extracted_instances_leave_parser_unready(tmp_path: Path) -> None:
+    index = INDEX_WITH_EXTRACTED.replace(
+        b"</table>\n</body></html>",
+        b'<tr><td>5</td><td>EXTRACTED XBRL INSTANCE DOCUMENT</td><td><a href="second_htm.xml">second_htm.xml</a></td></tr>\n</table>\n</body></html>',
+    )
+    contents = CONTENTS_WITH_EXTRACTED | {"second_htm.xml": b"<xbrl />"}
+    requests: list[httpx.Request] = []
+    with mock_client(requests, index_content=index, contents=contents) as client:
+        result = ingest_filing(
+            REFERENCE,
+            user_agent=USER_AGENT,
+            bronze_directory=tmp_path / "filings",
+            client=client,
+        )
+    assert result.status == "COMPLETE"
+    assert result.parser_ready is False
+    assert result.published is not None
+    manifest = read_manifest(result.published.manifest_path)
+    assert manifest["source_complete"] is True
+    assert manifest["parser_ready"] is False
+    assert "Multiple EXTRACTED" in manifest["parser_readiness_reason"]
+
+
+def test_parser_ready_can_be_true_when_source_incomplete(tmp_path: Path) -> None:
+    contents = CONTENTS_WITH_EXTRACTED | {"package.txt": b"invalid package"}
+    requests: list[httpx.Request] = []
+    bronze_directory = tmp_path / "filings"
+    with (
+        mock_client(
+            requests, index_content=INDEX_WITH_EXTRACTED, contents=contents
+        ) as client,
+        pytest.raises(PublicationError) as caught,
+    ):
+        ingest_filing(
+            REFERENCE,
+            user_agent=USER_AGENT,
+            bronze_directory=bronze_directory,
+            client=client,
+        )
+    assert not canonical_path(bronze_directory).exists()
+    stage = caught.value.staging_path
+    assert stage is not None
+    manifest = read_manifest(next((stage / "manifests").glob("run_id=*.json")))
+    assert manifest["status"] == "FAILED"
+    assert manifest["source_complete"] is False
+    assert manifest["parser_ready"] is True
+    assert (stage / "sec-derived" / "issuer_htm.xml").read_bytes() == contents[
+        "issuer_htm.xml"
     ]
 
 
@@ -179,12 +414,13 @@ def test_optional_final_download_failure_publishes_partial(tmp_path: Path) -> No
         "VERIFIED",
         "VERIFIED",
     ]
-    # The publisher only saw missing bytes, not the HTTP response.
+    # The publisher gets the attempted file's error, but no made-up retry details.
     assert manifest["files"][3] == {
         "document_name": "issuer.xsd",
         "section": "data-file",
         "required_for_source": False,
-        "status": "MISSING",
+        "status": "FAILED",
+        "error": result.download_failure.message,
     }
 
 
@@ -290,12 +526,13 @@ def test_required_download_failure_keeps_verified_staging(tmp_path: Path) -> Non
     assert manifest["source_complete"] is False
     assert [file["status"] for file in manifest["files"]] == [
         "VERIFIED",
-        "MISSING",
+        "FAILED",
         "MISSING",
         "MISSING",
         "VERIFIED",
         "VERIFIED",
     ]
+    assert manifest["files"][1]["error"] == result.download_failure.message
 
 
 def test_required_download_failure_does_not_hide_unstaged_publication_error(
@@ -471,7 +708,7 @@ def test_publication_error_is_not_hidden_by_successful_required_downloads(
 
 def test_result_types_are_frozen_and_slotted() -> None:
     failure = DownloadFailure("report.htm", "unavailable")
-    result = IngestionResult(REFERENCE, "FAILED", None, None, failure)
+    result = IngestionResult(REFERENCE, "FAILED", None, None, failure, False)
     assert not hasattr(failure, "__dict__")
     assert not hasattr(result, "__dict__")
     with pytest.raises(FrozenInstanceError):

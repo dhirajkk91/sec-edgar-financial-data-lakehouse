@@ -1,3 +1,4 @@
+import gzip
 from dataclasses import FrozenInstanceError
 
 import httpx
@@ -248,3 +249,64 @@ def test_zero_byte_response_is_a_download_error() -> None:
             user_agent=USER_AGENT,
             client=client,
         )
+
+
+def test_http_200_sec_rate_limit_page_is_rejected() -> None:
+    block = b"<html><head><title>SEC.gov | Request Rate Threshold Exceeded</title></head><body>Wait before requesting more.</body></html>"
+    with (
+        httpx.Client(
+            transport=httpx.MockTransport(lambda _: httpx.Response(200, content=block))
+        ) as client,
+        pytest.raises(DownloadError, match="SEC rate-limit page"),
+    ):
+        download_filing_file(
+            REFERENCE, document_name="report.htm", user_agent=USER_AGENT, client=client
+        )
+
+
+def test_normal_filing_can_mention_access_denied() -> None:
+    content = b"<html><head><title>10-Q</title></head><body>The claim was access denied.</body></html>"
+    with httpx.Client(
+        transport=httpx.MockTransport(lambda _: httpx.Response(200, content=content))
+    ) as client:
+        result = download_filing_file(
+            REFERENCE, document_name="report.htm", user_agent=USER_AGENT, client=client
+        )
+    assert result.content == content
+
+
+def test_identity_content_length_must_match() -> None:
+    with (
+        httpx.Client(
+            transport=httpx.MockTransport(
+                lambda _: httpx.Response(
+                    200, content=b"file", headers={"Content-Length": "9"}
+                )
+            )
+        ) as client,
+        pytest.raises(DownloadError, match="Content-Length 9"),
+    ):
+        download_filing_file(
+            REFERENCE, document_name="report.htm", user_agent=USER_AGENT, client=client
+        )
+
+
+def test_compressed_wire_length_is_not_compared_to_decoded_body() -> None:
+    content = b"<html><body>Filing body</body></html>"
+    encoded = gzip.compress(content)
+    with httpx.Client(
+        transport=httpx.MockTransport(
+            lambda _: httpx.Response(
+                200,
+                content=encoded,
+                headers={
+                    "Content-Encoding": "gzip",
+                    "Content-Length": str(len(encoded)),
+                },
+            )
+        )
+    ) as client:
+        result = download_filing_file(
+            REFERENCE, document_name="report.htm", user_agent=USER_AGENT, client=client
+        )
+    assert result.content == content

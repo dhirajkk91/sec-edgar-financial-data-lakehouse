@@ -39,9 +39,9 @@ Filenames come from the index and must be safe local filenames. A missing or mal
 The run reports two separate booleans:
 
 - `source_complete`: every submitted document, the complete submission `.txt`, and both discovery metadata files are verified.
-- `parser_ready`: the files required by the configured first Silver parser are present and verified. The initial contract covers the primary Inline XBRL filing and any extension schema or linkbases that parser requires.
+- `parser_ready`: exactly one Data Files entry described by the SEC as `EXTRACTED XBRL INSTANCE DOCUMENT` has an XML filename and a verified, well-formed staged file. This is the first Silver parser's input contract.
 
-SEC-derived files can be optional for `source_complete` while still being needed by a particular parser. The parser contract must name its dependencies; the downloader does not infer readiness from an `.html` or `.xml` extension alone. A filing may be source-complete but not parser-ready. If a required submitted exhibit fails while parser inputs are present, the run is still unsuccessful as a Bronze archive.
+SEC-derived files can be optional for `source_complete` while still being needed by the parser. Readiness requires both the SEC description and XML filename; an arbitrary XML file does not qualify. A filing may be source-complete but not parser-ready. If a required submitted exhibit fails while the extracted instance is verified, the run is still unsuccessful as a Bronze archive.
 
 ## Ingestion and publication
 

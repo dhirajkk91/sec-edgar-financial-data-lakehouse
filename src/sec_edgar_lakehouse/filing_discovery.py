@@ -8,6 +8,10 @@ from urllib.parse import unquote
 import httpx
 from bs4 import BeautifulSoup
 
+from sec_edgar_lakehouse.filing_download import (
+    _content_length_error,
+    _sec_access_block_reason,
+)
 from sec_edgar_lakehouse.filing_reference import FilingReference
 
 
@@ -113,6 +117,12 @@ def _fetch_index(client: httpx.Client, url: str, user_agent: str) -> bytes:
         raise DiscoveryError(
             f"Filing index request returned HTTP {response.status_code}: {url}"
         )
+    if not response.content:
+        raise DiscoveryError(f"Filing index response was empty: {url}")
+    if block_reason := _sec_access_block_reason(response.content):
+        raise DiscoveryError(f"{block_reason}: {url}")
+    if length_error := _content_length_error(response):
+        raise DiscoveryError(f"{length_error}: {url}")
     return response.content
 
 

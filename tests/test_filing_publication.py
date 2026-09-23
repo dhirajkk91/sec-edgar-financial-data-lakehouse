@@ -42,7 +42,7 @@ INVENTORY = FilingInventory(
 )
 CONTENTS = {
     "report.htm": b"<html>report</html>",
-    "package.txt": b"complete submission",
+    "package.txt": b"<SEC-DOCUMENT>0001193125-15-118890\n<SEC-HEADER>FILING\n",
     "issuer.xsd": b"<schema />",
 }
 DISCOVERY = FilingDiscovery(
@@ -56,6 +56,27 @@ DISCOVERY = FilingDiscovery(
     retrieved_at=datetime(2026, 1, 1, tzinfo=UTC),
     index_content=b"<html>SEC index response</html>\n",
 )
+EXHIBIT_FIRST_INVENTORY = FilingInventory(
+    REFERENCE,
+    (
+        InventoryEntry("exhibit.htm", ArtifactSection.SUBMITTED, "1", "EX-99", True),
+        InventoryEntry("annual.htm", ArtifactSection.SUBMITTED, "2", "10-K", True),
+        *INVENTORY.entries[1:],
+    ),
+)
+EXHIBIT_FIRST_DISCOVERY = replace(
+    DISCOVERY,
+    submitted_documents=(
+        FilingDocument("1", "Exhibit", "exhibit.htm", "EX-99"),
+        FilingDocument("2", "Annual report", "annual.htm", "10-K"),
+    ),
+)
+EXHIBIT_FIRST_CONTENTS = {
+    "exhibit.htm": b"exhibit bytes",
+    "annual.htm": b"<html>10-K filing</html>",
+    "package.txt": CONTENTS["package.txt"],
+    "issuer.xsd": CONTENTS["issuer.xsd"],
+}
 
 
 def read_manifest(path: Path) -> dict[str, Any]:
@@ -206,6 +227,95 @@ def test_complete_filing_is_published_with_manifest(tmp_path: Path) -> None:
     assert not any((bronze_directory.parent / ".filing-staging").iterdir())
 
 
+def test_exhibit_first_does_not_hide_malformed_10k_html(tmp_path: Path) -> None:
+    bronze_directory = tmp_path / "filings"
+    with pytest.raises(PublicationError) as caught:
+        publish_filing(
+            EXHIBIT_FIRST_INVENTORY,
+            EXHIBIT_FIRST_CONTENTS | {"annual.htm": b"not HTML"},
+            discovery=EXHIBIT_FIRST_DISCOVERY,
+            bronze_directory=bronze_directory,
+        )
+
+    assert not canonical_path(bronze_directory).exists()
+    stage = caught.value.staging_path
+    assert stage is not None
+    assert (stage / "submitted" / "exhibit.htm").read_bytes() == b"exhibit bytes"
+    manifest = read_manifest(next((stage / "manifests").glob("run_id=*.json")))
+    assert manifest["status"] == "FAILED"
+    assert manifest["files"][0]["status"] == "VERIFIED"
+    assert manifest["files"][1]["document_name"] == "annual.htm"
+    assert manifest["files"][1]["status"] == "FAILED"
+    assert "Primary filing HTML" in manifest["files"][1]["error"]
+
+
+def test_exhibit_first_with_valid_10k_html_publishes(tmp_path: Path) -> None:
+    published = publish_filing(
+        EXHIBIT_FIRST_INVENTORY,
+        EXHIBIT_FIRST_CONTENTS,
+        discovery=EXHIBIT_FIRST_DISCOVERY,
+        bronze_directory=tmp_path / "filings",
+    )
+
+    manifest = read_manifest(published.manifest_path)
+    assert manifest["status"] == "COMPLETE"
+    assert [file["status"] for file in manifest["files"][:2]] == [
+        "VERIFIED",
+        "VERIFIED",
+    ]
+    assert (published.path / "submitted" / "annual.htm").read_bytes() == (
+        EXHIBIT_FIRST_CONTENTS["annual.htm"]
+    )
+
+
+def test_multiple_10k_10q_primary_rows_are_rejected(tmp_path: Path) -> None:
+    first = replace(EXHIBIT_FIRST_INVENTORY.entries[0], document_type="10-Q")
+    inventory = replace(
+        EXHIBIT_FIRST_INVENTORY,
+        entries=(first, *EXHIBIT_FIRST_INVENTORY.entries[1:]),
+    )
+    submitted = EXHIBIT_FIRST_DISCOVERY.submitted_documents
+    discovery = replace(
+        EXHIBIT_FIRST_DISCOVERY,
+        submitted_documents=(replace(submitted[0], document_type="10-Q"), submitted[1]),
+    )
+    bronze_directory = tmp_path / "filings"
+
+    with pytest.raises(PublicationError, match="Multiple primary 10-K/10-Q"):
+        publish_filing(
+            inventory,
+            EXHIBIT_FIRST_CONTENTS,
+            discovery=discovery,
+            bronze_directory=bronze_directory,
+        )
+
+    assert not canonical_path(bronze_directory).exists()
+    assert not (tmp_path / ".filing-staging").exists()
+
+
+def test_non_10k_10q_submitted_type_has_no_primary_html_rule(tmp_path: Path) -> None:
+    inventory = replace(
+        INVENTORY,
+        entries=(
+            replace(INVENTORY.entries[0], document_type="8-K"),
+            *INVENTORY.entries[1:],
+        ),
+    )
+    discovery = replace(
+        DISCOVERY,
+        submitted_documents=(
+            replace(DISCOVERY.submitted_documents[0], document_type="8-K"),
+        ),
+    )
+    published = publish_filing(
+        inventory,
+        CONTENTS | {"report.htm": b"not HTML"},
+        discovery=discovery,
+        bronze_directory=tmp_path / "filings",
+    )
+    assert read_manifest(published.manifest_path)["status"] == "COMPLETE"
+
+
 def test_missing_optional_file_is_recorded_and_does_not_block_publication(
     tmp_path: Path,
 ) -> None:
@@ -344,6 +454,34 @@ def test_missing_required_file_preserves_verified_staging_and_failure_record(
         "VERIFIED",
         "VERIFIED",
     ]
+
+
+def test_required_content_error_is_visible_in_manifest_and_exception(
+    tmp_path: Path,
+) -> None:
+    bronze_directory = tmp_path / "filings"
+    with pytest.raises(PublicationError) as caught:
+        publish_filing(
+            INVENTORY,
+            CONTENTS | {"report.htm": b"not HTML"},
+            discovery=DISCOVERY,
+            bronze_directory=bronze_directory,
+        )
+
+    assert not canonical_path(bronze_directory).exists()
+    stage = caught.value.staging_path
+    assert stage is not None
+    assert (stage / "submission-package" / "package.txt").read_bytes() == CONTENTS[
+        "package.txt"
+    ]
+    manifest = read_manifest(next((stage / "manifests").glob("run_id=*.json")))
+    assert manifest["status"] == "FAILED"
+    assert manifest["source_complete"] is False
+    assert manifest["files"][0]["status"] == "FAILED"
+    reason = manifest["files"][0]["error"]
+    assert "Primary filing HTML" in reason
+    assert f"report.htm: {reason}" in manifest["error"]
+    assert f"report.htm: {reason}" in str(caught.value)
 
 
 def tamper_staged_file(monkeypatch: pytest.MonkeyPatch, tampered_name: str) -> None:
