@@ -32,6 +32,7 @@ class IngestionResult:
     published: PublishedFiling | None
     staging_path: Path | None
     download_failure: DownloadFailure | None
+    parser_ready: bool
 
 
 def ingest_filing(
@@ -90,31 +91,51 @@ def _ingest_with_client(
         contents[entry.document_name] = downloaded.content
 
     try:
+        failed_files = (
+            {download_failure.document_name: download_failure.message}
+            if download_failure is not None
+            else None
+        )
         published = publish_filing(
-            inventory, contents, discovery=discovery, bronze_directory=bronze_directory
+            inventory,
+            contents,
+            discovery=discovery,
+            bronze_directory=bronze_directory,
+            failed_files=failed_files,
         )
     except PublicationError as exc:
         if not required_download_failed or exc.staging_path is None:
             raise
         return IngestionResult(
-            reference, "FAILED", None, exc.staging_path, download_failure
+            reference,
+            "FAILED",
+            None,
+            exc.staging_path,
+            download_failure,
+            exc.parser_ready,
         )
 
+    status, parser_ready = _published_outcome(published.manifest_path)
     return IngestionResult(
         reference,
-        _published_status(published.manifest_path),
+        status,
         published,
         None,
         download_failure,
+        parser_ready,
     )
 
 
-def _published_status(manifest_path: Path) -> Literal["COMPLETE", "PARTIAL"]:
+def _published_outcome(
+    manifest_path: Path,
+) -> tuple[Literal["COMPLETE", "PARTIAL"], bool]:
     manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
     if isinstance(manifest, dict):
         status = manifest.get("status")
-        if status == "COMPLETE":
-            return "COMPLETE"
-        if status == "PARTIAL":
-            return "PARTIAL"
+        parser_ready = manifest.get("parser_ready")
+        if isinstance(parser_ready, bool):
+            if status == "COMPLETE":
+                return "COMPLETE", parser_ready
+            if status == "PARTIAL":
+                return "PARTIAL", parser_ready
     raise PublicationError(f"Published manifest has invalid status: {manifest_path}")

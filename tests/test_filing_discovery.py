@@ -91,6 +91,22 @@ def test_keeps_exact_index_bytes_from_the_request_it_parses() -> None:
     assert result.submitted_documents[0].document_name == "report.htm"
 
 
+def test_http_200_sec_block_index_fails_before_discovery() -> None:
+    block = b"<html><head><title>SEC.gov | Your Request Originates from an Undeclared Automated Tool</title></head></html>"
+    requests: list[httpx.Request] = []
+
+    def handle(request: httpx.Request) -> httpx.Response:
+        requests.append(request)
+        return httpx.Response(200, content=block)
+
+    with (
+        httpx.Client(transport=httpx.MockTransport(handle)) as client,
+        pytest.raises(DiscoveryError, match="SEC access-block page"),
+    ):
+        discover_filing(REFERENCE, user_agent=USER_AGENT, client=client)
+    assert len(requests) == 1
+
+
 def test_submitted_documents_preserve_optional_fields_and_unknown_types() -> None:
     result = discover()
 

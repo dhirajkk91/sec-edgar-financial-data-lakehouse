@@ -96,4 +96,46 @@ def _fetch_file(client: httpx.Client, url: str, user_agent: str) -> bytes:
         )
     if not response.content:
         raise DownloadError(f"Filing file response was empty: {url}")
+    if block_reason := _sec_access_block_reason(response.content):
+        raise DownloadError(f"{block_reason}: {url}")
+    if length_error := _content_length_error(response):
+        raise DownloadError(f"{length_error}: {url}")
     return response.content
+
+
+def _sec_access_block_reason(content: bytes) -> str | None:
+    preview = content[:8192].decode("utf-8", errors="ignore").casefold()
+    if "<html" not in preview[:512]:
+        return None
+    title = re.search(r"<title\b[^>]*>(.*?)</title>", preview, flags=re.DOTALL)
+    if title is None:
+        return None
+    title_text = re.sub(r"<[^>]+>", "", title.group(1)).strip()
+    if "sec.gov" in title_text and "request rate threshold exceeded" in title_text:
+        return "SEC rate-limit page returned with HTTP 200"
+    if "sec.gov" in title_text and (
+        "undeclared automated tool" in title_text or "access denied" in title_text
+    ):
+        return "SEC access-block page returned with HTTP 200"
+    if (
+        title_text == "access denied"
+        and "sec.gov" in preview
+        and ("reference #" in preview or "permission to access" in preview)
+    ):
+        return "SEC access-block page returned with HTTP 200"
+    return None
+
+
+def _content_length_error(response: httpx.Response) -> str | None:
+    if response.headers.get("Content-Encoding", "identity").lower() != "identity":
+        return None
+    header = response.headers.get("Content-Length")
+    if header is None:
+        return None
+    try:
+        expected = int(header)
+    except ValueError:
+        return "Invalid Content-Length header"
+    if expected != len(response.content):
+        return f"Content-Length {expected} does not match {len(response.content)} response bytes"
+    return None

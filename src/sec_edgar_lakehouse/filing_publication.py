@@ -3,7 +3,9 @@
 import hashlib
 import json
 import os
+import re
 import tempfile
+import xml.etree.ElementTree as ET
 from collections.abc import Mapping
 from dataclasses import dataclass
 from datetime import datetime, timedelta
@@ -12,10 +14,11 @@ from typing import Any
 from uuid import uuid4
 
 from sec_edgar_lakehouse.filing_discovery import FilingDiscovery
-from sec_edgar_lakehouse.filing_download import DownloadedFile
+from sec_edgar_lakehouse.filing_download import DownloadedFile, _sec_access_block_reason
 from sec_edgar_lakehouse.filing_inventory import (
     ArtifactSection,
     FilingInventory,
+    InventoryEntry,
 )
 from sec_edgar_lakehouse.filing_storage import (
     StorageError,
@@ -28,14 +31,22 @@ _SECTION_DIRECTORIES = {
     ArtifactSection.SUBMISSION_PACKAGE: "submission-package",
     ArtifactSection.DATA_FILE: "sec-derived",
 }
+_PRIMARY_DOCUMENT_TYPES = frozenset({"10-K", "10-Q", "10-K/A", "10-Q/A"})
 
 
 class PublicationError(Exception):
     """A filing could not be safely published."""
 
-    def __init__(self, message: str, *, staging_path: Path | None = None) -> None:
+    def __init__(
+        self,
+        message: str,
+        *,
+        staging_path: Path | None = None,
+        parser_ready: bool = False,
+    ) -> None:
         super().__init__(message)
         self.staging_path = staging_path
+        self.parser_ready = parser_ready
 
 
 @dataclass(frozen=True, slots=True)
@@ -52,9 +63,14 @@ def publish_filing(
     *,
     discovery: FilingDiscovery,
     bronze_directory: Path,
+    failed_files: Mapping[str, str] | None = None,
 ) -> PublishedFiling:
     """Stage supplied bytes and publish only after required files are verified."""
-    _validate_inputs(inventory, file_contents, discovery, bronze_directory)
+    _validate_inputs(
+        inventory, file_contents, discovery, bronze_directory, failed_files
+    )
+    primary_name = _primary_document_name(discovery)
+    failed_files = {} if failed_files is None else failed_files
     reference = inventory.reference
     bronze_directory = bronze_directory.resolve()
     final_path = (
@@ -94,6 +110,10 @@ def publish_filing(
             "status": "MISSING",
         }
         records.append(record)
+        if entry.document_name in failed_files:
+            record["status"] = "FAILED"
+            record["error"] = failed_files[entry.document_name]
+            continue
         if entry.document_name not in file_contents:
             continue
         try:
@@ -144,12 +164,18 @@ def publish_filing(
         else:
             stored_files[("metadata", metadata_name)] = stored
 
+    inventory_entries = {
+        (entry.section.value, entry.document_name): entry for entry in inventory.entries
+    }
     for record in records:
         staged_file = stored_files.get((record["section"], record["document_name"]))
         if staged_file is None:
             continue
         try:
-            _verify_staged_file(staged_file)
+            content = _verify_staged_file(staged_file)
+            if record["section"] != "metadata":
+                entry = inventory_entries[(record["section"], record["document_name"])]
+                _validate_staged_content(entry, content, primary_name)
         except (OSError, ValueError) as exc:
             record["status"] = "FAILED"
             record["error"] = str(exc)
@@ -170,6 +196,7 @@ def publish_filing(
             record["size_bytes"] = staged_file.size_bytes
             record["sha256"] = staged_file.sha256
 
+    parser_ready, parser_reason = _parser_readiness(discovery, records)
     # Optional failures can publish, but every source-required file has to pass.
     required_verified = all(
         record["status"] == "VERIFIED"
@@ -183,20 +210,38 @@ def publish_filing(
             cleanup_error = str(exc)
 
     if not required_verified or cleanup_error is not None:
+        required_errors = [
+            f"{record['document_name']}: {record['error']}"
+            for record in records
+            if record["required_for_source"]
+            and record["section"] != "metadata"
+            and record["status"] == "FAILED"
+        ]
+        reported_errors = [
+            error for error in (metadata_error, *required_errors) if error is not None
+        ]
         failure_error = (
-            "; ".join(
-                error for error in (metadata_error, cleanup_error) if error is not None
-            )
+            "; ".join(error for error in (*reported_errors, cleanup_error) if error)
             or None
         )
         _write_manifest(
             staging_path / manifest_relative_path,
-            _manifest(inventory, run_id, "FAILED", False, records, error=failure_error),
+            _manifest(
+                inventory,
+                run_id,
+                "FAILED",
+                False,
+                parser_ready,
+                parser_reason,
+                records,
+                error=failure_error,
+            ),
         )
-        detail = f": {metadata_error}" if metadata_error is not None else ""
+        detail = f": {'; '.join(reported_errors)}" if reported_errors else ""
         raise PublicationError(
             f"Filing was not published{detail}; inspect {staging_path / manifest_relative_path}",
             staging_path=staging_path,
+            parser_ready=parser_ready,
         )
 
     run_status = (
@@ -207,7 +252,9 @@ def publish_filing(
     # The manifest is already in place when the filing becomes visible in Bronze.
     _write_manifest(
         staging_path / manifest_relative_path,
-        _manifest(inventory, run_id, run_status, True, records),
+        _manifest(
+            inventory, run_id, run_status, True, parser_ready, parser_reason, records
+        ),
     )
     try:
         _require_absent(final_path)
@@ -217,11 +264,21 @@ def publish_filing(
     except (OSError, PublicationError) as exc:
         _write_manifest(
             staging_path / manifest_relative_path,
-            _manifest(inventory, run_id, "FAILED", False, records, error=str(exc)),
+            _manifest(
+                inventory,
+                run_id,
+                "FAILED",
+                False,
+                parser_ready,
+                parser_reason,
+                records,
+                error=str(exc),
+            ),
         )
         raise PublicationError(
             f"Could not publish filing to {final_path}: {exc}",
             staging_path=staging_path,
+            parser_ready=parser_ready,
         ) from exc
 
     return PublishedFiling(final_path, final_path / manifest_relative_path)
@@ -232,6 +289,7 @@ def _validate_inputs(
     file_contents: Mapping[str, bytes],
     discovery: FilingDiscovery,
     bronze_directory: Path,
+    failed_files: Mapping[str, str] | None,
 ) -> None:
     if not isinstance(inventory, FilingInventory):
         raise PublicationError("Inventory must be a FilingInventory")
@@ -259,6 +317,14 @@ def _validate_inputs(
     unknown_names = set(file_contents) - inventory_names
     if unknown_names:
         raise PublicationError(f"Files not in the inventory: {sorted(unknown_names)!r}")
+    if failed_files is not None:
+        if not isinstance(failed_files, Mapping):
+            raise PublicationError("Failed files must be a mapping of names to reasons")
+        unknown_failures = set(failed_files) - inventory_names
+        if unknown_failures or set(failed_files) & set(file_contents):
+            raise PublicationError(
+                "Failed files must be known and have no supplied bytes"
+            )
 
 
 def _discovery_json(inventory: FilingInventory, discovery: FilingDiscovery) -> bytes:
@@ -338,7 +404,7 @@ def _discovery_json(inventory: FilingInventory, discovery: FilingDiscovery) -> b
     return (json.dumps(record, indent=2, ensure_ascii=False) + "\n").encode("utf-8")
 
 
-def _verify_staged_file(stored: StoredFile) -> None:
+def _verify_staged_file(stored: StoredFile) -> bytes:
     if stored.path.is_symlink():
         raise ValueError(f"Staged file is a symlink: {stored.path}")
     content = stored.path.read_bytes()
@@ -346,6 +412,81 @@ def _verify_staged_file(stored: StoredFile) -> None:
         raise ValueError(f"Staged size changed: {stored.path}")
     if hashlib.sha256(content).hexdigest() != stored.sha256:
         raise ValueError(f"Staged checksum changed: {stored.path}")
+    return content
+
+
+def _validate_staged_content(
+    entry: InventoryEntry, content: bytes, primary_name: str | None
+) -> None:
+    if block_reason := _sec_access_block_reason(content):
+        raise ValueError(block_reason)
+    lower_name = entry.document_name.lower()
+    if entry.section is ArtifactSection.SUBMISSION_PACKAGE:
+        upper = content.upper()
+        if b"<SEC-DOCUMENT" not in upper or not (
+            b"<SEC-HEADER" in upper or b"<DOCUMENT>" in upper
+        ):
+            raise ValueError("Complete submission is missing SEC submission markers")
+    elif lower_name.endswith((".xml", ".xsd")):
+        try:
+            ET.fromstring(content)
+        except ET.ParseError as exc:
+            raise ValueError(f"Malformed XML: {exc}") from exc
+    elif (
+        entry.section is ArtifactSection.SUBMITTED
+        and entry.document_name == primary_name
+        and re.search(
+            rb"<!doctype\s+html\b|<html(?:\s|>)|<ix:html(?:\s|>)",
+            content[:8192],
+            re.IGNORECASE,
+        )
+        is None
+    ):
+        raise ValueError("Primary filing HTML lacks recognizable document markup")
+
+
+def _primary_document_name(discovery: FilingDiscovery) -> str | None:
+    matches = [
+        document.document_name
+        for document in discovery.submitted_documents
+        if (document.document_type or "").strip().upper() in _PRIMARY_DOCUMENT_TYPES
+    ]
+    if len(matches) > 1:
+        raise PublicationError(
+            f"Multiple primary 10-K/10-Q submitted documents were listed: {matches!r}"
+        )
+    return matches[0] if matches else None
+
+
+def _parser_readiness(
+    discovery: FilingDiscovery, records: list[dict[str, Any]]
+) -> tuple[bool, str | None]:
+    candidates = [
+        file.document_name
+        for file in discovery.data_files
+        if (file.description or "").strip().casefold()
+        == "extracted xbrl instance document"
+        and file.document_name.lower().endswith(".xml")
+    ]
+    if not candidates:
+        return False, "No EXTRACTED XBRL INSTANCE DOCUMENT XML file was listed"
+    if len(candidates) != 1:
+        return False, "Multiple EXTRACTED XBRL INSTANCE DOCUMENT XML files were listed"
+    name = candidates[0]
+    record = next(
+        (
+            item
+            for item in records
+            if item["section"] == ArtifactSection.DATA_FILE.value
+            and item["document_name"] == name
+        ),
+        None,
+    )
+    if record is None or record["status"] != "VERIFIED":
+        outcome = "MISSING" if record is None else record["status"]
+        reason = "" if record is None else f": {record.get('error', 'not verified')}"
+        return False, f"Parser input {name} is {outcome}{reason}"
+    return True, None
 
 
 def _remove_failed_optional_file(
@@ -423,6 +564,8 @@ def _manifest(
     run_id: str,
     status: str,
     source_complete: bool,
+    parser_ready: bool,
+    parser_reason: str | None,
     records: list[dict[str, Any]],
     *,
     error: str | None = None,
@@ -431,12 +574,15 @@ def _manifest(
         "run_id": run_id,
         "status": status,
         "source_complete": source_complete,
+        "parser_ready": parser_ready,
         "cik": inventory.reference.cik,
         "accession_number": inventory.reference.accession_number,
         "files": records,
     }
     if error is not None:
         manifest["error"] = error
+    if parser_reason is not None:
+        manifest["parser_readiness_reason"] = parser_reason
     return manifest
 
 
