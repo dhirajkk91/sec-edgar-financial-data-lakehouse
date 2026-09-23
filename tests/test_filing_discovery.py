@@ -13,6 +13,7 @@ from sec_edgar_lakehouse import (
     FilingDocument,
     FilingReference,
     discover_filing,
+    filing_request,
 )
 
 HTML = (Path(__file__).parent / "fixtures" / "filing-index.html").read_bytes()
@@ -22,6 +23,11 @@ HTML_WITHOUT_DATA_FILES = (
 )
 REFERENCE = FilingReference("1122304", "0001193125-15-118890")
 USER_AGENT = "DiscoveryTests contact@example.org"
+
+
+@pytest.fixture(autouse=True)
+def no_real_retry_sleep(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(filing_request, "sleep", lambda _seconds: None)
 
 
 def discover(html: bytes = HTML) -> FilingDiscovery:
@@ -210,7 +216,7 @@ def test_invalid_user_agent_prevents_requests(user_agent: str) -> None:
         discover_filing(REFERENCE, user_agent=user_agent, client=client)
 
 
-@pytest.mark.parametrize("status", [301, 403, 404, 429, 500])
+@pytest.mark.parametrize("status", [301, 403, 404])
 def test_non_success_status_is_not_retried_or_redirected(status: int) -> None:
     calls = 0
 
@@ -239,10 +245,10 @@ def test_network_failure_is_a_discovery_error() -> None:
 
     with (
         httpx.Client(transport=httpx.MockTransport(handle)) as client,
-        pytest.raises(DiscoveryError, match="Could not fetch filing index"),
+        pytest.raises(DiscoveryError, match="failed after 3 attempts"),
     ):
         discover_filing(REFERENCE, user_agent=USER_AGENT, client=client)
-    assert calls == 1
+    assert calls == 3
 
 
 def test_missing_table() -> None:

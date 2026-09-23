@@ -1,16 +1,28 @@
 """Download one file from an SEC filing archive."""
 
 import re
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from urllib.parse import quote, unquote
 
 import httpx
 
 from sec_edgar_lakehouse.filing_reference import FilingReference
+from sec_edgar_lakehouse.filing_request import (
+    RequestFailure,
+    RequestPacer,
+    request_index_or_document,
+)
 
 
 class DownloadError(Exception):
     """A filing file could not be requested or returned safely."""
+
+    def __init__(
+        self, message: str, *, attempts: int = 0, stop_run: bool = False
+    ) -> None:
+        super().__init__(message)
+        self.attempts = attempts
+        self.stop_run = stop_run
 
 
 @dataclass(frozen=True, slots=True)
@@ -19,6 +31,7 @@ class DownloadedFile:
 
     document_name: str
     content: bytes
+    attempts: int = field(default=0, compare=False)
 
 
 def download_filing_file(
@@ -27,6 +40,7 @@ def download_filing_file(
     document_name: str,
     user_agent: str,
     client: httpx.Client | None = None,
+    _pacer: RequestPacer | None = None,
 ) -> DownloadedFile:
     """Download one filing file and return its bytes unchanged."""
     _validate_user_agent(user_agent)
@@ -41,11 +55,13 @@ def download_filing_file(
     )
     if client is None:
         with httpx.Client() as owned_client:
-            content = _fetch_file(owned_client, url, user_agent)
+            content, attempts = _fetch_file(owned_client, url, user_agent, _pacer)
     else:
-        content = _fetch_file(client, url, user_agent)
+        content, attempts = _fetch_file(client, url, user_agent, _pacer)
 
-    return DownloadedFile(document_name=document_name, content=content)
+    return DownloadedFile(
+        document_name=document_name, content=content, attempts=attempts
+    )
 
 
 def _validate_user_agent(user_agent: str) -> None:
@@ -79,51 +95,27 @@ def _validate_document_name(document_name: str) -> None:
         raise DownloadError(f"Unsafe document name: {document_name!r}")
 
 
-def _fetch_file(client: httpx.Client, url: str, user_agent: str) -> bytes:
+def _fetch_file(
+    client: httpx.Client, url: str, user_agent: str, pacer: RequestPacer | None
+) -> tuple[bytes, int]:
     try:
-        response = client.get(
-            url,
-            headers={"User-Agent": user_agent},
-            timeout=httpx.Timeout(30.0, connect=10.0),
-            # Following a redirect would silently turn this into more than one request.
-            follow_redirects=False,
-        )
-    except httpx.RequestError as exc:
-        raise DownloadError(f"Could not download filing file {url}: {exc}") from exc
-    if not response.is_success:
+        requested = request_index_or_document(client, url, user_agent, pacer=pacer)
+    except RequestFailure as exc:
+        if exc.attempts == 1 and str(exc).startswith("HTTP ") and not exc.stop_run:
+            message = f"Filing file request returned {exc}: {url}"
+        else:
+            message = f"Filing file request failed after {exc.attempts} attempts: {exc}: {url}"
         raise DownloadError(
-            f"Filing file request returned HTTP {response.status_code}: {url}"
-        )
+            message, attempts=exc.attempts, stop_run=exc.stop_run
+        ) from exc
+    response = requested.response
     if not response.content:
-        raise DownloadError(f"Filing file response was empty: {url}")
-    if block_reason := _sec_access_block_reason(response.content):
-        raise DownloadError(f"{block_reason}: {url}")
+        raise DownloadError(
+            f"Filing file response was empty: {url}", attempts=requested.attempts
+        )
     if length_error := _content_length_error(response):
-        raise DownloadError(f"{length_error}: {url}")
-    return response.content
-
-
-def _sec_access_block_reason(content: bytes) -> str | None:
-    preview = content[:8192].decode("utf-8", errors="ignore").casefold()
-    if "<html" not in preview[:512]:
-        return None
-    title = re.search(r"<title\b[^>]*>(.*?)</title>", preview, flags=re.DOTALL)
-    if title is None:
-        return None
-    title_text = re.sub(r"<[^>]+>", "", title.group(1)).strip()
-    if "sec.gov" in title_text and "request rate threshold exceeded" in title_text:
-        return "SEC rate-limit page returned with HTTP 200"
-    if "sec.gov" in title_text and (
-        "undeclared automated tool" in title_text or "access denied" in title_text
-    ):
-        return "SEC access-block page returned with HTTP 200"
-    if (
-        title_text == "access denied"
-        and "sec.gov" in preview
-        and ("reference #" in preview or "permission to access" in preview)
-    ):
-        return "SEC access-block page returned with HTTP 200"
-    return None
+        raise DownloadError(f"{length_error}: {url}", attempts=requested.attempts)
+    return response.content, requested.attempts
 
 
 def _content_length_error(response: httpx.Response) -> str | None:
