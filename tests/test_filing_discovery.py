@@ -1,4 +1,5 @@
 from dataclasses import FrozenInstanceError
+from datetime import timedelta
 from pathlib import Path
 
 import httpx
@@ -55,7 +56,7 @@ def test_one_get_with_correct_url_user_agent_and_timeouts(
         return httpx.Response(200, content=HTML)
 
     with httpx.Client(transport=httpx.MockTransport(handle)) as client:
-        discover_filing(reference, user_agent=USER_AGENT, client=client)
+        result = discover_filing(reference, user_agent=USER_AGENT, client=client)
         assert not client.is_closed
     assert len(requests) == 1
     request = requests[0]
@@ -68,6 +69,26 @@ def test_one_get_with_correct_url_user_agent_and_timeouts(
     assert request.headers["User-Agent"] == USER_AGENT
     assert request.extensions["timeout"]["connect"] == 10
     assert request.extensions["timeout"]["read"] == 30
+    assert result.index_content == HTML
+    assert result.index_url == str(request.url)
+    assert result.retrieved_at.utcoffset() == timedelta(0)
+    assert "index_content" not in repr(result)
+
+
+def test_keeps_exact_index_bytes_from_the_request_it_parses() -> None:
+    original = HTML + b"\r\n<!-- trailing SEC bytes -->\r\n"
+    requests: list[httpx.Request] = []
+
+    def handle(request: httpx.Request) -> httpx.Response:
+        requests.append(request)
+        return httpx.Response(200, content=original)
+
+    with httpx.Client(transport=httpx.MockTransport(handle)) as client:
+        result = discover_filing(REFERENCE, user_agent=USER_AGENT, client=client)
+
+    assert len(requests) == 1
+    assert result.index_content == original
+    assert result.submitted_documents[0].document_name == "report.htm"
 
 
 def test_submitted_documents_preserve_optional_fields_and_unknown_types() -> None:

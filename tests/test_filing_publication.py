@@ -1,20 +1,31 @@
 import hashlib
 import json
+from dataclasses import replace
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any, cast
 
 import pytest
 
+import sec_edgar_lakehouse.filing_publication as publication
 from sec_edgar_lakehouse import (
     ArtifactSection,
+    CompleteSubmissionFile,
     DownloadedFile,
+    FilingDataFile,
+    FilingDiscovery,
+    FilingDocument,
     FilingInventory,
     FilingReference,
     InventoryEntry,
     PublicationError,
     publish_filing,
 )
-from sec_edgar_lakehouse.filing_storage import StoredFile
+from sec_edgar_lakehouse.filing_storage import (
+    StorageError,
+    StoredFile,
+    store_downloaded_file,
+)
 
 REFERENCE = FilingReference("1122304", "0001193125-15-118890")
 INVENTORY = FilingInventory(
@@ -34,6 +45,17 @@ CONTENTS = {
     "package.txt": b"complete submission",
     "issuer.xsd": b"<schema />",
 }
+DISCOVERY = FilingDiscovery(
+    submitted_documents=(FilingDocument("1", "Report", "report.htm", "10-Q"),),
+    complete_submission=CompleteSubmissionFile("package.txt"),
+    data_files=(FilingDataFile("2", "Schema", "issuer.xsd", "EX-101.SCH"),),
+    index_url=(
+        "https://www.sec.gov/Archives/edgar/data/1122304/"
+        "000119312515118890/0001193125-15-118890-index.html"
+    ),
+    retrieved_at=datetime(2026, 1, 1, tzinfo=UTC),
+    index_content=b"<html>SEC index response</html>\n",
+)
 
 
 def read_manifest(path: Path) -> dict[str, Any]:
@@ -95,7 +117,9 @@ def test_invalid_inventory_is_rejected_before_staging(
     bronze_directory = tmp_path / "filings"
 
     with pytest.raises(PublicationError, match=message):
-        publish_filing(inventory, supplied, bronze_directory=bronze_directory)
+        publish_filing(
+            inventory, supplied, discovery=DISCOVERY, bronze_directory=bronze_directory
+        )
 
     assert not bronze_directory.exists()
     assert not canonical_path(bronze_directory).exists()
@@ -104,7 +128,9 @@ def test_invalid_inventory_is_rejected_before_staging(
 
 def test_complete_filing_is_published_with_manifest(tmp_path: Path) -> None:
     bronze_directory = tmp_path / "bronze" / "sec" / "filings"
-    published = publish_filing(INVENTORY, CONTENTS, bronze_directory=bronze_directory)
+    published = publish_filing(
+        INVENTORY, CONTENTS, discovery=DISCOVERY, bronze_directory=bronze_directory
+    )
 
     assert published.path == canonical_path(bronze_directory)
     assert published.manifest_path.parent == published.path / "manifests"
@@ -125,12 +151,58 @@ def test_complete_filing_is_published_with_manifest(tmp_path: Path) -> None:
         "VERIFIED",
         "VERIFIED",
         "VERIFIED",
+        "VERIFIED",
+        "VERIFIED",
     ]
     assert manifest["files"][0]["size_bytes"] == len(CONTENTS["report.htm"])
     assert (
         manifest["files"][0]["sha256"]
         == hashlib.sha256(CONTENTS["report.htm"]).hexdigest()
     )
+    index_bytes = (published.path / "metadata" / "filing-index.html").read_bytes()
+    discovery_bytes = (published.path / "metadata" / "discovery.json").read_bytes()
+    assert index_bytes == DISCOVERY.index_content
+    normalized = json.loads(discovery_bytes)
+    assert normalized["cik"] == REFERENCE.cik
+    assert normalized["accession_number"] == REFERENCE.accession_number
+    assert normalized["index_url"] == DISCOVERY.index_url
+    assert normalized["retrieved_at"] == DISCOVERY.retrieved_at.isoformat()
+    assert normalized["inventory"] == [
+        {
+            "section": "submitted",
+            "document_name": "report.htm",
+            "description": "Report",
+            "sequence": "1",
+            "document_type": "10-Q",
+            "required_for_source": True,
+        },
+        {
+            "section": "submission-package",
+            "document_name": "package.txt",
+            "description": None,
+            "sequence": None,
+            "document_type": None,
+            "required_for_source": True,
+        },
+        {
+            "section": "data-file",
+            "document_name": "issuer.xsd",
+            "description": "Schema",
+            "sequence": "2",
+            "document_type": "EX-101.SCH",
+            "required_for_source": False,
+        },
+    ]
+    assert "index_content" not in normalized
+    assert "SEC index response" not in discovery_bytes.decode()
+    for entry, content in zip(
+        manifest["files"][-2:], (index_bytes, discovery_bytes), strict=True
+    ):
+        assert entry["section"] == "metadata"
+        assert entry["required_for_source"] is True
+        assert entry["status"] == "VERIFIED"
+        assert entry["size_bytes"] == len(content)
+        assert entry["sha256"] == hashlib.sha256(content).hexdigest()
     assert not any((bronze_directory.parent / ".filing-staging").iterdir())
 
 
@@ -141,19 +213,88 @@ def test_missing_optional_file_is_recorded_and_does_not_block_publication(
     supplied = {
         name: content for name, content in CONTENTS.items() if name != "issuer.xsd"
     }
-    published = publish_filing(INVENTORY, supplied, bronze_directory=bronze_directory)
+    published = publish_filing(
+        INVENTORY, supplied, discovery=DISCOVERY, bronze_directory=bronze_directory
+    )
 
     manifest = read_manifest(published.manifest_path)
     assert manifest["status"] == "PARTIAL"
     assert manifest["source_complete"] is True
-    optional = manifest["files"][-1]
+    optional = manifest["files"][2]
     assert optional == {
         "document_name": "issuer.xsd",
         "section": "data-file",
         "required_for_source": False,
         "status": "MISSING",
     }
+    assert [record["status"] for record in manifest["files"][-2:]] == [
+        "VERIFIED",
+        "VERIFIED",
+    ]
     assert not (published.path / "sec-derived" / "issuer.xsd").exists()
+
+
+@pytest.mark.parametrize("metadata_name", ["filing-index.html", "discovery.json"])
+@pytest.mark.parametrize("failure_kind", ["write", "verify"])
+def test_metadata_failure_preserves_documents_and_blocks_publication(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    metadata_name: str,
+    failure_kind: str,
+) -> None:
+    def fail_metadata(
+        downloaded: DownloadedFile, *, destination_directory: Path
+    ) -> StoredFile:
+        if downloaded.document_name == metadata_name and failure_kind == "write":
+            raise StorageError("simulated metadata write failure")
+        stored = store_downloaded_file(
+            downloaded, destination_directory=destination_directory
+        )
+        if downloaded.document_name == metadata_name:
+            stored.path.write_bytes(b"x" * stored.size_bytes)
+        return stored
+
+    monkeypatch.setattr(publication, "store_downloaded_file", fail_metadata)
+    bronze_directory = tmp_path / "filings"
+    with pytest.raises(PublicationError, match=metadata_name) as caught:
+        publish_filing(
+            INVENTORY, CONTENTS, discovery=DISCOVERY, bronze_directory=bronze_directory
+        )
+
+    assert not canonical_path(bronze_directory).exists()
+    stage = caught.value.staging_path
+    assert stage is not None
+    assert (stage / "submitted" / "report.htm").read_bytes() == CONTENTS["report.htm"]
+    assert (stage / "submission-package" / "package.txt").read_bytes() == CONTENTS[
+        "package.txt"
+    ]
+    manifest = read_manifest(next((stage / "manifests").glob("run_id=*.json")))
+    assert manifest["status"] == "FAILED"
+    assert manifest["source_complete"] is False
+    assert metadata_name in manifest["error"]
+    failed = next(
+        record
+        for record in manifest["files"]
+        if record["document_name"] == metadata_name and record["section"] == "metadata"
+    )
+    assert failed["status"] == "FAILED"
+    assert "error" in failed
+
+
+@pytest.mark.parametrize("index_content", [b"", None])
+def test_missing_or_empty_index_evidence_blocks_publication(
+    tmp_path: Path, index_content: bytes | None
+) -> None:
+    bronze_directory = tmp_path / "filings"
+    with pytest.raises(PublicationError, match="filing-index.html") as caught:
+        publish_filing(
+            INVENTORY,
+            CONTENTS,
+            discovery=replace(DISCOVERY, index_content=cast(bytes, index_content)),
+            bronze_directory=bronze_directory,
+        )
+    assert not canonical_path(bronze_directory).exists()
+    assert caught.value.staging_path is not None
 
 
 def test_failed_optional_storage_is_recorded_without_invented_http_details(
@@ -161,13 +302,13 @@ def test_failed_optional_storage_is_recorded_without_invented_http_details(
 ) -> None:
     supplied = CONTENTS | {"issuer.xsd": b""}
     published = publish_filing(
-        INVENTORY, supplied, bronze_directory=tmp_path / "filings"
+        INVENTORY, supplied, discovery=DISCOVERY, bronze_directory=tmp_path / "filings"
     )
 
     manifest = read_manifest(published.manifest_path)
     assert manifest["status"] == "PARTIAL"
     assert manifest["source_complete"] is True
-    optional = manifest["files"][-1]
+    optional = manifest["files"][2]
     assert optional["status"] == "FAILED"
     assert "empty" in optional["error"]
     assert "attempts" not in optional
@@ -183,6 +324,7 @@ def test_missing_required_file_preserves_verified_staging_and_failure_record(
         publish_filing(
             INVENTORY,
             {"report.htm": CONTENTS["report.htm"]},
+            discovery=DISCOVERY,
             bronze_directory=bronze_directory,
         )
 
@@ -199,6 +341,8 @@ def test_missing_required_file_preserves_verified_staging_and_failure_record(
         "VERIFIED",
         "MISSING",
         "MISSING",
+        "VERIFIED",
+        "VERIFIED",
     ]
 
 
@@ -223,7 +367,9 @@ def test_tampered_required_file_blocks_publication(
     tamper_staged_file(monkeypatch, "report.htm")
     bronze_directory = tmp_path / "filings"
     with pytest.raises(PublicationError) as caught:
-        publish_filing(INVENTORY, CONTENTS, bronze_directory=bronze_directory)
+        publish_filing(
+            INVENTORY, CONTENTS, discovery=DISCOVERY, bronze_directory=bronze_directory
+        )
 
     assert not bronze_directory.exists()
     stage = caught.value.staging_path
@@ -242,14 +388,14 @@ def test_tampered_optional_file_is_removed_before_partial_publication(
 ) -> None:
     tamper_staged_file(monkeypatch, "issuer.xsd")
     published = publish_filing(
-        INVENTORY, CONTENTS, bronze_directory=tmp_path / "filings"
+        INVENTORY, CONTENTS, discovery=DISCOVERY, bronze_directory=tmp_path / "filings"
     )
 
     manifest = read_manifest(published.manifest_path)
     assert manifest["status"] == "PARTIAL"
     assert manifest["source_complete"] is True
-    assert manifest["files"][-1]["status"] == "FAILED"
-    assert "checksum changed" in manifest["files"][-1]["error"]
+    assert manifest["files"][2]["status"] == "FAILED"
+    assert "checksum changed" in manifest["files"][2]["error"]
     assert not (published.path / "sec-derived" / "issuer.xsd").exists()
     assert (published.path / "submitted" / "report.htm").read_bytes() == CONTENTS[
         "report.htm"
@@ -270,7 +416,9 @@ def test_optional_cleanup_failure_blocks_publication(
     monkeypatch.setattr(Path, "unlink", fail_optional_unlink)
     bronze_directory = tmp_path / "filings"
     with pytest.raises(PublicationError) as caught:
-        publish_filing(INVENTORY, CONTENTS, bronze_directory=bronze_directory)
+        publish_filing(
+            INVENTORY, CONTENTS, discovery=DISCOVERY, bronze_directory=bronze_directory
+        )
 
     assert not bronze_directory.exists()
     stage = caught.value.staging_path
@@ -278,7 +426,7 @@ def test_optional_cleanup_failure_blocks_publication(
     manifest = read_manifest(next((stage / "manifests").glob("run_id=*.json")))
     assert manifest["status"] == "FAILED"
     assert manifest["source_complete"] is False
-    assert "cleanup failed" in manifest["files"][-1]["error"]
+    assert "cleanup failed" in manifest["files"][2]["error"]
     assert (stage / "sec-derived" / "issuer.xsd").exists()
 
 
@@ -303,11 +451,11 @@ def test_optional_storage_failure_removes_leftover_temporary_file(
         fail_optional_storage,
     )
     published = publish_filing(
-        INVENTORY, CONTENTS, bronze_directory=tmp_path / "filings"
+        INVENTORY, CONTENTS, discovery=DISCOVERY, bronze_directory=tmp_path / "filings"
     )
     manifest = read_manifest(published.manifest_path)
     assert manifest["status"] == "PARTIAL"
-    assert manifest["files"][-1]["status"] == "FAILED"
+    assert manifest["files"][2]["status"] == "FAILED"
     assert list((published.path / "sec-derived").iterdir()) == []
 
 
@@ -323,14 +471,21 @@ def test_optional_cleanup_preserves_another_inventory_filename(
         + INVENTORY.entries[-1:],
     )
     content = CONTENTS | {similar_name: b"valid optional content", "issuer.xsd": b""}
+    discovery = replace(
+        DISCOVERY,
+        data_files=(
+            FilingDataFile(None, None, similar_name, None),
+            *DISCOVERY.data_files,
+        ),
+    )
 
     published = publish_filing(
-        inventory, content, bronze_directory=tmp_path / "filings"
+        inventory, content, discovery=discovery, bronze_directory=tmp_path / "filings"
     )
 
     manifest = read_manifest(published.manifest_path)
     assert manifest["status"] == "PARTIAL"
-    assert [file["status"] for file in manifest["files"][-2:]] == [
+    assert [file["status"] for file in manifest["files"][2:4]] == [
         "VERIFIED",
         "FAILED",
     ]
@@ -348,7 +503,9 @@ def test_existing_canonical_directory_is_never_replaced(tmp_path: Path) -> None:
     marker.write_bytes(b"keep me")
 
     with pytest.raises(PublicationError, match="already exists") as caught:
-        publish_filing(INVENTORY, CONTENTS, bronze_directory=bronze_directory)
+        publish_filing(
+            INVENTORY, CONTENTS, discovery=DISCOVERY, bronze_directory=bronze_directory
+        )
 
     assert marker.read_bytes() == b"keep me"
     assert list(existing.iterdir()) == [marker]
@@ -375,7 +532,9 @@ def test_failed_directory_move_leaves_no_partial_canonical_filing(
 
     monkeypatch.setattr("sec_edgar_lakehouse.filing_publication.os.rename", fail_move)
     with pytest.raises(PublicationError, match="move failed") as caught:
-        publish_filing(INVENTORY, CONTENTS, bronze_directory=bronze_directory)
+        publish_filing(
+            INVENTORY, CONTENTS, discovery=DISCOVERY, bronze_directory=bronze_directory
+        )
 
     assert caught.value.__cause__ is failure
     assert not canonical_path(bronze_directory).exists()
@@ -392,7 +551,9 @@ def test_each_failed_run_gets_a_unique_staging_directory(tmp_path: Path) -> None
     stages = []
     for _ in range(2):
         with pytest.raises(PublicationError) as caught:
-            publish_filing(INVENTORY, {}, bronze_directory=bronze_directory)
+            publish_filing(
+                INVENTORY, {}, discovery=DISCOVERY, bronze_directory=bronze_directory
+            )
         stages.append(caught.value.staging_path)
     assert stages[0] != stages[1]
     assert all(stage is not None and stage.is_dir() for stage in stages)

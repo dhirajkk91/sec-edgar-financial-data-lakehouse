@@ -91,8 +91,9 @@ def test_complete_filing_requests_in_inventory_order_and_publishes(
 ) -> None:
     requests: list[httpx.Request] = []
     bronze_directory = tmp_path / "filings"
+    index_response = INDEX + b"\r\n"
     with (
-        mock_client(requests) as client,
+        mock_client(requests, index_content=index_response) as client,
         patch.object(
             ingestion, "build_filing_inventory", wraps=ingestion.build_filing_inventory
         ) as build,
@@ -111,12 +112,25 @@ def test_complete_filing_requests_in_inventory_order_and_publishes(
     assert names(requests) == REQUEST_ORDER
     assert build.call_count == 1
     assert publish.call_count == 1
+    assert publish.call_args.kwargs["discovery"].index_content == index_response
     assert result.reference is REFERENCE
     assert result.status == "COMPLETE"
     assert result.staging_path is None
     assert result.download_failure is None
     assert result.published is not None
     assert result.published.path == canonical_path(bronze_directory)
+    assert (
+        result.published.path / "metadata" / "filing-index.html"
+    ).read_bytes() == index_response
+    normalized = json.loads(
+        (result.published.path / "metadata" / "discovery.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    assert normalized["index_url"] == str(requests[0].url)
+    assert [entry["document_name"] for entry in normalized["inventory"]] == list(
+        CONTENTS
+    )
     assert (
         result.published.path / "submitted" / "report.htm"
     ).read_bytes() == CONTENTS["report.htm"]
@@ -132,7 +146,11 @@ def test_complete_filing_requests_in_inventory_order_and_publishes(
     manifest = read_manifest(result.published.manifest_path)
     assert manifest["status"] == "COMPLETE"
     assert manifest["source_complete"] is True
-    assert [file["status"] for file in manifest["files"]] == ["VERIFIED"] * 4
+    assert [file["status"] for file in manifest["files"]] == ["VERIFIED"] * 6
+    assert [file["document_name"] for file in manifest["files"][-2:]] == [
+        "filing-index.html",
+        "discovery.json",
+    ]
 
 
 def test_optional_final_download_failure_publishes_partial(tmp_path: Path) -> None:
@@ -157,8 +175,12 @@ def test_optional_final_download_failure_publishes_partial(tmp_path: Path) -> No
     manifest = read_manifest(result.published.manifest_path)
     assert manifest["status"] == "PARTIAL"
     assert manifest["source_complete"] is True
+    assert [file["status"] for file in manifest["files"][-2:]] == [
+        "VERIFIED",
+        "VERIFIED",
+    ]
     # The publisher only saw missing bytes, not the HTTP response.
-    assert manifest["files"][-1] == {
+    assert manifest["files"][3] == {
         "document_name": "issuer.xsd",
         "section": "data-file",
         "required_for_source": False,
@@ -195,8 +217,45 @@ def test_optional_storage_failure_sets_partial_without_download_failure(
     manifest = read_manifest(result.published.manifest_path)
     assert manifest["status"] == "PARTIAL"
     assert manifest["source_complete"] is True
-    assert manifest["files"][-1]["status"] == "FAILED"
+    assert manifest["files"][3]["status"] == "FAILED"
     assert not (result.published.path / "sec-derived" / "issuer.xsd").exists()
+
+
+def test_metadata_failure_surfaces_staging_path_through_ingestion(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    original_store = publication.store_downloaded_file
+
+    def fail_index_storage(
+        downloaded: DownloadedFile, *, destination_directory: Path
+    ) -> StoredFile:
+        if downloaded.document_name == "filing-index.html":
+            raise StorageError("cannot archive SEC index")
+        return original_store(downloaded, destination_directory=destination_directory)
+
+    monkeypatch.setattr(publication, "store_downloaded_file", fail_index_storage)
+    requests: list[httpx.Request] = []
+    bronze_directory = tmp_path / "filings"
+    with (
+        mock_client(requests) as client,
+        pytest.raises(PublicationError, match="filing-index.html") as caught,
+    ):
+        ingest_filing(
+            REFERENCE,
+            user_agent=USER_AGENT,
+            bronze_directory=bronze_directory,
+            client=client,
+        )
+
+    assert names(requests) == REQUEST_ORDER
+    assert not canonical_path(bronze_directory).exists()
+    stage = caught.value.staging_path
+    assert stage is not None
+    assert (stage / "submitted" / "report.htm").read_bytes() == CONTENTS["report.htm"]
+    manifest = read_manifest(next((stage / "manifests").glob("run_id=*.json")))
+    assert manifest["status"] == "FAILED"
+    assert manifest["source_complete"] is False
+    assert "filing-index.html" in manifest["error"]
 
 
 def test_required_download_failure_keeps_verified_staging(tmp_path: Path) -> None:
@@ -234,6 +293,8 @@ def test_required_download_failure_keeps_verified_staging(tmp_path: Path) -> Non
         "MISSING",
         "MISSING",
         "MISSING",
+        "VERIFIED",
+        "VERIFIED",
     ]
 
 

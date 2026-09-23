@@ -6,10 +6,12 @@ import os
 import tempfile
 from collections.abc import Mapping
 from dataclasses import dataclass
+from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any
 from uuid import uuid4
 
+from sec_edgar_lakehouse.filing_discovery import FilingDiscovery
 from sec_edgar_lakehouse.filing_download import DownloadedFile
 from sec_edgar_lakehouse.filing_inventory import (
     ArtifactSection,
@@ -48,10 +50,11 @@ def publish_filing(
     inventory: FilingInventory,
     file_contents: Mapping[str, bytes],
     *,
+    discovery: FilingDiscovery,
     bronze_directory: Path,
 ) -> PublishedFiling:
     """Stage supplied bytes and publish only after required files are verified."""
-    _validate_inputs(inventory, file_contents, bronze_directory)
+    _validate_inputs(inventory, file_contents, discovery, bronze_directory)
     reference = inventory.reference
     bronze_directory = bronze_directory.resolve()
     final_path = (
@@ -78,8 +81,9 @@ def publish_filing(
     )
     manifest_relative_path = Path("manifests") / f"run_id={run_id}.json"
     records: list[dict[str, Any]] = []
-    stored_files: dict[str, StoredFile] = {}
+    stored_files: dict[tuple[str, str], StoredFile] = {}
     cleanup_error: str | None = None
+    metadata_error: str | None = None
     inventory_names = {entry.document_name for entry in inventory.entries}
 
     for entry in inventory.entries:
@@ -112,10 +116,36 @@ def publish_filing(
                     cleanup_error = str(removal_error)
                     record["error"] += f"; cleanup failed: {removal_error}"
         else:
-            stored_files[entry.document_name] = stored
+            stored_files[(entry.section.value, entry.document_name)] = stored
+
+    for metadata_name in ("filing-index.html", "discovery.json"):
+        record = {
+            "document_name": metadata_name,
+            "section": "metadata",
+            "required_for_source": True,
+            "status": "MISSING",
+        }
+        records.append(record)
+        try:
+            content = (
+                discovery.index_content
+                if metadata_name == "filing-index.html"
+                else _discovery_json(inventory, discovery)
+            )
+            stored = store_downloaded_file(
+                DownloadedFile(metadata_name, content),
+                destination_directory=staging_path / "metadata",
+            )
+        except (StorageError, OSError, TypeError, ValueError) as exc:
+            record["status"] = "FAILED"
+            record["error"] = str(exc)
+            if metadata_error is None:
+                metadata_error = f"{metadata_name}: {exc}"
+        else:
+            stored_files[("metadata", metadata_name)] = stored
 
     for record in records:
-        staged_file = stored_files.get(record["document_name"])
+        staged_file = stored_files.get((record["section"], record["document_name"]))
         if staged_file is None:
             continue
         try:
@@ -123,6 +153,8 @@ def publish_filing(
         except (OSError, ValueError) as exc:
             record["status"] = "FAILED"
             record["error"] = str(exc)
+            if record["section"] == "metadata" and metadata_error is None:
+                metadata_error = f"{record['document_name']}: {exc}"
             if not record["required_for_source"]:
                 try:
                     _remove_failed_optional_file(
@@ -151,12 +183,19 @@ def publish_filing(
             cleanup_error = str(exc)
 
     if not required_verified or cleanup_error is not None:
+        failure_error = (
+            "; ".join(
+                error for error in (metadata_error, cleanup_error) if error is not None
+            )
+            or None
+        )
         _write_manifest(
             staging_path / manifest_relative_path,
-            _manifest(inventory, run_id, "FAILED", False, records, error=cleanup_error),
+            _manifest(inventory, run_id, "FAILED", False, records, error=failure_error),
         )
+        detail = f": {metadata_error}" if metadata_error is not None else ""
         raise PublicationError(
-            f"Filing was not published; inspect {staging_path / manifest_relative_path}",
+            f"Filing was not published{detail}; inspect {staging_path / manifest_relative_path}",
             staging_path=staging_path,
         )
 
@@ -191,6 +230,7 @@ def publish_filing(
 def _validate_inputs(
     inventory: FilingInventory,
     file_contents: Mapping[str, bytes],
+    discovery: FilingDiscovery,
     bronze_directory: Path,
 ) -> None:
     if not isinstance(inventory, FilingInventory):
@@ -209,6 +249,8 @@ def _validate_inputs(
         raise PublicationError(
             "Inventory needs exactly one required submission package"
         )
+    if not isinstance(discovery, FilingDiscovery):
+        raise PublicationError("Discovery evidence must be a FilingDiscovery")
     if not isinstance(bronze_directory, Path):
         raise PublicationError("Bronze directory must be a pathlib.Path")
     if not isinstance(file_contents, Mapping):
@@ -217,6 +259,83 @@ def _validate_inputs(
     unknown_names = set(file_contents) - inventory_names
     if unknown_names:
         raise PublicationError(f"Files not in the inventory: {sorted(unknown_names)!r}")
+
+
+def _discovery_json(inventory: FilingInventory, discovery: FilingDiscovery) -> bytes:
+    if (
+        not isinstance(discovery.index_url, str)
+        or not discovery.index_url
+        or not isinstance(discovery.retrieved_at, datetime)
+        or discovery.retrieved_at.utcoffset() != timedelta(0)
+    ):
+        raise ValueError("Discovery evidence needs an index URL and UTC retrieval time")
+
+    discovered = [
+        (
+            ArtifactSection.SUBMITTED,
+            document.document_name,
+            document.description,
+            document.sequence,
+            document.document_type,
+            True,
+        )
+        for document in discovery.submitted_documents
+    ]
+    discovered.append(
+        (
+            ArtifactSection.SUBMISSION_PACKAGE,
+            discovery.complete_submission.document_name,
+            None,
+            None,
+            None,
+            True,
+        )
+    )
+    discovered.extend(
+        (
+            ArtifactSection.DATA_FILE,
+            document.document_name,
+            document.description,
+            document.sequence,
+            document.document_type,
+            False,
+        )
+        for document in discovery.data_files
+    )
+    if len(discovered) != len(inventory.entries):
+        raise ValueError("Discovery and inventory entries do not match")
+
+    normalized = []
+    for entry, (section, name, description, sequence, document_type, required) in zip(
+        inventory.entries, discovered, strict=True
+    ):
+        if (
+            entry.section,
+            entry.document_name,
+            entry.sequence,
+            entry.document_type,
+            entry.required_for_source,
+        ) != (section, name, sequence, document_type, required):
+            raise ValueError("Discovery and inventory entries do not match")
+        normalized.append(
+            {
+                "section": entry.section.value,
+                "document_name": entry.document_name,
+                "description": description,
+                "sequence": entry.sequence,
+                "document_type": entry.document_type,
+                "required_for_source": entry.required_for_source,
+            }
+        )
+
+    record = {
+        "cik": inventory.reference.cik,
+        "accession_number": inventory.reference.accession_number,
+        "index_url": discovery.index_url,
+        "retrieved_at": discovery.retrieved_at.isoformat(),
+        "inventory": normalized,
+    }
+    return (json.dumps(record, indent=2, ensure_ascii=False) + "\n").encode("utf-8")
 
 
 def _verify_staged_file(stored: StoredFile) -> None:
@@ -254,7 +373,11 @@ def _require_only_verified_files(
 ) -> None:
     verified_paths = {
         staging_path
-        / _SECTION_DIRECTORIES[ArtifactSection(record["section"])]
+        / (
+            "metadata"
+            if record["section"] == "metadata"
+            else _SECTION_DIRECTORIES[ArtifactSection(record["section"])]
+        )
         / record["document_name"]
         for record in records
         if record["status"] == "VERIFIED"
@@ -262,12 +385,12 @@ def _require_only_verified_files(
     actual_paths: set[Path] = set()
     for path in staging_path.iterdir():
         if (
-            path.name not in _SECTION_DIRECTORIES.values()
+            path.name not in (*_SECTION_DIRECTORIES.values(), "metadata")
             or not path.is_dir()
             or path.is_symlink()
         ):
             raise PublicationError(f"Unexpected staged path remains: {path}")
-    for directory_name in _SECTION_DIRECTORIES.values():
+    for directory_name in (*_SECTION_DIRECTORIES.values(), "metadata"):
         directory = staging_path / directory_name
         if directory.exists():
             for path in directory.iterdir():

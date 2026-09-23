@@ -86,7 +86,7 @@ data/bronze/sec/filings/
             └── run_id=<run-id>.json
 ```
 
-`submitted/` keeps the documents reported in the submission table. `submission-package/` contains the complete submission text file. `sec-derived/` is reserved for optional SEC-generated XBRL support files. `metadata/` contains the source index and normalized discovery record.
+`submitted/` keeps the documents reported in the submission table. `submission-package/` contains the complete submission text file. `sec-derived/` is reserved for optional SEC-generated XBRL support files. New local runs require `metadata/filing-index.html` (the exact discovery response) and `metadata/discovery.json` (the normalized discovery record) to verify before publication.
 
 Invalid or conflicting content is kept outside the canonical filing directory:
 
@@ -153,7 +153,7 @@ document_status:
 NOT_STARTED | DOWNLOADED | VERIFIED | MISSING | SKIPPED_IDENTICAL | FAILED | CONTENT_CHANGE_DETECTED
 ```
 
-For the current local publisher, `COMPLETE` means every inventory file was verified and published. `PARTIAL` means all required files were verified and published, while an optional file is `MISSING` or `FAILED`. `FAILED` means the filing was not published and `source_complete` is false. `MISSING` records that no bytes were supplied by the caller; it does not imply a download attempt.
+For the current local publisher, `COMPLETE` means every inventory file and both required metadata files were verified and published. `PARTIAL` means all required files, including metadata, were verified and published, while an optional file is `MISSING` or `FAILED`. `FAILED` means the filing was not published and `source_complete` is false. `MISSING` records that no bytes were supplied by the caller; it does not imply a download attempt.
 
 ## Failure and retry behavior
 

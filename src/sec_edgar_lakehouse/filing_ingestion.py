@@ -91,7 +91,7 @@ def _ingest_with_client(
 
     try:
         published = publish_filing(
-            inventory, contents, bronze_directory=bronze_directory
+            inventory, contents, discovery=discovery, bronze_directory=bronze_directory
         )
     except PublicationError as exc:
         if not required_download_failed or exc.staging_path is None:
