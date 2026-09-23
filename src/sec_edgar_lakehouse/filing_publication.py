@@ -14,11 +14,14 @@ from typing import Any
 from uuid import uuid4
 
 from sec_edgar_lakehouse.filing_discovery import FilingDiscovery
-from sec_edgar_lakehouse.filing_download import DownloadedFile, _sec_access_block_reason
+from sec_edgar_lakehouse.filing_download import DownloadedFile
 from sec_edgar_lakehouse.filing_inventory import (
     ArtifactSection,
     FilingInventory,
     InventoryEntry,
+)
+from sec_edgar_lakehouse.filing_request import (
+    sec_access_block_reason as _sec_access_block_reason,
 )
 from sec_edgar_lakehouse.filing_storage import (
     StorageError,
@@ -64,11 +67,22 @@ def publish_filing(
     discovery: FilingDiscovery,
     bronze_directory: Path,
     failed_files: Mapping[str, str] | None = None,
+    network_attempts: Mapping[str, int] | None = None,
+    stop_run_error: str | None = None,
 ) -> PublishedFiling:
     """Stage supplied bytes and publish only after required files are verified."""
     _validate_inputs(
         inventory, file_contents, discovery, bronze_directory, failed_files
     )
+    if network_attempts is not None and (
+        set(network_attempts) - {entry.document_name for entry in inventory.entries}
+        or any(
+            type(value) is not int or value < 1 for value in network_attempts.values()
+        )
+    ):
+        raise PublicationError(
+            "Network attempts must identify requested inventory files"
+        )
     primary_name = _primary_document_name(discovery)
     failed_files = {} if failed_files is None else failed_files
     reference = inventory.reference
@@ -109,6 +123,8 @@ def publish_filing(
             "required_for_source": entry.required_for_source,
             "status": "MISSING",
         }
+        if network_attempts is not None and entry.document_name in network_attempts:
+            record["network_attempts"] = network_attempts[entry.document_name]
         records.append(record)
         if entry.document_name in failed_files:
             record["status"] = "FAILED"
@@ -209,7 +225,7 @@ def publish_filing(
         except (OSError, PublicationError) as exc:
             cleanup_error = str(exc)
 
-    if not required_verified or cleanup_error is not None:
+    if not required_verified or cleanup_error is not None or stop_run_error is not None:
         required_errors = [
             f"{record['document_name']}: {record['error']}"
             for record in records
@@ -218,7 +234,9 @@ def publish_filing(
             and record["status"] == "FAILED"
         ]
         reported_errors = [
-            error for error in (metadata_error, *required_errors) if error is not None
+            error
+            for error in (metadata_error, *required_errors, stop_run_error)
+            if error is not None
         ]
         failure_error = (
             "; ".join(error for error in (*reported_errors, cleanup_error) if error)

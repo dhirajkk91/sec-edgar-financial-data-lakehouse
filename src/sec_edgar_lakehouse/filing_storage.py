@@ -1,6 +1,7 @@
 """Persist one downloaded filing file locally."""
 
 import hashlib
+import ntpath
 import os
 import tempfile
 from dataclasses import dataclass
@@ -93,7 +94,7 @@ def _validate_downloaded_file(downloaded: DownloadedFile) -> None:
         or "\\" in decoded_name
         or any(ord(char) < 32 or ord(char) == 127 for char in decoded_name)
         or Path(name).name != name
-        or (os.name == "nt" and os.path.isreserved(name))
+        or (os.name == "nt" and ntpath.isreserved(name))
     ):
         raise StorageError(f"Unsafe document name: {name!r}")
     if not isinstance(downloaded.content, bytes):

@@ -8,15 +8,23 @@ from urllib.parse import unquote
 import httpx
 from bs4 import BeautifulSoup
 
-from sec_edgar_lakehouse.filing_download import (
-    _content_length_error,
-    _sec_access_block_reason,
-)
+from sec_edgar_lakehouse.filing_download import _content_length_error
 from sec_edgar_lakehouse.filing_reference import FilingReference
+from sec_edgar_lakehouse.filing_request import (
+    RequestFailure,
+    RequestPacer,
+    request_index_or_document,
+)
 
 
 class DiscoveryError(Exception):
     """The filing index could not be fetched or its documents could not be read."""
+
+    def __init__(self, message: str, *, attempts: int = 0) -> None:
+        if attempts and "attempt" not in message:
+            message = f"{message} (after {attempts} network attempt{'s' if attempts != 1 else ''})"
+        super().__init__(message)
+        self.attempts = attempts
 
 
 @dataclass(frozen=True, slots=True)
@@ -63,6 +71,7 @@ def discover_filing(
     *,
     user_agent: str,
     client: httpx.Client | None = None,
+    _pacer: RequestPacer | None = None,
 ) -> FilingDiscovery:
     """Fetch one filing index and return its listed filing files.
 
@@ -79,10 +88,13 @@ def discover_filing(
     )
     if client is None:
         with httpx.Client() as owned_client:
-            html = _fetch_index(owned_client, url, user_agent)
+            html, attempts = _fetch_index(owned_client, url, user_agent, _pacer)
     else:
-        html = _fetch_index(client, url, user_agent)
-    return _parse_discovery(html, index_url=url, retrieved_at=datetime.now(UTC))
+        html, attempts = _fetch_index(client, url, user_agent, _pacer)
+    try:
+        return _parse_discovery(html, index_url=url, retrieved_at=datetime.now(UTC))
+    except DiscoveryError as exc:
+        raise DiscoveryError(str(exc), attempts=attempts) from exc
 
 
 def _validate_user_agent(user_agent: str) -> None:
@@ -102,28 +114,25 @@ def _validate_user_agent(user_agent: str) -> None:
         )
 
 
-def _fetch_index(client: httpx.Client, url: str, user_agent: str) -> bytes:
+def _fetch_index(
+    client: httpx.Client, url: str, user_agent: str, pacer: RequestPacer | None
+) -> tuple[bytes, int]:
     try:
-        response = client.get(
-            url,
-            headers={"User-Agent": user_agent},
-            timeout=httpx.Timeout(30.0, connect=10.0),
-            # A redirect would otherwise turn discovery into more than one request.
-            follow_redirects=False,
-        )
-    except httpx.RequestError as exc:
-        raise DiscoveryError(f"Could not fetch filing index {url}: {exc}") from exc
-    if not response.is_success:
+        requested = request_index_or_document(client, url, user_agent, pacer=pacer)
+    except RequestFailure as exc:
         raise DiscoveryError(
-            f"Filing index request returned HTTP {response.status_code}: {url}"
-        )
+            f"Filing index request failed after {exc.attempts} "
+            f"attempt{'s' if exc.attempts != 1 else ''}: {exc}: {url}",
+            attempts=exc.attempts,
+        ) from exc
+    response = requested.response
     if not response.content:
-        raise DiscoveryError(f"Filing index response was empty: {url}")
-    if block_reason := _sec_access_block_reason(response.content):
-        raise DiscoveryError(f"{block_reason}: {url}")
+        raise DiscoveryError(
+            f"Filing index response was empty: {url}", attempts=requested.attempts
+        )
     if length_error := _content_length_error(response):
-        raise DiscoveryError(f"{length_error}: {url}")
-    return response.content
+        raise DiscoveryError(f"{length_error}: {url}", attempts=requested.attempts)
+    return response.content, requested.attempts
 
 
 def _parse_discovery(

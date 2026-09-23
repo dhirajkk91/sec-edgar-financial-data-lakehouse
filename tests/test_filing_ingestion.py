@@ -213,28 +213,31 @@ def test_invalid_required_content_blocks_publication(
 ) -> None:
     requests: list[httpx.Request] = []
     bronze_directory = tmp_path / "filings"
-    with (
-        mock_client(requests, contents=CONTENTS | {name: body}) as client,
-        pytest.raises(PublicationError) as caught,
-    ):
-        ingest_filing(
+    with mock_client(requests, contents=CONTENTS | {name: body}) as client:
+        result = ingest_filing(
             REFERENCE,
             user_agent=USER_AGENT,
             bronze_directory=bronze_directory,
             client=client,
         )
 
-    assert names(requests) == REQUEST_ORDER
+    assert names(requests) == REQUEST_ORDER[: REQUEST_ORDER.index(name) + 1]
+    assert result.status == "FAILED"
+    assert result.published is None
     assert not canonical_path(bronze_directory).exists()
-    stage = caught.value.staging_path
+    stage = result.staging_path
     assert stage is not None
-    assert (stage / "submitted" / "exhibit.htm").read_bytes() == CONTENTS["exhibit.htm"]
+    if name == "package.txt":
+        assert (stage / "submitted" / "exhibit.htm").read_bytes() == CONTENTS[
+            "exhibit.htm"
+        ]
     manifest = read_manifest(next((stage / "manifests").glob("run_id=*.json")))
     assert manifest["status"] == "FAILED"
     assert manifest["source_complete"] is False
     failed = next(file for file in manifest["files"] if file["document_name"] == name)
     assert failed["status"] == "FAILED"
     assert reason in failed["error"]
+    assert failed["network_attempts"] == 1
 
 
 def test_malformed_optional_xml_is_removed_from_partial_publication(
@@ -253,7 +256,8 @@ def test_malformed_optional_xml_is_removed_from_partial_publication(
 
     assert names(requests) == REQUEST_ORDER
     assert result.status == "PARTIAL"
-    assert result.download_failure is None
+    assert result.download_failure is not None
+    assert "Malformed XML" in result.download_failure.message
     assert result.parser_ready is False
     assert result.published is not None
     assert not (result.published.path / "sec-derived" / "issuer.xsd").exists()
@@ -360,32 +364,29 @@ def test_ambiguous_extracted_instances_leave_parser_unready(tmp_path: Path) -> N
     assert "Multiple EXTRACTED" in manifest["parser_readiness_reason"]
 
 
-def test_parser_ready_can_be_true_when_source_incomplete(tmp_path: Path) -> None:
+def test_required_content_failure_stops_before_parser_input(tmp_path: Path) -> None:
     contents = CONTENTS_WITH_EXTRACTED | {"package.txt": b"invalid package"}
     requests: list[httpx.Request] = []
     bronze_directory = tmp_path / "filings"
-    with (
-        mock_client(
-            requests, index_content=INDEX_WITH_EXTRACTED, contents=contents
-        ) as client,
-        pytest.raises(PublicationError) as caught,
-    ):
-        ingest_filing(
+    with mock_client(
+        requests, index_content=INDEX_WITH_EXTRACTED, contents=contents
+    ) as client:
+        result = ingest_filing(
             REFERENCE,
             user_agent=USER_AGENT,
             bronze_directory=bronze_directory,
             client=client,
         )
     assert not canonical_path(bronze_directory).exists()
-    stage = caught.value.staging_path
+    assert names(requests) == REQUEST_ORDER[:4]
+    stage = result.staging_path
     assert stage is not None
     manifest = read_manifest(next((stage / "manifests").glob("run_id=*.json")))
     assert manifest["status"] == "FAILED"
     assert manifest["source_complete"] is False
-    assert manifest["parser_ready"] is True
-    assert (stage / "sec-derived" / "issuer_htm.xml").read_bytes() == contents[
-        "issuer_htm.xml"
-    ]
+    assert manifest["parser_ready"] is False
+    assert manifest["files"][4]["status"] == "MISSING"
+    assert not (stage / "sec-derived" / "issuer_htm.xml").exists()
 
 
 def test_optional_final_download_failure_publishes_partial(tmp_path: Path) -> None:
@@ -414,13 +415,14 @@ def test_optional_final_download_failure_publishes_partial(tmp_path: Path) -> No
         "VERIFIED",
         "VERIFIED",
     ]
-    # The publisher gets the attempted file's error, but no made-up retry details.
+    # Only the requested file gets a network attempt count.
     assert manifest["files"][3] == {
         "document_name": "issuer.xsd",
         "section": "data-file",
         "required_for_source": False,
         "status": "FAILED",
         "error": result.download_failure.message,
+        "network_attempts": 1,
     }
 
 
@@ -592,7 +594,7 @@ def test_discovery_failure_stops_before_download_or_publication(
                 client=client,
             )
         assert not client.is_closed
-    assert names(requests) == [INDEX_NAME]
+    assert names(requests) == [INDEX_NAME] * 3
     assert not (tmp_path / "filings").exists()
 
 
@@ -631,6 +633,7 @@ def test_paces_discovery_and_download_requests(
         clock[0] += seconds
 
     monkeypatch.setattr(ingestion, "sleep", fake_sleep)
+    monkeypatch.setattr(ingestion, "monotonic", lambda: clock[0])
     with mock_client(requests, request_times=request_times, clock=clock) as client:
         ingest_filing(
             REFERENCE,
@@ -715,3 +718,315 @@ def test_result_types_are_frozen_and_slotted() -> None:
         failure.message = "changed"  # type: ignore[misc]
     with pytest.raises(FrozenInstanceError):
         result.status = "COMPLETE"  # type: ignore[misc]
+
+
+def test_index_retry_recovery_uses_same_pace_as_documents(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    clock = [0.0]
+    sleeps: list[float] = []
+    request_times: list[float] = []
+    requests: list[str] = []
+    index_calls = 0
+
+    def fake_sleep(seconds: float) -> None:
+        sleeps.append(seconds)
+        clock[0] += seconds
+
+    def respond(request: httpx.Request) -> httpx.Response:
+        nonlocal index_calls
+        name = request.url.path.rsplit("/", maxsplit=1)[-1]
+        requests.append(name)
+        request_times.append(clock[0])
+        if name == INDEX_NAME:
+            index_calls += 1
+            return httpx.Response(500 if index_calls == 1 else 200, content=INDEX)
+        return httpx.Response(200, content=CONTENTS[name])
+
+    monkeypatch.setattr(ingestion, "sleep", fake_sleep)
+    monkeypatch.setattr(ingestion, "monotonic", lambda: clock[0])
+    with httpx.Client(transport=httpx.MockTransport(respond)) as client:
+        result = ingest_filing(
+            REFERENCE,
+            user_agent=USER_AGENT,
+            bronze_directory=tmp_path / "filings",
+            client=client,
+            request_interval_seconds=0.75,
+        )
+    assert result.status == "COMPLETE"
+    assert requests == [INDEX_NAME, INDEX_NAME, *CONTENTS]
+    assert request_times == [0, 1, 1.75, 2.5, 3.25, 4.0]
+    assert sleeps == [1, 0.75, 0.75, 0.75, 0.75]
+
+
+def test_document_retry_success_records_attempts(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    clock = [0.0]
+    sleeps: list[float] = []
+    requests: list[str] = []
+    report_calls = 0
+
+    def fake_sleep(seconds: float) -> None:
+        sleeps.append(seconds)
+        clock[0] += seconds
+
+    def respond(request: httpx.Request) -> httpx.Response:
+        nonlocal report_calls
+        name = request.url.path.rsplit("/", maxsplit=1)[-1]
+        requests.append(name)
+        if name == INDEX_NAME:
+            return httpx.Response(200, content=INDEX)
+        if name == "report.htm":
+            report_calls += 1
+            if report_calls == 1:
+                return httpx.Response(429, headers={"Retry-After": "2"})
+        return httpx.Response(200, content=CONTENTS[name])
+
+    monkeypatch.setattr(ingestion, "sleep", fake_sleep)
+    monkeypatch.setattr(ingestion, "monotonic", lambda: clock[0])
+    with httpx.Client(transport=httpx.MockTransport(respond)) as client:
+        result = ingest_filing(
+            REFERENCE,
+            user_agent=USER_AGENT,
+            bronze_directory=tmp_path / "filings",
+            client=client,
+        )
+    assert requests == [INDEX_NAME, "report.htm", "report.htm", *list(CONTENTS)[1:]]
+    assert sleeps == [0.5, 2, 0.5, 0.5, 0.5]
+    assert result.published is not None
+    manifest = read_manifest(result.published.manifest_path)
+    assert manifest["files"][0]["network_attempts"] == 2
+    assert all(file["network_attempts"] == 1 for file in manifest["files"][1:4])
+    assert all("network_attempts" not in file for file in manifest["files"][4:])
+
+
+def test_optional_exhaustion_continues_to_later_file_and_publishes_partial(
+    tmp_path: Path,
+) -> None:
+    requests: list[str] = []
+
+    def respond(request: httpx.Request) -> httpx.Response:
+        name = request.url.path.rsplit("/", maxsplit=1)[-1]
+        requests.append(name)
+        if name == INDEX_NAME:
+            return httpx.Response(200, content=INDEX_WITH_EXTRACTED)
+        if name == "issuer.xsd":
+            return httpx.Response(503)
+        return httpx.Response(200, content=CONTENTS_WITH_EXTRACTED[name])
+
+    with httpx.Client(transport=httpx.MockTransport(respond)) as client:
+        result = ingest_filing(
+            REFERENCE,
+            user_agent=USER_AGENT,
+            bronze_directory=tmp_path / "filings",
+            client=client,
+        )
+    assert requests == [INDEX_NAME, *list(CONTENTS)[:3], "issuer.xsd"] + [
+        "issuer.xsd",
+        "issuer.xsd",
+        "issuer_htm.xml",
+    ]
+    assert result.status == "PARTIAL"
+    assert result.parser_ready is True
+    assert result.published is not None
+    manifest = read_manifest(result.published.manifest_path)
+    by_name = {file["document_name"]: file for file in manifest["files"]}
+    assert by_name["issuer.xsd"]["status"] == "FAILED"
+    assert by_name["issuer.xsd"]["network_attempts"] == 3
+    assert "HTTP 503" in by_name["issuer.xsd"]["error"]
+    assert by_name["issuer_htm.xml"]["status"] == "VERIFIED"
+    assert by_name["issuer_htm.xml"]["network_attempts"] == 1
+
+
+def test_multiple_optional_failures_keep_each_manifest_reason(tmp_path: Path) -> None:
+    def respond(request: httpx.Request) -> httpx.Response:
+        name = request.url.path.rsplit("/", maxsplit=1)[-1]
+        if name == INDEX_NAME:
+            return httpx.Response(200, content=INDEX_WITH_EXTRACTED)
+        if name == "issuer.xsd":
+            return httpx.Response(404)
+        if name == "issuer_htm.xml":
+            return httpx.Response(500)
+        return httpx.Response(200, content=CONTENTS_WITH_EXTRACTED[name])
+
+    with httpx.Client(transport=httpx.MockTransport(respond)) as client:
+        result = ingest_filing(
+            REFERENCE,
+            user_agent=USER_AGENT,
+            bronze_directory=tmp_path / "filings",
+            client=client,
+        )
+    assert result.status == "PARTIAL"
+    assert result.published is not None
+    manifest = read_manifest(result.published.manifest_path)
+    by_name = {file["document_name"]: file for file in manifest["files"]}
+    assert by_name["issuer.xsd"]["status"] == "FAILED"
+    assert by_name["issuer.xsd"]["network_attempts"] == 1
+    assert "HTTP 404" in by_name["issuer.xsd"]["error"]
+    assert by_name["issuer_htm.xml"]["status"] == "FAILED"
+    assert by_name["issuer_htm.xml"]["network_attempts"] == 3
+    assert "HTTP 500" in by_name["issuer_htm.xml"]["error"]
+
+
+@pytest.mark.parametrize("status", [403, 200])
+def test_access_block_on_optional_file_fails_entire_run(
+    tmp_path: Path, status: int
+) -> None:
+    requests: list[str] = []
+    block = b"<html><head><title>SEC.gov | Request Rate Threshold Exceeded</title></head></html>"
+
+    def respond(request: httpx.Request) -> httpx.Response:
+        name = request.url.path.rsplit("/", maxsplit=1)[-1]
+        requests.append(name)
+        if name == INDEX_NAME:
+            return httpx.Response(200, content=INDEX_WITH_EXTRACTED)
+        if name == "issuer.xsd":
+            return httpx.Response(status, content=block)
+        return httpx.Response(200, content=CONTENTS_WITH_EXTRACTED[name])
+
+    bronze_directory = tmp_path / "filings"
+    with httpx.Client(transport=httpx.MockTransport(respond)) as client:
+        result = ingest_filing(
+            REFERENCE,
+            user_agent=USER_AGENT,
+            bronze_directory=bronze_directory,
+            client=client,
+        )
+    assert requests == [INDEX_NAME, *list(CONTENTS)[:3], "issuer.xsd"]
+    assert result.status == "FAILED"
+    assert result.published is None
+    assert not canonical_path(bronze_directory).exists()
+    assert result.staging_path is not None
+    manifest = read_manifest(next((result.staging_path / "manifests").glob("*.json")))
+    assert manifest["status"] == "FAILED"
+    assert manifest["files"][3]["status"] == "FAILED"
+    assert manifest["files"][3]["network_attempts"] == 1
+    assert manifest["files"][4]["status"] == "MISSING"
+
+
+def test_retry_after_over_limit_on_optional_file_stops_run(tmp_path: Path) -> None:
+    requests: list[str] = []
+
+    def respond(request: httpx.Request) -> httpx.Response:
+        name = request.url.path.rsplit("/", maxsplit=1)[-1]
+        requests.append(name)
+        if name == INDEX_NAME:
+            return httpx.Response(200, content=INDEX_WITH_EXTRACTED)
+        if name == "issuer.xsd":
+            return httpx.Response(429, headers={"Retry-After": "61"})
+        return httpx.Response(200, content=CONTENTS_WITH_EXTRACTED[name])
+
+    with httpx.Client(transport=httpx.MockTransport(respond)) as client:
+        result = ingest_filing(
+            REFERENCE,
+            user_agent=USER_AGENT,
+            bronze_directory=tmp_path / "filings",
+            client=client,
+        )
+    assert requests == [INDEX_NAME, *list(CONTENTS)[:3], "issuer.xsd"]
+    assert result.status == "FAILED"
+    assert result.staging_path is not None
+    manifest = read_manifest(next((result.staging_path / "manifests").glob("*.json")))
+    assert "60-second limit" in manifest["error"]
+    assert manifest["files"][3]["network_attempts"] == 1
+    assert manifest["files"][4]["status"] == "MISSING"
+
+
+def test_required_exhaustion_stops_later_downloads_and_stages_failed(
+    tmp_path: Path,
+) -> None:
+    requests: list[str] = []
+
+    def respond(request: httpx.Request) -> httpx.Response:
+        name = request.url.path.rsplit("/", maxsplit=1)[-1]
+        requests.append(name)
+        if name == INDEX_NAME:
+            return httpx.Response(200, content=INDEX)
+        if name == "exhibit.htm":
+            return httpx.Response(500)
+        return httpx.Response(200, content=CONTENTS[name])
+
+    bronze_directory = tmp_path / "filings"
+    with httpx.Client(transport=httpx.MockTransport(respond)) as client:
+        result = ingest_filing(
+            REFERENCE,
+            user_agent=USER_AGENT,
+            bronze_directory=bronze_directory,
+            client=client,
+        )
+    assert requests == [
+        INDEX_NAME,
+        "report.htm",
+        "exhibit.htm",
+        "exhibit.htm",
+        "exhibit.htm",
+    ]
+    assert result.status == "FAILED"
+    assert not canonical_path(bronze_directory).exists()
+    assert result.staging_path is not None
+    manifest = read_manifest(next((result.staging_path / "manifests").glob("*.json")))
+    assert [item["status"] for item in manifest["files"][:4]] == [
+        "VERIFIED",
+        "FAILED",
+        "MISSING",
+        "MISSING",
+    ]
+    assert manifest["files"][1]["network_attempts"] == 3
+    assert "HTTP 500" in manifest["files"][1]["error"]
+
+
+def test_optional_invalid_content_continues_to_later_file(tmp_path: Path) -> None:
+    requests: list[str] = []
+
+    def respond(request: httpx.Request) -> httpx.Response:
+        name = request.url.path.rsplit("/", maxsplit=1)[-1]
+        requests.append(name)
+        if name == INDEX_NAME:
+            return httpx.Response(200, content=INDEX_WITH_EXTRACTED)
+        body = b"<schema>" if name == "issuer.xsd" else CONTENTS_WITH_EXTRACTED[name]
+        return httpx.Response(200, content=body)
+
+    with httpx.Client(transport=httpx.MockTransport(respond)) as client:
+        result = ingest_filing(
+            REFERENCE,
+            user_agent=USER_AGENT,
+            bronze_directory=tmp_path / "filings",
+            client=client,
+        )
+    assert requests == [INDEX_NAME, *CONTENTS_WITH_EXTRACTED]
+    assert result.status == "PARTIAL"
+    assert result.parser_ready is True
+    assert result.published is not None
+    manifest = read_manifest(result.published.manifest_path)
+    by_name = {item["document_name"]: item for item in manifest["files"]}
+    assert by_name["issuer.xsd"]["status"] == "FAILED"
+    assert by_name["issuer.xsd"]["network_attempts"] == 1
+    assert "Malformed XML" in by_name["issuer.xsd"]["error"]
+    assert by_name["issuer_htm.xml"]["status"] == "VERIFIED"
+
+
+def test_index_exhaustion_exposes_attempt_count_and_final_reason(
+    tmp_path: Path,
+) -> None:
+    requests: list[str] = []
+
+    def respond(request: httpx.Request) -> httpx.Response:
+        requests.append(request.url.path.rsplit("/", maxsplit=1)[-1])
+        return httpx.Response(503, content=b"busy")
+
+    with (
+        httpx.Client(transport=httpx.MockTransport(respond)) as client,
+        pytest.raises(
+            DiscoveryError, match="failed after 3 attempts: HTTP 503"
+        ) as caught,
+    ):
+        ingest_filing(
+            REFERENCE,
+            user_agent=USER_AGENT,
+            bronze_directory=tmp_path / "filings",
+            client=client,
+        )
+    assert caught.value.attempts == 3
+    assert requests == [INDEX_NAME] * 3
+    assert not (tmp_path / "filings").exists()

@@ -9,10 +9,16 @@ from sec_edgar_lakehouse import (
     DownloadError,
     FilingReference,
     download_filing_file,
+    filing_request,
 )
 
 REFERENCE = FilingReference("1122304", "0001193125-15-118890")
 USER_AGENT = "DownloadTests contact@example.org"
+
+
+@pytest.fixture(autouse=True)
+def no_real_retry_sleep(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(filing_request, "sleep", lambda _seconds: None)
 
 
 def test_downloads_one_file_with_expected_request() -> None:
@@ -196,7 +202,7 @@ def test_network_failure_is_a_download_error() -> None:
 
     with (
         httpx.Client(transport=httpx.MockTransport(handle)) as client,
-        pytest.raises(DownloadError, match="Could not download filing file"),
+        pytest.raises(DownloadError, match="failed after 3 attempts"),
     ):
         download_filing_file(
             REFERENCE,
@@ -205,10 +211,10 @@ def test_network_failure_is_a_download_error() -> None:
             client=client,
         )
 
-    assert calls == 1
+    assert calls == 3
 
 
-@pytest.mark.parametrize("status", [302, 403, 404, 429, 500])
+@pytest.mark.parametrize("status", [302, 403, 404])
 def test_non_success_response_is_not_retried_or_redirected(status: int) -> None:
     calls = 0
 
