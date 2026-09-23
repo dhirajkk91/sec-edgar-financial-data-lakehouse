@@ -1,4 +1,5 @@
 from dataclasses import FrozenInstanceError, replace
+from datetime import UTC, datetime
 
 import pytest
 
@@ -29,6 +30,9 @@ DISCOVERY = FilingDiscovery(
         FilingDataFile("4", "Future data", "future.xml", "Unknown-Type"),
         FilingDataFile(None, None, "optional.xml", None),
     ),
+    index_url="https://www.sec.gov/Archives/edgar/data/1122304/index.html",
+    retrieved_at=datetime(2026, 1, 1, tzinfo=UTC),
+    index_content=b"<html>index</html>",
 )
 
 
@@ -82,6 +86,9 @@ def test_discovery_is_unchanged_and_build_is_deterministic() -> None:
         tuple(replace(document) for document in DISCOVERY.submitted_documents),
         replace(DISCOVERY.complete_submission),
         tuple(replace(data_file) for data_file in DISCOVERY.data_files),
+        DISCOVERY.index_url,
+        DISCOVERY.retrieved_at,
+        DISCOVERY.index_content,
     )
     first = build_filing_inventory(REFERENCE, DISCOVERY)
     assert DISCOVERY == before

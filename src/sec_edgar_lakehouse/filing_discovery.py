@@ -1,7 +1,8 @@
 """Discover files listed on an SEC filing index."""
 
 import re
-from dataclasses import dataclass
+from dataclasses import dataclass, field
+from datetime import UTC, datetime
 from urllib.parse import unquote
 
 import httpx
@@ -48,6 +49,9 @@ class FilingDiscovery:
     submitted_documents: tuple[FilingDocument, ...]
     complete_submission: CompleteSubmissionFile
     data_files: tuple[FilingDataFile, ...]
+    index_url: str
+    retrieved_at: datetime
+    index_content: bytes = field(repr=False)
 
 
 def discover_filing(
@@ -74,7 +78,7 @@ def discover_filing(
             html = _fetch_index(owned_client, url, user_agent)
     else:
         html = _fetch_index(client, url, user_agent)
-    return _parse_discovery(html)
+    return _parse_discovery(html, index_url=url, retrieved_at=datetime.now(UTC))
 
 
 def _validate_user_agent(user_agent: str) -> None:
@@ -112,7 +116,9 @@ def _fetch_index(client: httpx.Client, url: str, user_agent: str) -> bytes:
     return response.content
 
 
-def _parse_discovery(html: bytes) -> FilingDiscovery:
+def _parse_discovery(
+    html: bytes, *, index_url: str, retrieved_at: datetime
+) -> FilingDiscovery:
     soup = BeautifulSoup(html, "html.parser")
     table = soup.find("table", attrs={"summary": "Document Format Files"})
     if table is None:
@@ -197,6 +203,9 @@ def _parse_discovery(html: bytes) -> FilingDiscovery:
         submitted_documents=tuple(documents),
         complete_submission=CompleteSubmissionFile(complete_submission_name),
         data_files=_parse_data_files(soup),
+        index_url=index_url,
+        retrieved_at=retrieved_at,
+        index_content=html,
     )
 
 
