@@ -169,6 +169,11 @@ def _validate_inputs(
         raise SilverWriteError(
             f"Output directory parent is not a directory: {output_directory.parent}"
         )
+    _validate_extraction(extraction)
+
+
+def _validate_extraction(extraction: SilverExtraction) -> None:
+    """Check source identity and counts before either writer creates staging."""
     if extraction.accepted_count != len(extraction.accepted_facts):
         raise SilverWriteError("Accepted fact count does not match the extraction")
     if extraction.rejected_count != len(extraction.rejected_occurrences):
@@ -382,7 +387,7 @@ def _verify_schema(
     expected: tuple[tuple[str, str], ...],
 ) -> None:
     rows = connection.execute(
-        "DESCRIBE SELECT * FROM read_parquet(?)", [str(path)]
+        "DESCRIBE SELECT * FROM read_parquet(?, hive_partitioning=false)", [str(path)]
     ).fetchall()
     actual = tuple((str(row[0]), str(row[1])) for row in rows)
     if actual != expected:
@@ -399,7 +404,7 @@ def _verify_count(
     subject: str,
 ) -> None:
     row = connection.execute(
-        "SELECT count(*) FROM read_parquet(?)", [str(path)]
+        "SELECT count(*) FROM read_parquet(?, hive_partitioning=false)", [str(path)]
     ).fetchone()
     if row is None:
         raise SilverWriteError(f"Could not read Parquet {subject} count")
@@ -416,7 +421,8 @@ def _verify_fact_identity(
     facts_path: Path,
 ) -> None:
     rows = connection.execute(
-        "SELECT source_occurrence_id FROM read_parquet(?)", [str(facts_path)]
+        "SELECT source_occurrence_id FROM read_parquet(?, hive_partitioning=false)",
+        [str(facts_path)],
     ).fetchall()
     actual_ids = tuple(str(row[0]) for row in rows)
     expected_ids = tuple(
@@ -438,8 +444,8 @@ def _verify_dimension_links(
     row = connection.execute(
         """
         SELECT count(*)
-        FROM read_parquet(?) AS dimensions
-        LEFT JOIN read_parquet(?) AS facts USING (source_occurrence_id)
+        FROM read_parquet(?, hive_partitioning=false) AS dimensions
+        LEFT JOIN read_parquet(?, hive_partitioning=false) AS facts USING (source_occurrence_id)
         WHERE facts.source_occurrence_id IS NULL
         """,
         [str(dimensions_path), str(facts_path)],
@@ -459,7 +465,7 @@ def _verify_decimals(
     facts_path: Path,
 ) -> None:
     rows = connection.execute(
-        "SELECT source_occurrence_id, value_decimal, is_nil FROM read_parquet(?)",
+        "SELECT source_occurrence_id, value_decimal, is_nil FROM read_parquet(?, hive_partitioning=false)",
         [str(facts_path)],
     ).fetchall()
     expected = {
@@ -489,7 +495,7 @@ def _verify_rejections(
     rejections_path: Path,
 ) -> None:
     rows = connection.execute(
-        "SELECT source_occurrence_id, raw_attributes_json FROM read_parquet(?)",
+        "SELECT source_occurrence_id, raw_attributes_json FROM read_parquet(?, hive_partitioning=false)",
         [str(rejections_path)],
     ).fetchall()
     actual_ids = tuple(str(row[0]) for row in rows)

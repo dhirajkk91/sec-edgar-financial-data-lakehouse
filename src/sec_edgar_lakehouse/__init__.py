@@ -52,6 +52,11 @@ from sec_edgar_lakehouse.silver_parquet import (
     SilverWriteError,
     write_silver_parquet,
 )
+from sec_edgar_lakehouse.silver_publication import (
+    SilverPublicationError,
+    SilverPublicationResult,
+    publish_silver_extraction,
+)
 
 # Keep the package root as the stable import surface for callers.
 __all__ = [
@@ -78,6 +83,8 @@ __all__ = [
     "SilverFact",
     "SilverInputError",
     "SilverParquetFiles",
+    "SilverPublicationError",
+    "SilverPublicationResult",
     "SilverWriteError",
     "StorageError",
     "StoredFile",
@@ -87,6 +94,7 @@ __all__ = [
     "extract_filing_facts",
     "ingest_filing",
     "publish_filing",
+    "publish_silver_extraction",
     "store_downloaded_file",
     "write_silver_parquet",
 ]
