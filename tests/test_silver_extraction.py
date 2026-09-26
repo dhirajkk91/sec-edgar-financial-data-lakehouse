@@ -384,6 +384,75 @@ def test_decimal_38_18_boundary_is_exact_without_rounding(tmp_path: Path) -> Non
     assert result.rejected_occurrences[0].reason_code == "DECIMAL_OUT_OF_RANGE"
 
 
+def test_child_inside_unit_measure_rejects_only_affected_fact(tmp_path: Path) -> None:
+    valid_product = """<xbrli:unit id="PRODUCT">
+  <xbrli:measure>iso4217:USD</xbrli:measure>
+  <xbrli:measure>xbrli:shares</xbrli:measure>
+</xbrli:unit>"""
+    malformed = """<xbrli:unit id="MALFORMED">
+  <xbrli:measure>iso4217:USD<acme:extra /></xbrli:measure>
+</xbrli:unit>"""
+    xml = xbrl(
+        instant_context(),
+        valid_product,
+        malformed,
+        '<us-gaap:Assets contextRef="instant" unitRef="PRODUCT">42</us-gaap:Assets>',
+        '<us-gaap:Liabilities contextRef="instant" unitRef="MALFORMED">7</us-gaap:Liabilities>',
+    )
+    directory, manifest = fixture(tmp_path, xml)
+
+    result = extract_filing_facts(directory, manifest)
+
+    assert result.status == "PARTIAL"
+    assert (result.candidate_count, result.accepted_count, result.rejected_count) == (
+        2,
+        1,
+        1,
+    )
+    assert result.accepted_facts[0].concept_local_name == "Assets"
+    assert result.accepted_facts[0].unit_expression == (
+        f"{{{ISO4217}}}USD * {{{XBRLI}}}shares"
+    )
+    assert result.rejected_occurrences[0].reason_code == "INVALID_UNIT"
+
+
+def test_stray_text_in_unit_wrapper_rejects_only_affected_fact(tmp_path: Path) -> None:
+    valid_divide = """<xbrli:unit id="USD_PER_SHARE">
+  <xbrli:divide>
+    <xbrli:unitNumerator><xbrli:measure>iso4217:USD</xbrli:measure></xbrli:unitNumerator>
+    <xbrli:unitDenominator><xbrli:measure>xbrli:shares</xbrli:measure></xbrli:unitDenominator>
+  </xbrli:divide>
+</xbrli:unit>"""
+    malformed = """<xbrli:unit id="MALFORMED">
+  <xbrli:divide>
+    <xbrli:unitNumerator>unexpected<xbrli:measure>iso4217:USD</xbrli:measure></xbrli:unitNumerator>
+    <xbrli:unitDenominator><xbrli:measure>xbrli:shares</xbrli:measure></xbrli:unitDenominator>
+  </xbrli:divide>
+</xbrli:unit>"""
+    xml = xbrl(
+        instant_context(),
+        valid_divide,
+        malformed,
+        '<us-gaap:EarningsPerShare contextRef="instant" unitRef="USD_PER_SHARE">1.25</us-gaap:EarningsPerShare>',
+        '<us-gaap:OtherIncome contextRef="instant" unitRef="MALFORMED">7</us-gaap:OtherIncome>',
+    )
+    directory, manifest = fixture(tmp_path, xml)
+
+    result = extract_filing_facts(directory, manifest)
+
+    assert result.status == "PARTIAL"
+    assert (result.candidate_count, result.accepted_count, result.rejected_count) == (
+        2,
+        1,
+        1,
+    )
+    assert result.accepted_facts[0].concept_local_name == "EarningsPerShare"
+    assert result.accepted_facts[0].unit_expression == (
+        f"({{{ISO4217}}}USD) / ({{{XBRLI}}}shares)"
+    )
+    assert result.rejected_occurrences[0].reason_code == "INVALID_UNIT"
+
+
 @pytest.mark.parametrize("target", ["xml", "discovery"])
 def test_tampered_bronze_bytes_are_rejected(tmp_path: Path, target: str) -> None:
     xml = xbrl(

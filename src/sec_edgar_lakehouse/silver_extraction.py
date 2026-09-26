@@ -776,6 +776,7 @@ def _parse_dimensions(
 def _parse_unit(unit: ET.Element, namespace_scopes: dict[int, dict[str, str]]) -> _Unit:
     unit_ref = unit.get("id") or ""
     children = list(unit)
+    _require_unit_wrapper_text(unit, unit_ref, "unit")
     if children and all(child.tag == f"{{{_XBRLI}}}measure" for child in children):
         expressions = [
             _measure_expression(child, namespace_scopes, unit_ref) for child in children
@@ -783,6 +784,7 @@ def _parse_unit(unit: ET.Element, namespace_scopes: dict[int, dict[str, str]]) -
         expression = " * ".join(expressions)
     elif len(children) == 1 and children[0].tag == f"{{{_XBRLI}}}divide":
         divide = children[0]
+        _require_unit_wrapper_text(divide, unit_ref, "divide")
         numerators = divide.findall(f"{{{_XBRLI}}}unitNumerator")
         denominators = divide.findall(f"{{{_XBRLI}}}unitDenominator")
         if len(numerators) != 1 or len(denominators) != 1 or len(divide) != 2:
@@ -801,6 +803,7 @@ def _measure_group(
     unit_ref: str,
 ) -> str:
     measures = list(group)
+    _require_unit_wrapper_text(group, unit_ref, "measure group")
     if not measures or any(
         measure.tag != f"{{{_XBRLI}}}measure" for measure in measures
     ):
@@ -815,6 +818,8 @@ def _measure_expression(
     namespace_scopes: dict[int, dict[str, str]],
     unit_ref: str,
 ) -> str:
+    if list(measure):
+        _problem("INVALID_UNIT", f"Unit {unit_ref!r} has a malformed measure")
     namespace, name = _resolve_qname(
         (measure.text or "").strip(),
         namespace_scopes[id(measure)],
@@ -823,6 +828,18 @@ def _measure_expression(
         code="INVALID_UNIT",
     )
     return f"{{{namespace}}}{name}"
+
+
+def _require_unit_wrapper_text(
+    wrapper: ET.Element, unit_ref: str, subject: str
+) -> None:
+    if (wrapper.text or "").strip() or any(
+        (child.tail or "").strip() for child in wrapper
+    ):
+        _problem(
+            "INVALID_UNIT",
+            f"Unit {unit_ref!r} has unexpected text in its {subject}",
+        )
 
 
 def _resolve_qname(
