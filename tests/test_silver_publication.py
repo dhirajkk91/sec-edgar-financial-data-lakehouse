@@ -219,6 +219,191 @@ def test_failure_preserves_pointer_and_records_failure(
     assert not list(first.active_path.parent.glob(".publication-*.tmp"))
 
 
+def test_recovery_does_not_replace_a_newer_active_version(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    value_a, manifest, root = prepared(tmp_path)
+    version_a = publish(value_a, manifest, root, "a")
+    pointer_a = version_a.active_path.read_bytes()
+    value_b = changed_source(value_a, manifest)
+    manifest_b = manifest.read_bytes()
+    with monkeypatch.context() as patch:
+        patch.setattr(publication.os, "replace", fail_active_replace)
+        with pytest.raises(
+            SilverPublicationError, match="activation failure"
+        ) as caught:
+            publish(value_b, manifest, root, "b-failed")
+    assert version_a.active_path.read_bytes() == pointer_a
+    version_b = caught.value.version_path
+    assert version_b is not None and version_b.is_dir()
+    before_b = {
+        path: (path.read_bytes(), path.stat().st_mtime_ns)
+        for path in version_b.iterdir()
+    }
+    checksum_c = "c" * 64
+    value_c = replace(
+        value_b,
+        selected_document_sha256=checksum_c,
+        accepted_facts=tuple(
+            replace(fact, source_sha256=checksum_c) for fact in value_b.accepted_facts
+        ),
+    )
+    record = read(manifest)
+    record["files"][0]["sha256"] = checksum_c
+    manifest.write_text(json.dumps(record))
+    version_c = publish(value_c, manifest, root, "c")
+    assert version_c.outcome == "PUBLISHED" and version_c.active
+    pointer_c = (
+        version_c.active_path.read_bytes(),
+        version_c.active_path.stat().st_mtime_ns,
+    )
+    manifest.write_bytes(manifest_b)
+    retry = publish(value_b, manifest, root, "b-retry")
+    assert retry.outcome == "SKIPPED" and not retry.active
+    assert retry.version_path == version_b
+    assert (
+        version_c.active_path.read_bytes(),
+        version_c.active_path.stat().st_mtime_ns,
+    ) == pointer_c
+    assert read(version_c.active_path)["version_path"] == (
+        version_c.version_path.relative_to(version_c.active_path.parent).as_posix()
+    )
+    assert all(
+        (path.read_bytes(), path.stat().st_mtime_ns) == evidence
+        for path, evidence in before_b.items()
+    )
+    assert "recovered_version_from_run_id" not in read(retry.run_path)
+
+
+def fail_active_replace(source: Any, destination: Any) -> None:
+    raise OSError("injected activation failure")
+
+
+@pytest.mark.parametrize("replacement", [False, True])
+def test_retry_recovers_promoted_version_without_rewriting(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, replacement: bool
+) -> None:
+    value, manifest, root = prepared(tmp_path)
+    previous = None
+    if replacement:
+        first = publish(value, manifest, root)
+        previous = (
+            first.active_path.read_bytes(),
+            first.active_path.stat().st_mtime_ns,
+        )
+        value = changed_source(value, manifest)
+    with monkeypatch.context() as patch:
+        patch.setattr(publication.os, "replace", fail_active_replace)
+        with pytest.raises(
+            SilverPublicationError, match="activation failure"
+        ) as caught:
+            publish(value, manifest, root, "original-failure")
+    error = caught.value
+    assert error.version_path is not None and error.run_path is not None
+    active = error.run_path.parent.parent / "active.json"
+    before = {
+        p: (p.read_bytes(), p.stat().st_mtime_ns) for p in error.version_path.iterdir()
+    }
+    original_run = error.run_path.read_bytes()
+    assert read(error.run_path)["outcome"] == "FAILED"
+    if previous is None:
+        assert not active.exists()
+    else:
+        assert (active.read_bytes(), active.stat().st_mtime_ns) == previous
+    with monkeypatch.context() as patch:
+        patch.setattr(publication.os, "replace", fail_active_replace)
+        with pytest.raises(SilverPublicationError, match="activation failure") as retry:
+            publish(value, manifest, root, "failed-retry")
+    assert retry.value.run_path is not None
+    assert read(retry.value.run_path)["outcome"] == "FAILED"
+    if previous is None:
+        assert not active.exists()
+    else:
+        assert (active.read_bytes(), active.stat().st_mtime_ns) == previous
+    recovered = publish(value, manifest, root, "successful-retry")
+    assert recovered.outcome == "PUBLISHED" and recovered.active
+    assert recovered.version_path == error.version_path
+    run = read(recovered.run_path)
+    assert run["recovered_version_from_run_id"] == "original-failure"
+    assert run["resulting_active_version"] == run["intended_version_path"]
+    assert run["active"] is True
+    pointer = read(active)
+    assert pointer["processing_run_id"] == "successful-retry"
+    assert pointer["version_path"] == run["intended_version_path"]
+    assert (
+        pointer["publication_sha256"]
+        == hashlib.sha256(recovered.publication_path.read_bytes()).hexdigest()
+    )
+    assert error.run_path.read_bytes() == original_run
+    assert all(
+        (p.read_bytes(), p.stat().st_mtime_ns) == data for p, data in before.items()
+    )
+    pointer_before = (active.read_bytes(), active.stat().st_mtime_ns)
+    skipped = publish(value, manifest, root, "already-active")
+    assert skipped.outcome == "SKIPPED" and skipped.active
+    assert (active.read_bytes(), active.stat().st_mtime_ns) == pointer_before
+
+
+@pytest.mark.parametrize(
+    "mutation",
+    [
+        "missing",
+        "json",
+        "run_id",
+        "identity",
+        "intended",
+        "resulting",
+        "timestamp",
+        "missing_resulting",
+        "active",
+        "successful",
+    ],
+)
+def test_invalid_original_run_cannot_authorize_recovery(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, mutation: str
+) -> None:
+    value, manifest, root = prepared(tmp_path)
+    first = publish(value, manifest, root)
+    pointer = (first.active_path.read_bytes(), first.active_path.stat().st_mtime_ns)
+    value = changed_source(value, manifest)
+    with monkeypatch.context() as patch:
+        patch.setattr(publication.os, "replace", fail_active_replace)
+        with pytest.raises(SilverPublicationError) as caught:
+            publish(value, manifest, root, "failed")
+    path = caught.value.run_path
+    assert path is not None
+    record = read(path)
+    if mutation == "missing":
+        path.unlink()
+    elif mutation == "json":
+        path.write_text("not json")
+    else:
+        if mutation == "run_id":
+            record["processing_run_id"] = "different"
+        elif mutation == "identity":
+            record["source_sha256"] = "c" * 64
+        elif mutation == "intended":
+            record["intended_version_path"] = "versions/other"
+        elif mutation == "resulting":
+            record["resulting_active_version"] = record["intended_version_path"]
+        elif mutation == "timestamp":
+            record["completed_at"] = "yesterday"
+        elif mutation == "missing_resulting":
+            del record["resulting_active_version"]
+        elif mutation == "active":
+            record["active"] = True
+        else:
+            record["outcome"] = "PUBLISHED"
+        path.write_text(json.dumps(record))
+    result = publish(value, manifest, root, "retry")
+    assert result.outcome == "SKIPPED" and not result.active
+    assert "recovered_version_from_run_id" not in read(result.run_path)
+    assert (
+        first.active_path.read_bytes(),
+        first.active_path.stat().st_mtime_ns,
+    ) == pointer
+
+
 @pytest.mark.parametrize("mutation", ["checksum", "extra", "json"])
 def test_corrupt_existing_version_is_never_replaced(
     tmp_path: Path, mutation: str

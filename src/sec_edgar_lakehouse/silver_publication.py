@@ -108,13 +108,26 @@ def publish_silver_extraction(
         if staging.exists():
             raise SilverPublicationError(f"Staging path already exists: {staging}")
         if version.exists():
-            _verify_version(version, relative, extraction, root=root)
+            publication = _verify_version(version, relative, extraction, root=root)
             outcome: Literal["PUBLISHED", "SKIPPED"] = "SKIPPED"
-            reason = (
+            reason: str | None = (
                 "Existing version is active"
                 if previous == relative
                 else "Existing version is inactive; activation unchanged"
             )
+            if previous != relative:
+                recovered_run = _recoverable_run(
+                    filing,
+                    relative,
+                    publication,
+                    extraction,
+                    current_active_version=previous,
+                    root=root,
+                )
+                if recovered_run is not None:
+                    run["recovered_version_from_run_id"] = recovered_run
+                    outcome = "PUBLISHED"
+                    reason = None
         else:
             staging.parent.mkdir(parents=True, exist_ok=True)
             staging.mkdir()
@@ -148,6 +161,9 @@ def publish_silver_extraction(
             _verify_version(version, relative, extraction, root=root)
             staging.rmdir()
             owned_staging = False
+            outcome = "PUBLISHED"
+            reason = None
+        if outcome == "PUBLISHED":
             pointer = {
                 **_identity(extraction),
                 "processing_run_id": processing_run_id,
@@ -159,8 +175,6 @@ def publish_silver_extraction(
             # The version is complete before readers can see it through this pointer.
             _write_json(active_path, pointer, replace=True, root=root)
             resulting = relative
-            outcome = "PUBLISHED"
-            reason = None
         run.update(
             completed_at=_now(),
             outcome=outcome,
@@ -210,6 +224,52 @@ def publish_silver_extraction(
             staging_path=staging,
             version_path=version,
         ) from exc
+
+
+def _recoverable_run(
+    filing: Path,
+    relative: str,
+    publication: dict[str, Any],
+    extraction: SilverExtraction,
+    *,
+    current_active_version: str | None,
+    root: Path,
+) -> str | None:
+    # Only failed activation evidence can distinguish an orphan from an old version.
+    original_id = publication["processing_run_id"]
+    _safe_id(original_id)
+    path = _contained(filing, f"runs/run_id={original_id}.json", root=root)
+    try:
+        record = _read_json(path, root=root)
+        for key in (
+            *_identity(extraction),
+            "bronze_manifest_path",
+            "bronze_manifest_sha256",
+        ):
+            if record.get(key) != publication.get(key):
+                return None
+        for key in ("started_at", "completed_at"):
+            _utc_timestamp(record.get(key))
+        for key in ("previous_active_version", "resulting_active_version"):
+            if key not in record:
+                return None
+            if record[key] is not None:
+                _contained(filing, record[key], root=root)
+        if (
+            record.get("processing_run_id") != original_id
+            or record.get("outcome") != "FAILED"
+            or record.get("intended_version_path") != relative
+            or record["resulting_active_version"] == relative
+            or record["resulting_active_version"] != record["previous_active_version"]
+            or record["resulting_active_version"] != current_active_version
+            or record.get("active") is not False
+            or not isinstance(record.get("failure_reason"), str)
+            or not record["failure_reason"].strip()
+        ):
+            return None
+    except OSError, ValueError, SilverPublicationError:
+        return None
+    return str(original_id)
 
 
 def _safe_id(value: object) -> None:
