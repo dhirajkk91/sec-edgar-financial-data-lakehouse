@@ -9,6 +9,7 @@ description = "Ingests, validates, and processes SEC EDGAR filings and XBRL fina
 requires-python = ">=3.14,<3.15"
 dependencies = [
     "beautifulsoup4>=4.15.0",
+    "duckdb>=1.5,<1.6",
     "httpx>=0.28.1",
 ]
 
