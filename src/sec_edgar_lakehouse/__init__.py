@@ -36,6 +36,17 @@ from sec_edgar_lakehouse.filing_storage import (
     StoredFile,
     store_downloaded_file,
 )
+from sec_edgar_lakehouse.silver_extraction import (
+    SilverExtractionError,
+    SilverInputError,
+    extract_filing_facts,
+)
+from sec_edgar_lakehouse.silver_models import (
+    RejectedOccurrence,
+    SilverDimension,
+    SilverExtraction,
+    SilverFact,
+)
 
 # Keep the package root as the stable import surface for callers.
 __all__ = [
@@ -55,11 +66,18 @@ __all__ = [
     "InventoryError",
     "PublicationError",
     "PublishedFiling",
+    "RejectedOccurrence",
+    "SilverDimension",
+    "SilverExtraction",
+    "SilverExtractionError",
+    "SilverFact",
+    "SilverInputError",
     "StorageError",
     "StoredFile",
     "build_filing_inventory",
     "discover_filing",
     "download_filing_file",
+    "extract_filing_facts",
     "ingest_filing",
     "publish_filing",
     "store_downloaded_file",
