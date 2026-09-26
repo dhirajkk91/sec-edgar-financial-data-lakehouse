@@ -1,5 +1,8 @@
 .DS_Store
 
+# Local lakehouse outputs
+/data/
+
 # Python environment and generated files
 .venv/
 __pycache__/

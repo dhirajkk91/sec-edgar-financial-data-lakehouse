@@ -34,10 +34,10 @@ def main(argv: Sequence[str] | None = None) -> int:
                 facts.period_end,
                 facts.period_instant,
                 coalesce(dimensions.dimension_count, 0) AS dimension_count
-            FROM read_parquet(?) AS facts
+            FROM read_parquet(?, hive_partitioning=false) AS facts
             LEFT JOIN (
                 SELECT source_occurrence_id, count(*) AS dimension_count
-                FROM read_parquet(?)
+                FROM read_parquet(?, hive_partitioning=false)
                 GROUP BY source_occurrence_id
             ) AS dimensions USING (source_occurrence_id)
             ORDER BY facts.source_ordinal
@@ -65,7 +65,7 @@ def main(argv: Sequence[str] | None = None) -> int:
 
 def _count(connection: duckdb.DuckDBPyConnection, path: Path) -> int:
     row = connection.execute(
-        "SELECT count(*) FROM read_parquet(?)", [str(path)]
+        "SELECT count(*) FROM read_parquet(?, hive_partitioning=false)", [str(path)]
     ).fetchone()
     if row is None:
         raise RuntimeError(f"Could not read row count from {path}")
