@@ -190,6 +190,10 @@ def _validate_inputs(
             )
         if fact.is_nil != (fact.value_decimal is None):
             raise SilverWriteError("Fact nil flag and decimal value do not agree")
+        if not fact.is_nil and not isinstance(fact.value_decimal, Decimal):
+            raise SilverWriteError(
+                "Non-nil fact value_decimal must be a decimal.Decimal"
+            )
 
 
 def _write_files(

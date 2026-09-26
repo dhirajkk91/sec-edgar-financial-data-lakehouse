@@ -3,6 +3,7 @@ from dataclasses import FrozenInstanceError, replace
 from datetime import date
 from decimal import Decimal
 from pathlib import Path
+from typing import cast
 
 import duckdb
 import pytest
@@ -300,6 +301,23 @@ def test_existing_output_is_untouched(tmp_path: Path) -> None:
 
     assert sentinel.read_text(encoding="utf-8") == "do not replace"
     assert list(output.iterdir()) == [sentinel]
+
+
+def test_float_value_is_rejected_before_output_is_created(tmp_path: Path) -> None:
+    output = tmp_path / "float-output"
+    invalid_fact = replace(
+        fact("float-value", 1, Decimal(1)),
+        value_decimal=cast(Decimal, 1.0),
+    )
+
+    with pytest.raises(SilverWriteError, match="decimal.Decimal"):
+        write_silver_parquet(
+            extraction((invalid_fact,)),
+            output,
+            processing_run_id="run-float",
+        )
+
+    assert not output.exists()
 
 
 def test_verification_failure_removes_only_the_new_output(tmp_path: Path) -> None:
