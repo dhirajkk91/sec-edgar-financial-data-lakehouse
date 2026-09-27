@@ -117,18 +117,29 @@ def _validate_user_agent(user_agent: str) -> None:
 def _fetch_index(
     client: httpx.Client, url: str, user_agent: str, pacer: RequestPacer | None
 ) -> tuple[bytes, int]:
+    return _fetch_content(client, url, user_agent, pacer, subject="Filing index")
+
+
+def _fetch_content(
+    client: httpx.Client,
+    url: str,
+    user_agent: str,
+    pacer: RequestPacer | None,
+    *,
+    subject: str,
+) -> tuple[bytes, int]:
     try:
         requested = request_index_or_document(client, url, user_agent, pacer=pacer)
     except RequestFailure as exc:
         raise DiscoveryError(
-            f"Filing index request failed after {exc.attempts} "
+            f"{subject} request failed after {exc.attempts} "
             f"attempt{'s' if exc.attempts != 1 else ''}: {exc}: {url}",
             attempts=exc.attempts,
         ) from exc
     response = requested.response
     if not response.content:
         raise DiscoveryError(
-            f"Filing index response was empty: {url}", attempts=requested.attempts
+            f"{subject} response was empty: {url}", attempts=requested.attempts
         )
     if length_error := _content_length_error(response):
         raise DiscoveryError(f"{length_error}: {url}", attempts=requested.attempts)
