@@ -36,6 +36,11 @@ from sec_edgar_lakehouse.filing_storage import (
     StoredFile,
     store_downloaded_file,
 )
+from sec_edgar_lakehouse.silver_catalog import (
+    SilverCatalogError,
+    SilverCatalogResult,
+    refresh_silver_catalog,
+)
 from sec_edgar_lakehouse.silver_extraction import (
     SilverExtractionError,
     SilverInputError,
@@ -77,6 +82,8 @@ __all__ = [
     "PublicationError",
     "PublishedFiling",
     "RejectedOccurrence",
+    "SilverCatalogError",
+    "SilverCatalogResult",
     "SilverDimension",
     "SilverExtraction",
     "SilverExtractionError",
@@ -95,6 +102,7 @@ __all__ = [
     "ingest_filing",
     "publish_filing",
     "publish_silver_extraction",
+    "refresh_silver_catalog",
     "store_downloaded_file",
     "write_silver_parquet",
 ]
