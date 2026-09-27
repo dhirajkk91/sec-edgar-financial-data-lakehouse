@@ -15,6 +15,7 @@ from urllib.parse import quote
 import duckdb
 
 from sec_edgar_lakehouse import silver_parquet as parquet
+from sec_edgar_lakehouse.filing_reference import FilingReference
 from sec_edgar_lakehouse.silver_models import SilverExtraction, SilverStatus
 
 _FILES = {
@@ -559,10 +560,40 @@ def _verify_version(
 def _read_active(
     filing: Path, extraction: SilverExtraction, *, root: Path
 ) -> str | None:
+    active = _load_active(filing, root=root)
+    if active is None:
+        return None
+    if (
+        active.pointer.get("cik") != extraction.reference.cik
+        or active.pointer.get("accession_number")
+        != extraction.reference.accession_number
+    ):
+        raise SilverPublicationError("Active pointer filing identity mismatch")
+    return str(active.pointer["version_path"])
+
+
+@dataclass(frozen=True, slots=True)
+class _ActiveVersion:
+    pointer: dict[str, Any]
+    publication: dict[str, Any]
+    version_path: Path
+    publication_path: Path
+
+
+def _load_active(filing: Path, *, root: Path) -> _ActiveVersion | None:
+    """Load one active publication with its verified paths and file evidence."""
     path = filing / "active.json"
     _no_symlinks(path, root)
     if not path.exists():
         return None
+    cik = filing.parent.name.removeprefix("cik=")
+    accession = filing.name.removeprefix("accession=")
+    reference = FilingReference(cik, accession)
+    if (
+        filing.parent.name != f"cik={reference.cik}"
+        or filing.name != f"accession={reference.accession_number}"
+    ):
+        raise SilverPublicationError("Invalid filing directory identity")
     pointer = _read_json(path, root=root)
     relative = pointer.get("version_path")
     if not isinstance(relative, str):
@@ -574,17 +605,25 @@ def _read_active(
     publication = _verify_version(version, relative, root=root)
     if pointer.get("publication_sha256") != _sha(publication_path):
         raise SilverPublicationError("Active publication checksum mismatch")
-    for key in _identity(extraction):
+    for key in (
+        "cik",
+        "accession_number",
+        "source_document_name",
+        "source_sha256",
+        "parser_version",
+        "schema_version",
+        "silver_status",
+    ):
         if pointer.get(key) != publication.get(key):
             raise SilverPublicationError(f"Active pointer {key} mismatch")
     if (
-        pointer.get("cik") != extraction.reference.cik
-        or pointer.get("accession_number") != extraction.reference.accession_number
+        pointer.get("cik") != reference.cik
+        or pointer.get("accession_number") != reference.accession_number
     ):
         raise SilverPublicationError("Active pointer filing identity mismatch")
     _safe_id(pointer.get("processing_run_id"))
     _utc_timestamp(pointer.get("activated_at"))
-    return relative
+    return _ActiveVersion(pointer, publication, version, publication_path)
 
 
 def _sha(path: Path) -> str:
