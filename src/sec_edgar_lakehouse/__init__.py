@@ -1,5 +1,12 @@
 """Domain types for the SEC EDGAR financial data lakehouse."""
 
+from sec_edgar_lakehouse.company_filings import (
+    CompanyFiling,
+    CompanyFilingsDiscovery,
+    CompanyFilingsDiscoveryError,
+    discover_company_filings,
+    select_company_filings,
+)
 from sec_edgar_lakehouse.filing_discovery import (
     CompleteSubmissionFile,
     DiscoveryError,
@@ -66,6 +73,9 @@ from sec_edgar_lakehouse.silver_publication import (
 # Keep the package root as the stable import surface for callers.
 __all__ = [
     "ArtifactSection",
+    "CompanyFiling",
+    "CompanyFilingsDiscovery",
+    "CompanyFilingsDiscoveryError",
     "CompleteSubmissionFile",
     "DiscoveryError",
     "DownloadError",
@@ -96,6 +106,7 @@ __all__ = [
     "StorageError",
     "StoredFile",
     "build_filing_inventory",
+    "discover_company_filings",
     "discover_filing",
     "download_filing_file",
     "extract_filing_facts",
@@ -103,6 +114,7 @@ __all__ = [
     "publish_filing",
     "publish_silver_extraction",
     "refresh_silver_catalog",
+    "select_company_filings",
     "store_downloaded_file",
     "write_silver_parquet",
 ]
