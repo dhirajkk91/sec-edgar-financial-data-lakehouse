@@ -7,6 +7,12 @@ from sec_edgar_lakehouse.company_filings import (
     discover_company_filings,
     select_company_filings,
 )
+from sec_edgar_lakehouse.company_processing import (
+    CompanyFilingProcessResult,
+    CompanyProcessingError,
+    CompanyProcessingResult,
+    process_company_filings,
+)
 from sec_edgar_lakehouse.filing_discovery import (
     CompleteSubmissionFile,
     DiscoveryError,
@@ -74,8 +80,11 @@ from sec_edgar_lakehouse.silver_publication import (
 __all__ = [
     "ArtifactSection",
     "CompanyFiling",
+    "CompanyFilingProcessResult",
     "CompanyFilingsDiscovery",
     "CompanyFilingsDiscoveryError",
+    "CompanyProcessingError",
+    "CompanyProcessingResult",
     "CompleteSubmissionFile",
     "DiscoveryError",
     "DownloadError",
@@ -111,6 +120,7 @@ __all__ = [
     "download_filing_file",
     "extract_filing_facts",
     "ingest_filing",
+    "process_company_filings",
     "publish_filing",
     "publish_silver_extraction",
     "refresh_silver_catalog",

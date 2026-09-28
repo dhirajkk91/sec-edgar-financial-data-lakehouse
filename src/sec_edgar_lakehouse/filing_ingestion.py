@@ -27,6 +27,7 @@ class DownloadFailure:
     document_name: str
     message: str
     attempts: int = 0
+    stop_run: bool = False
 
 
 @dataclass(frozen=True, slots=True)
@@ -46,9 +47,10 @@ def ingest_filing(
     bronze_directory: Path,
     client: httpx.Client | None = None,
     request_interval_seconds: float = 0.5,
+    _pacer: RequestPacer | None = None,
 ) -> IngestionResult:
     """Download in inventory order and publish verified required files."""
-    if request_interval_seconds < 0.5:
+    if _pacer is None and request_interval_seconds < 0.5:
         raise ValueError("Request interval must be at least 0.5 seconds")
 
     if client is None:
@@ -59,9 +61,15 @@ def ingest_filing(
                 bronze_directory,
                 owned_client,
                 request_interval_seconds,
+                _pacer,
             )
     return _ingest_with_client(
-        reference, user_agent, bronze_directory, client, request_interval_seconds
+        reference,
+        user_agent,
+        bronze_directory,
+        client,
+        request_interval_seconds,
+        _pacer,
     )
 
 
@@ -71,8 +79,10 @@ def _ingest_with_client(
     bronze_directory: Path,
     client: httpx.Client,
     request_interval_seconds: float,
+    pacer: RequestPacer | None,
 ) -> IngestionResult:
-    pacer = RequestPacer(request_interval_seconds, clock=monotonic, sleeper=sleep)
+    if pacer is None:
+        pacer = RequestPacer(request_interval_seconds, clock=monotonic, sleeper=sleep)
     discovery = discover_filing(
         reference, user_agent=user_agent, client=client, _pacer=pacer
     )
@@ -113,7 +123,9 @@ def _ingest_with_client(
         failed_files[entry.document_name] = message
         if attempts:
             network_attempts[entry.document_name] = attempts
-        failure = DownloadFailure(entry.document_name, message, attempts)
+        failure = DownloadFailure(
+            entry.document_name, message, attempts, bool(stop_run_error)
+        )
         if download_failure is None or entry.required_for_source or stop_run_error:
             download_failure = failure
         if entry.required_for_source or stop_run_error:

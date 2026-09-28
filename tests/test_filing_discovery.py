@@ -107,10 +107,11 @@ def test_http_200_sec_block_index_fails_before_discovery() -> None:
 
     with (
         httpx.Client(transport=httpx.MockTransport(handle)) as client,
-        pytest.raises(DiscoveryError, match="SEC access-block page"),
+        pytest.raises(DiscoveryError, match="SEC access-block page") as caught,
     ):
         discover_filing(REFERENCE, user_agent=USER_AGENT, client=client)
     assert len(requests) == 1
+    assert caught.value.stop_run
 
 
 def test_submitted_documents_preserve_optional_fields_and_unknown_types() -> None:

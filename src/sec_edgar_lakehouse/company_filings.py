@@ -51,13 +51,18 @@ def discover_company_filings(
     *,
     user_agent: str,
     client: httpx.Client | None = None,
+    _pacer: filing_request.RequestPacer | None = None,
 ) -> CompanyFilingsDiscovery:
     """Fetch only the main submissions JSON; an injected client remains caller-owned."""
     try:
         normalized = _normalize_cik(cik)
         _validate_user_agent(user_agent)
         url = f"https://data.sec.gov/submissions/CIK{normalized}.json"
-        pacer = filing_request.RequestPacer(0.5, sleeper=filing_request.sleep)
+        pacer = (
+            filing_request.RequestPacer(0.5, sleeper=filing_request.sleep)
+            if _pacer is None
+            else _pacer
+        )
         if client is None:
             with httpx.Client() as owned:
                 content, _ = _fetch_content(
@@ -198,6 +203,29 @@ def select_company_filings(
     """Filter exact forms and inclusive filing dates, newest first, then apply limit."""
     if not isinstance(discovery, CompanyFilingsDiscovery):
         raise CompanyFilingsDiscoveryError("discovery must be CompanyFilingsDiscovery")
+    _validate_selection_inputs(forms, filed_on_or_after, filed_on_or_before, limit)
+    matches = (
+        f
+        for f in discovery.recent_filings
+        if f.form in forms
+        and (filed_on_or_after is None or f.filing_date >= filed_on_or_after)
+        and (filed_on_or_before is None or f.filing_date <= filed_on_or_before)
+    )
+    return tuple(
+        sorted(
+            matches,
+            key=lambda f: (f.filing_date, f.reference.accession_number),
+            reverse=True,
+        )[:limit]
+    )
+
+
+def _validate_selection_inputs(
+    forms: Collection[str],
+    filed_on_or_after: date | None,
+    filed_on_or_before: date | None,
+    limit: int | None,
+) -> None:
     if (
         isinstance(forms, (str, bytes))
         or not isinstance(forms, Collection)
@@ -220,17 +248,3 @@ def select_company_filings(
         raise CompanyFilingsDiscoveryError("Filing-date start must not be after end")
     if limit is not None and (type(limit) is not int or limit <= 0):
         raise CompanyFilingsDiscoveryError("limit must be a positive integer")
-    matches = (
-        f
-        for f in discovery.recent_filings
-        if f.form in forms
-        and (filed_on_or_after is None or f.filing_date >= filed_on_or_after)
-        and (filed_on_or_before is None or f.filing_date <= filed_on_or_before)
-    )
-    return tuple(
-        sorted(
-            matches,
-            key=lambda f: (f.filing_date, f.reference.accession_number),
-            reverse=True,
-        )[:limit]
-    )
