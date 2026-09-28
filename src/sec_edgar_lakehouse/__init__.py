@@ -18,6 +18,11 @@ from sec_edgar_lakehouse.company_processing import (
     CompanyProcessingResult,
     process_company_filings,
 )
+from sec_edgar_lakehouse.company_run import (
+    CompanyRunError,
+    CompanyRunResult,
+    execute_company_pipeline_run,
+)
 from sec_edgar_lakehouse.filing_discovery import (
     CompleteSubmissionFile,
     DiscoveryError,
@@ -92,6 +97,8 @@ __all__ = [
     "CompanyPipelineResult",
     "CompanyProcessingError",
     "CompanyProcessingResult",
+    "CompanyRunError",
+    "CompanyRunResult",
     "CompleteSubmissionFile",
     "DiscoveryError",
     "DownloadError",
@@ -125,6 +132,7 @@ __all__ = [
     "discover_company_filings",
     "discover_filing",
     "download_filing_file",
+    "execute_company_pipeline_run",
     "extract_filing_facts",
     "ingest_filing",
     "process_company_filings",

@@ -15,7 +15,7 @@ The first version processes one company at a time and runs filings sequentially.
 ```text
 +---------------------------------------------+
 | Discover recent filings from SEC            |
-| Preserve submissions JSON and source details|
+| Preserve exact submissions response         |
 +----------------------+----------------------+
                        |
                        v
@@ -83,7 +83,7 @@ Report date is metadata only. The coordinator never uses it as filing identity. 
 
 ## Discovery and selection
 
-The coordinator starts with the company submissions endpoint. It preserves the exact response used for the run and then calls the existing selection logic.
+The coordinator starts with the company submissions endpoint. It preserves the exact response used for the run and calls the existing selection logic. Evidence is finalized after execution.
 
 Selection is deterministic:
 
@@ -93,7 +93,7 @@ Selection is deterministic:
 4. Use accession number descending as the tie-breaker.
 5. Apply the limit after filtering and sorting.
 
-The selected list is written into the run record before filing processing begins. That makes it possible to explain why a filing was or was not part of a run.
+The selected list and outcomes are written into the final run record in processing order after the pipeline returns.
 
 ## Request handling
 
@@ -173,7 +173,7 @@ Refreshing once gives readers one stable post-run catalog and avoids repeatedly 
 
 If some filings fail but the remaining active Silver data can be cataloged, the catalog may still refresh and the company run becomes `PARTIAL`.
 
-If catalog refresh fails, the company run is `FAILED`. The catalog implementation is responsible for preserving its previous valid logical snapshot.
+If catalog refresh fails after usable processing, the existing pipeline returns `PARTIAL` and catalog status `FAILED`. The catalog implementation is responsible for preserving its previous valid logical snapshot.
 
 ## Company run status
 
@@ -182,8 +182,8 @@ The final status summarizes the entire run:
 | Status | Meaning |
 | --- | --- |
 | `COMPLETE` | Every selected filing completed or was safely skipped, and DuckDB refreshed successfully |
-| `PARTIAL` | At least one selected filing failed, but at least one usable filing remained and DuckDB refreshed successfully |
-| `FAILED` | Discovery failed, no selected filing produced usable Silver, run evidence could not be finalized, or DuckDB refresh failed |
+| `PARTIAL` | Usable filings remain, but processing or catalog refresh reported a partial result or failure |
+| `FAILED` | Discovery failed or selected filings produced no usable Silver |
 
 A run with no matching selected filings is a successful no-op. It records `COMPLETE`, zero selected filings, and does not pretend that data was processed.
 
@@ -192,29 +192,20 @@ A run with no matching selected filings is a successful no-op. It records `COMPL
 Local run evidence is stored outside Bronze and Silver data:
 
 ```text
-data/runs/sec/company/
+data/runs/company/
 └── cik=0000320193/
     └── run_id=<run-id>/
         ├── submissions.json
         └── run.json
 ```
 
-`submissions.json` contains the exact SEC response used to select filings.
+`submissions.json` contains the exact SEC source response bytes, without parsing, reformatting, normalization, or redaction.
 
-`run.json` contains:
+Each schema-version `"1"` JSON record contains the run ID, normalized CIK, UTC start and completion timestamps, selection filters, ordered filing outcomes and stage paths, processing counts, catalog status and available row counts, final status, and structured execution errors. Unavailable catalog paths and counts are null. `run.json` includes `submissions_evidence` with the relative path `submissions.json`, submissions URL, UTC retrieval time, exact byte count, and lowercase SHA-256. Source bytes are stored only in `submissions.json`; filing contents, XBRL facts, and configured SEC User-Agent or email are not added to the run record.
 
-- run ID and company identity
-- start and completion timestamps in UTC
-- selection configuration
-- submissions URL, retrieval time, size, and SHA-256
-- selected filing references in processing order
-- a result for every selected filing
-- Bronze and Silver paths when available
-- DuckDB refresh status and row counts
-- final company run status
-- failure details
+The reusable `execute_company_pipeline_run()` API calls the existing pipeline once. Expected `CompanyPipelineError` and `CompanyProcessingError` failures produce a `FAILED` record with a stable `PIPELINE` or `PROCESSING` error stage; unrelated programming errors propagate. Expected failures before a discovery result is available publish only `run.json` with `submissions_evidence: null`. When the pipeline returns a result, the record preserves its status and the top-level execution error is null.
 
-The run directory is created through staging and becomes visible only after its required evidence is written. A caller-supplied run ID is never allowed to overwrite an existing run.
+This is a single-writer local implementation. Run IDs use 1–128 ASCII letters, digits, hyphens, or underscores. Managed run-root and CIK symlinks are rejected. The attempt builds evidence in a unique staging directory inside the CIK directory. Each file is written through a temporary file, flushed, fsynced, and closed. Before publication, submissions bytes are reopened and verified against their size and SHA-256, `run.json` is reopened and parsed and checked against the intended record, and staging is checked for unexpected entries. Only then is the staging directory atomically promoted with `os.replace`, with final-directory existence checks before execution and promotion. Failure cleanup removes only the staging and temporary paths owned by the attempt. Existing records are never intentionally overwritten; concurrent writers are unsupported. Persistence failure raises `CompanyRunError` without rolling back Bronze, Silver, or DuckDB outputs.
 
 ## Idempotency and reruns
 
@@ -253,7 +244,7 @@ This version intentionally does not add:
 - cloud object storage
 - older submissions-history file retrieval
 - automatic amendment supersession
-- automatic cleanup of failed staging data
+- background cleanup of retained Bronze or Silver failure staging
 
 These are later decisions. Adding them before the sequential workflow is proven would make failures harder to understand without improving the first usable dataset.
 
@@ -268,7 +259,7 @@ Version 1 is complete when:
 5. A confirmed SEC access block stops further network requests.
 6. Every selected filing has an explicit outcome.
 7. DuckDB refresh runs once after filing processing.
-8. Exact discovery evidence and the final run record are preserved.
+8. Exact discovery evidence is preserved whenever discovery succeeds, along with selection configuration, ordered filing outcomes, and the finalized run record.
 9. A rerun does not duplicate canonical Bronze, Silver, or catalog rows.
 10. Tests cover complete, partial, failed, skipped, and stopped runs without live SEC requests.
 
