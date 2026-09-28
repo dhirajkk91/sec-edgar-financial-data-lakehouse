@@ -896,6 +896,8 @@ def test_access_block_on_optional_file_fails_entire_run(
     assert requests == [INDEX_NAME, *list(CONTENTS)[:3], "issuer.xsd"]
     assert result.status == "FAILED"
     assert result.published is None
+    assert result.download_failure is not None
+    assert result.download_failure.stop_run
     assert not canonical_path(bronze_directory).exists()
     assert result.staging_path is not None
     manifest = read_manifest(next((result.staging_path / "manifests").glob("*.json")))
@@ -927,6 +929,8 @@ def test_retry_after_over_limit_on_optional_file_stops_run(tmp_path: Path) -> No
     assert requests == [INDEX_NAME, *list(CONTENTS)[:3], "issuer.xsd"]
     assert result.status == "FAILED"
     assert result.staging_path is not None
+    assert result.download_failure is not None
+    assert result.download_failure.stop_run
     manifest = read_manifest(next((result.staging_path / "manifests").glob("*.json")))
     assert "60-second limit" in manifest["error"]
     assert manifest["files"][3]["network_attempts"] == 1

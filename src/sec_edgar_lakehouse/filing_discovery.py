@@ -20,11 +20,14 @@ from sec_edgar_lakehouse.filing_request import (
 class DiscoveryError(Exception):
     """The filing index could not be fetched or its documents could not be read."""
 
-    def __init__(self, message: str, *, attempts: int = 0) -> None:
+    def __init__(
+        self, message: str, *, attempts: int = 0, stop_run: bool = False
+    ) -> None:
         if attempts and "attempt" not in message:
             message = f"{message} (after {attempts} network attempt{'s' if attempts != 1 else ''})"
         super().__init__(message)
         self.attempts = attempts
+        self.stop_run = stop_run
 
 
 @dataclass(frozen=True, slots=True)
@@ -94,7 +97,9 @@ def discover_filing(
     try:
         return _parse_discovery(html, index_url=url, retrieved_at=datetime.now(UTC))
     except DiscoveryError as exc:
-        raise DiscoveryError(str(exc), attempts=attempts) from exc
+        raise DiscoveryError(
+            str(exc), attempts=attempts, stop_run=exc.stop_run
+        ) from exc
 
 
 def _validate_user_agent(user_agent: str) -> None:
@@ -135,6 +140,7 @@ def _fetch_content(
             f"{subject} request failed after {exc.attempts} "
             f"attempt{'s' if exc.attempts != 1 else ''}: {exc}: {url}",
             attempts=exc.attempts,
+            stop_run=exc.stop_run,
         ) from exc
     response = requested.response
     if not response.content:
