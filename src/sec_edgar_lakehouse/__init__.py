@@ -7,6 +7,11 @@ from sec_edgar_lakehouse.company_filings import (
     discover_company_filings,
     select_company_filings,
 )
+from sec_edgar_lakehouse.company_pipeline import (
+    CompanyPipelineError,
+    CompanyPipelineResult,
+    run_company_pipeline,
+)
 from sec_edgar_lakehouse.company_processing import (
     CompanyFilingProcessResult,
     CompanyProcessingError,
@@ -83,6 +88,8 @@ __all__ = [
     "CompanyFilingProcessResult",
     "CompanyFilingsDiscovery",
     "CompanyFilingsDiscoveryError",
+    "CompanyPipelineError",
+    "CompanyPipelineResult",
     "CompanyProcessingError",
     "CompanyProcessingResult",
     "CompleteSubmissionFile",
@@ -124,6 +131,7 @@ __all__ = [
     "publish_filing",
     "publish_silver_extraction",
     "refresh_silver_catalog",
+    "run_company_pipeline",
     "select_company_filings",
     "store_downloaded_file",
     "write_silver_parquet",
