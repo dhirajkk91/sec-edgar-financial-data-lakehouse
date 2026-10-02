@@ -13,3 +13,5 @@ sources:
         description: One dimension attached to an accepted fact occurrence.
       - name: rejected_facts
         description: One rejected numeric candidate with its source and reason.
+      - name: filing_metadata
+        description: Verified SEC metadata and first accepted discovery provenance per filing.
