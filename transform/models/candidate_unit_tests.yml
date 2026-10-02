@@ -1,0 +1,364 @@
+unit_tests:
+- name: equal_values_keep_occurrences_and_dimensions_do_not_multiply
+  model: int_financial_metric_candidates
+  description: Equal values remain separate; two dimensions belong to one occurrence.
+  given:
+  - input: ref('stg_silver_facts')
+    rows:
+    - cik: 0000320193
+      accession_number: 0000320193-25-000001
+      source_document_name: filing.xml
+      source_sha256: checksum
+      concept_namespace: http://fasb.org/us-gaap/2025
+      concept_local_name: RevenueFromContractWithCustomerExcludingAssessedTax
+      value_decimal: '100.000000000000000001'
+      is_nil: false
+      unit_expression: '{http://www.xbrl.org/2003/iso4217}USD'
+      period_kind: DURATION
+      period_start: '2025-01-01'
+      period_end: '2025-03-31'
+      source_occurrence_id: equal-a
+    - cik: 0000320193
+      accession_number: 0000320193-25-000001
+      source_document_name: filing.xml
+      source_sha256: checksum
+      concept_namespace: http://fasb.org/us-gaap/2025
+      concept_local_name: RevenueFromContractWithCustomerExcludingAssessedTax
+      value_decimal: '100.000000000000000001'
+      is_nil: false
+      unit_expression: '{http://www.xbrl.org/2003/iso4217}USD'
+      period_kind: DURATION
+      period_start: '2025-01-01'
+      period_end: '2025-03-31'
+      source_occurrence_id: equal-b
+  - input: ref('stg_silver_active_filings')
+    rows:
+    - cik: 0000320193
+      accession_number: 0000320193-25-000001
+      source_document_name: filing.xml
+      source_sha256: checksum
+  - input: ref('metric_concept_map')
+    rows:
+    - metric_code: revenue
+      concept_namespace_prefix: http://fasb.org/us-gaap/
+      concept_local_name: RevenueFromContractWithCustomerExcludingAssessedTax
+      concept_priority: 1
+      expected_period_kind: duration
+    - metric_code: revenue
+      concept_namespace_prefix: http://fasb.org/us-gaap/
+      concept_local_name: SalesRevenueNet
+      concept_priority: 2
+      expected_period_kind: duration
+    - metric_code: revenue
+      concept_namespace_prefix: http://fasb.org/us-gaap/
+      concept_local_name: Revenues
+      concept_priority: 3
+      expected_period_kind: duration
+  - input: ref('stg_silver_fact_dimensions')
+    rows:
+    - source_occurrence_id: equal-a
+      axis_name: ProductAxis
+    - source_occurrence_id: equal-a
+      axis_name: GeographyAxis
+  expect:
+    rows:
+    - source_occurrence_id: equal-a
+      value_decimal: '100.000000000000000001'
+      dimension_count: 2
+      has_dimensions: true
+      duration_days: 90
+      is_usd: true
+    - source_occurrence_id: equal-b
+      value_decimal: '100.000000000000000001'
+      dimension_count: 0
+      has_dimensions: false
+      duration_days: 90
+      is_usd: true
+- name: only_usable_matching_active_revenue_is_included
+  model: int_financial_metric_candidates
+  description: Nil, wrong concepts, periods and source identities are excluded; currency and comparative
+    periods are retained.
+  given:
+  - input: ref('stg_silver_facts')
+    rows:
+    - cik: 0000320193
+      accession_number: 0000320193-25-000001
+      source_document_name: filing.xml
+      source_sha256: checksum
+      concept_namespace: http://fasb.org/us-gaap/2025
+      concept_local_name: RevenueFromContractWithCustomerExcludingAssessedTax
+      value_decimal: null
+      is_nil: true
+      unit_expression: '{http://www.xbrl.org/2003/iso4217}USD'
+      period_kind: DURATION
+      period_start: '2025-01-01'
+      period_end: '2025-03-31'
+      source_occurrence_id: nil
+    - cik: 0000320193
+      accession_number: 0000320193-25-000001
+      source_document_name: filing.xml
+      source_sha256: checksum
+      concept_namespace: http://fasb.org/us-gaap/2025
+      concept_local_name: RevenueFromContractWithCustomerExcludingAssessedTax
+      value_decimal: null
+      is_nil: false
+      unit_expression: '{http://www.xbrl.org/2003/iso4217}USD'
+      period_kind: DURATION
+      period_start: '2025-01-01'
+      period_end: '2025-03-31'
+      source_occurrence_id: null-value
+    - cik: 0000320193
+      accession_number: 0000320193-25-000001
+      source_document_name: filing.xml
+      source_sha256: checksum
+      concept_namespace: http://fasb.org/us-gaap/2025
+      concept_local_name: Assets
+      value_decimal: '100.000000000000000001'
+      is_nil: false
+      unit_expression: '{http://www.xbrl.org/2003/iso4217}USD'
+      period_kind: DURATION
+      period_start: '2025-01-01'
+      period_end: '2025-03-31'
+      source_occurrence_id: unmatched-concept
+    - cik: 0000320193
+      accession_number: 0000320193-25-000001
+      source_document_name: filing.xml
+      source_sha256: checksum
+      concept_namespace: http://company.example/taxonomy
+      concept_local_name: RevenueFromContractWithCustomerExcludingAssessedTax
+      value_decimal: '100.000000000000000001'
+      is_nil: false
+      unit_expression: '{http://www.xbrl.org/2003/iso4217}USD'
+      period_kind: DURATION
+      period_start: '2025-01-01'
+      period_end: '2025-03-31'
+      source_occurrence_id: unmatched-namespace
+    - cik: 0000320193
+      accession_number: 0000320193-25-000001
+      source_document_name: filing.xml
+      source_sha256: checksum
+      concept_namespace: http://fasbXorg/us-gaap/2025
+      concept_local_name: RevenueFromContractWithCustomerExcludingAssessedTax
+      value_decimal: '100.000000000000000001'
+      is_nil: false
+      unit_expression: '{http://www.xbrl.org/2003/iso4217}USD'
+      period_kind: DURATION
+      period_start: '2025-01-01'
+      period_end: '2025-03-31'
+      source_occurrence_id: namespace-wildcard-lookalike
+    - cik: 0000320193
+      accession_number: 0000320193-25-000001
+      source_document_name: filing.xml
+      source_sha256: checksum
+      concept_namespace: http://fasb.org/us-gaap/2025
+      concept_local_name: RevenueFromContractWithCustomerExcludingAssessedTax
+      value_decimal: '100.000000000000000001'
+      is_nil: false
+      unit_expression: '{http://www.xbrl.org/2003/iso4217}USD'
+      period_kind: INSTANT
+      period_start: null
+      period_end: null
+      source_occurrence_id: instant
+      period_instant: '2025-03-31'
+    - cik: '0000000001'
+      accession_number: 0000320193-25-000001
+      source_document_name: filing.xml
+      source_sha256: checksum
+      concept_namespace: http://fasb.org/us-gaap/2025
+      concept_local_name: RevenueFromContractWithCustomerExcludingAssessedTax
+      value_decimal: '100.000000000000000001'
+      is_nil: false
+      unit_expression: '{http://www.xbrl.org/2003/iso4217}USD'
+      period_kind: DURATION
+      period_start: '2025-01-01'
+      period_end: '2025-03-31'
+      source_occurrence_id: wrong-cik
+    - cik: 0000320193
+      accession_number: 0000320193-25-000002
+      source_document_name: filing.xml
+      source_sha256: checksum
+      concept_namespace: http://fasb.org/us-gaap/2025
+      concept_local_name: RevenueFromContractWithCustomerExcludingAssessedTax
+      value_decimal: '100.000000000000000001'
+      is_nil: false
+      unit_expression: '{http://www.xbrl.org/2003/iso4217}USD'
+      period_kind: DURATION
+      period_start: '2025-01-01'
+      period_end: '2025-03-31'
+      source_occurrence_id: wrong-accession
+    - cik: 0000320193
+      accession_number: 0000320193-25-000001
+      source_document_name: other.xml
+      source_sha256: checksum
+      concept_namespace: http://fasb.org/us-gaap/2025
+      concept_local_name: RevenueFromContractWithCustomerExcludingAssessedTax
+      value_decimal: '100.000000000000000001'
+      is_nil: false
+      unit_expression: '{http://www.xbrl.org/2003/iso4217}USD'
+      period_kind: DURATION
+      period_start: '2025-01-01'
+      period_end: '2025-03-31'
+      source_occurrence_id: wrong-document
+    - cik: 0000320193
+      accession_number: 0000320193-25-000001
+      source_document_name: filing.xml
+      source_sha256: other-checksum
+      concept_namespace: http://fasb.org/us-gaap/2025
+      concept_local_name: RevenueFromContractWithCustomerExcludingAssessedTax
+      value_decimal: '100.000000000000000001'
+      is_nil: false
+      unit_expression: '{http://www.xbrl.org/2003/iso4217}USD'
+      period_kind: DURATION
+      period_start: '2025-01-01'
+      period_end: '2025-03-31'
+      source_occurrence_id: wrong-checksum
+    - cik: 0000320193
+      accession_number: 0000320193-25-000001
+      source_document_name: filing.xml
+      source_sha256: checksum
+      concept_namespace: http://fasb.org/us-gaap/2025
+      concept_local_name: SalesRevenueNet
+      value_decimal: '100.000000000000000001'
+      is_nil: false
+      unit_expression: '{http://www.xbrl.org/2003/iso4217}EUR'
+      period_kind: DURATION
+      period_start: '2025-01-01'
+      period_end: null
+      source_occurrence_id: non-usd
+    - cik: 0000320193
+      accession_number: 0000320193-25-000001
+      source_document_name: filing.xml
+      source_sha256: checksum
+      concept_namespace: http://fasb.org/us-gaap/2025
+      concept_local_name: Revenues
+      value_decimal: '100.000000000000000001'
+      is_nil: false
+      unit_expression: '{http://www.xbrl.org/2003/iso4217}USD'
+      period_kind: DURATION
+      period_start: '2024-01-01'
+      period_end: '2024-03-31'
+      source_occurrence_id: comparative
+  - input: ref('stg_silver_active_filings')
+    rows:
+    - cik: 0000320193
+      accession_number: 0000320193-25-000001
+      source_document_name: filing.xml
+      source_sha256: checksum
+  - input: ref('metric_concept_map')
+    rows:
+    - metric_code: revenue
+      concept_namespace_prefix: http://fasb.org/us-gaap/
+      concept_local_name: RevenueFromContractWithCustomerExcludingAssessedTax
+      concept_priority: 1
+      expected_period_kind: duration
+    - metric_code: revenue
+      concept_namespace_prefix: http://fasb.org/us-gaap/
+      concept_local_name: SalesRevenueNet
+      concept_priority: 2
+      expected_period_kind: duration
+    - metric_code: revenue
+      concept_namespace_prefix: http://fasb.org/us-gaap/
+      concept_local_name: Revenues
+      concept_priority: 3
+      expected_period_kind: duration
+  - input: ref('stg_silver_fact_dimensions')
+    rows: []
+  expect:
+    rows:
+    - source_occurrence_id: non-usd
+      metric_code: revenue
+      concept_priority: 2
+      period_kind: duration
+      dimension_count: 0
+      has_dimensions: false
+      is_usd: false
+      duration_days: null
+    - source_occurrence_id: comparative
+      metric_code: revenue
+      concept_priority: 3
+      period_kind: duration
+      dimension_count: 0
+      has_dimensions: false
+      is_usd: true
+      duration_days: 91
+- name: typed_empty_inputs_produce_no_candidates
+  model: int_financial_metric_candidates
+  description: Empty typed inputs preserve the SQL shape without manufacturing candidates.
+  given:
+  - input: ref('stg_silver_facts')
+    format: sql
+    rows: |
+      select
+          cast(null as VARCHAR) as source_occurrence_id,
+          cast(null as VARCHAR) as cik,
+          cast(null as VARCHAR) as accession_number,
+          cast(null as VARCHAR) as source_document_name,
+          cast(null as VARCHAR) as source_sha256,
+          cast(null as BIGINT) as source_ordinal,
+          cast(null as VARCHAR) as processing_run_id,
+          cast(null as VARCHAR) as parser_version,
+          cast(null as VARCHAR) as schema_version,
+          cast(null as VARCHAR) as concept_namespace,
+          cast(null as VARCHAR) as concept_local_name,
+          cast(null as VARCHAR) as raw_value,
+          cast(null as DECIMAL(38,18)) as value_decimal,
+          cast(null as BOOLEAN) as is_nil,
+          cast(null as VARCHAR) as decimals,
+          cast(null as VARCHAR) as precision,
+          cast(null as VARCHAR) as unit_ref,
+          cast(null as VARCHAR) as unit_expression,
+          cast(null as VARCHAR) as unit_xml,
+          cast(null as VARCHAR) as context_ref,
+          cast(null as VARCHAR) as context_xml,
+          cast(null as VARCHAR) as entity_scheme,
+          cast(null as VARCHAR) as entity_identifier,
+          cast(null as VARCHAR) as period_kind,
+          cast(null as DATE) as period_start,
+          cast(null as DATE) as period_end,
+          cast(null as DATE) as period_instant
+      where false
+  - input: ref('stg_silver_active_filings')
+    format: sql
+    rows: |
+      select
+          cast(null as VARCHAR) as cik,
+          cast(null as VARCHAR) as accession_number,
+          cast(null as VARCHAR) as source_document_name,
+          cast(null as VARCHAR) as source_sha256,
+          cast(null as VARCHAR) as silver_status,
+          cast(null as VARCHAR) as parser_version,
+          cast(null as VARCHAR) as schema_version,
+          cast(null as VARCHAR) as activation_run_id,
+          cast(null as TIMESTAMP WITH TIME ZONE) as activated_at,
+          cast(null as VARCHAR) as version_path,
+          cast(null as VARCHAR) as publication_path,
+          cast(null as VARCHAR) as publication_sha256,
+          cast(null as BIGINT) as accepted_count,
+          cast(null as BIGINT) as dimension_count,
+          cast(null as BIGINT) as rejected_count,
+          cast(null as BIGINT) as candidate_count
+      where false
+  - input: ref('stg_silver_fact_dimensions')
+    format: sql
+    rows: |
+      select
+          cast(null as VARCHAR) as source_occurrence_id,
+          cast(null as VARCHAR) as axis_namespace,
+          cast(null as VARCHAR) as axis_name,
+          cast(null as VARCHAR) as member_kind,
+          cast(null as VARCHAR) as member_value,
+          cast(null as VARCHAR) as typed_member_xml,
+          cast(null as VARCHAR) as context_location
+      where false
+  - input: ref('metric_concept_map')
+    format: sql
+    rows: |
+      select
+          cast(null as VARCHAR) as metric_code,
+          cast(null as VARCHAR) as concept_namespace_prefix,
+          cast(null as VARCHAR) as concept_local_name,
+          cast(null as INTEGER) as concept_priority,
+          cast(null as VARCHAR) as expected_period_kind
+      where false
+  expect:
+    rows: []
