@@ -80,6 +80,34 @@ models:
       - name: is_usd
         description: True only for the exact simple ISO 4217 USD unit expression.
 
+  - name: stg_silver_filing_metadata
+    description: One row per currently active filing with verified stored SEC metadata.
+    columns:
+      - name: cik
+        data_tests: [not_null]
+      - name: accession_number
+        data_tests: [not_null]
+      - name: form
+        data_tests: [not_null]
+      - name: filing_date
+        data_tests: [not_null]
+      - name: primary_document
+        data_tests: [not_null]
+      - name: metadata_run_id
+        data_tests: [not_null]
+      - name: run_record_path
+        data_tests: [not_null]
+      - name: submissions_path
+        data_tests: [not_null]
+      - name: submissions_url
+        data_tests: [not_null]
+      - name: submissions_retrieved_at
+        data_tests: [not_null]
+      - name: submissions_size_bytes
+        data_tests: [not_null]
+      - name: submissions_sha256
+        data_tests: [not_null]
+
 seeds:
   - name: metric_concept_map
     description: Revenue concept mappings; one row per metric, namespace prefix, concept and period kind. Priority is evidence for later selection.

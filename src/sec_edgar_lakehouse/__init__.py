@@ -48,6 +48,12 @@ from sec_edgar_lakehouse.filing_inventory import (
     InventoryError,
     build_filing_inventory,
 )
+from sec_edgar_lakehouse.filing_metadata import (
+    FilingMetadataError,
+    FilingMetadataIssue,
+    FilingMetadataLoadResult,
+    load_filing_metadata,
+)
 from sec_edgar_lakehouse.filing_publication import (
     PublicationError,
     PublishedFiling,
@@ -108,6 +114,9 @@ __all__ = [
     "FilingDiscovery",
     "FilingDocument",
     "FilingInventory",
+    "FilingMetadataError",
+    "FilingMetadataIssue",
+    "FilingMetadataLoadResult",
     "FilingReference",
     "IngestionResult",
     "InventoryEntry",
@@ -135,6 +144,7 @@ __all__ = [
     "execute_company_pipeline_run",
     "extract_filing_facts",
     "ingest_filing",
+    "load_filing_metadata",
     "process_company_filings",
     "publish_filing",
     "publish_silver_extraction",
