@@ -1,0 +1,9 @@
+sec_edgar_gold:
+  target: dev
+  outputs:
+    dev:
+      type: duckdb
+      # Anchor the default to profiles.yml, including invocations from the repo root.
+      path: "{{ env_var('SEC_EDGAR_DUCKDB_PATH', flags.PROFILES_DIR ~ '/../data/query/sec_edgar.duckdb') }}"
+      schema: gold
+      threads: 1

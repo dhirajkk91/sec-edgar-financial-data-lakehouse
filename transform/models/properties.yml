@@ -1,0 +1,96 @@
+version: 2
+models:
+  - name: stg_silver_active_filings
+    description: Unmodified Silver publication metadata; one row per active filing.
+    columns:
+      - name: cik
+        data_tests: [not_null]
+      - name: accession_number
+        data_tests: [not_null]
+      - name: source_document_name
+        data_tests: [not_null]
+      - name: source_sha256
+        data_tests: [not_null]
+  - name: stg_silver_facts
+    description: Unmodified accepted Silver facts; one row per source occurrence.
+    columns:
+      - name: source_occurrence_id
+        data_tests: [not_null, unique]
+      - name: cik
+        data_tests: [not_null]
+      - name: accession_number
+        data_tests: [not_null]
+      - name: source_document_name
+        data_tests: [not_null]
+      - name: source_sha256
+        data_tests: [not_null]
+  - name: stg_silver_fact_dimensions
+    description: Unmodified Silver dimensions; one row per dimension on an occurrence.
+    columns:
+      - name: source_occurrence_id
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('stg_silver_facts')
+                field: source_occurrence_id
+  - name: int_financial_metric_candidates
+    description: One active Silver revenue occurrence per row; preserves comparative periods and dimensions without selecting a winner.
+    columns:
+      - name: source_occurrence_id
+        data_tests:
+          - not_null
+          - unique
+          - relationships:
+              arguments:
+                to: ref('stg_silver_facts')
+                field: source_occurrence_id
+      - name: cik
+        data_tests: [not_null]
+      - name: accession_number
+        data_tests: [not_null]
+      - name: source_document_name
+        data_tests: [not_null]
+      - name: source_sha256
+        data_tests: [not_null]
+      - name: metric_code
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: [revenue]
+      - name: period_kind
+        description: Lowercase period label matched exactly to the concept map.
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: [duration]
+      - name: value_decimal
+        description: Reported Silver value preserved as DECIMAL(38,18).
+        data_tests: [not_null]
+      - name: dimension_count
+        description: Dimension count for this occurrence; zero when none are present.
+        data_tests: [not_null]
+      - name: has_dimensions
+        description: Indicates dimensional evidence, without identifying company totals.
+        data_tests: [not_null]
+      - name: duration_days
+        description: Inclusive calendar days; null if either boundary is absent.
+      - name: is_usd
+        description: True only for the exact simple ISO 4217 USD unit expression.
+
+seeds:
+  - name: metric_concept_map
+    description: Revenue concept mappings; one row per metric, namespace prefix, concept and period kind. Priority is evidence for later selection.
+    columns:
+      - name: metric_code
+        data_tests: [not_null]
+      - name: concept_namespace_prefix
+        data_tests: [not_null]
+      - name: concept_local_name
+        data_tests: [not_null]
+      - name: concept_priority
+        data_tests: [not_null]
+      - name: expected_period_kind
+        data_tests: [not_null]

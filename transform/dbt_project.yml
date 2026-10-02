@@ -1,0 +1,22 @@
+name: sec_edgar_gold
+version: "1.0.0"
+config-version: 2
+profile: sec_edgar_gold
+
+model-paths: [models]
+seed-paths: [seeds]
+test-paths: [tests]
+
+models:
+  sec_edgar_gold:
+    +materialized: view
+
+seeds:
+  sec_edgar_gold:
+    metric_concept_map:
+      +column_types:
+        metric_code: VARCHAR
+        concept_namespace_prefix: VARCHAR
+        concept_local_name: VARCHAR
+        concept_priority: INTEGER
+        expected_period_kind: VARCHAR

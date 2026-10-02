@@ -1,0 +1,15 @@
+version: 2
+sources:
+  - name: silver
+    description: Verified active Silver catalog; dbt reads these existing relations.
+    database: "{{ target.database }}"
+    schema: silver
+    tables:
+      - name: active_filings
+        description: One verified active Silver publication per filing.
+      - name: facts
+        description: One accepted numeric fact occurrence from an active filing.
+      - name: fact_dimensions
+        description: One dimension attached to an accepted fact occurrence.
+      - name: rejected_facts
+        description: One rejected numeric candidate with its source and reason.

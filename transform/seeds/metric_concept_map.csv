@@ -1,0 +1,4 @@
+metric_code,concept_namespace_prefix,concept_local_name,concept_priority,expected_period_kind
+revenue,http://fasb.org/us-gaap/,RevenueFromContractWithCustomerExcludingAssessedTax,1,duration
+revenue,http://fasb.org/us-gaap/,SalesRevenueNet,2,duration
+revenue,http://fasb.org/us-gaap/,Revenues,3,duration
