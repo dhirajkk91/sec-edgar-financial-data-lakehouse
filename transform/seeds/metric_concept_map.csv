@@ -2,3 +2,5 @@ metric_code,concept_namespace_prefix,concept_local_name,concept_priority,expecte
 revenue,http://fasb.org/us-gaap/,RevenueFromContractWithCustomerExcludingAssessedTax,1,duration
 revenue,http://fasb.org/us-gaap/,SalesRevenueNet,2,duration
 revenue,http://fasb.org/us-gaap/,Revenues,3,duration
+net_income,http://fasb.org/us-gaap/,NetIncomeLoss,1,duration
+diluted_eps,http://fasb.org/us-gaap/,EarningsPerShareDiluted,1,duration
