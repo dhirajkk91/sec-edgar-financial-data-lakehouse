@@ -1,0 +1,1618 @@
+unit_tests:
+  - name: metric_units_losses_and_ordered_agreement_selected
+    model: int_reported_cash_flow_metrics
+    description: Negative operating cash flow and positive, negative and zero PP&E acquisition payments
+      retain their tagged signs; agreeing occurrences keep ordered lineage.
+    given:
+      - &cash_input_0
+        input: ref('int_financial_metric_candidates')
+        rows:
+          - &cash_row_0
+            metric_code: operating_cash_flow
+            concept_priority: 1
+            cik: 0000320193
+            accession_number: 0000320193-25-000001
+            source_occurrence_id: ocf-last
+            source_document_name: filing.xml
+            source_sha256: checksum
+            source_ordinal: 3
+            processing_run_id: silver-run
+            parser_version: '1'
+            schema_version: '1'
+            concept_namespace: http://fasb.org/us-gaap/2025
+            concept_local_name: NetCashProvidedByUsedInOperatingActivities
+            raw_value: '-10'
+            value_decimal: '-10'
+            decimals: '-6'
+            precision: null
+            unit_ref: USD
+            unit_expression: '{http://www.xbrl.org/2003/iso4217}USD'
+            context_ref: context
+            entity_scheme: http://www.sec.gov/CIK
+            entity_identifier: '320193'
+            period_kind: duration
+            period_start: '2025-07-01'
+            period_end: '2025-09-30'
+            period_instant: null
+            dimension_count: 0
+            has_dimensions: false
+            duration_days: 92
+            is_usd: true
+          - <<: *cash_row_0
+            source_occurrence_id: ocf-b
+            source_ordinal: 1
+            raw_value: '-010.000'
+            unit_ref: other
+            context_ref: other
+          - <<: *cash_row_0
+            source_occurrence_id: ocf-a
+            source_ordinal: 1
+            entity_scheme: https://www.sec.gov/CIK
+            entity_identifier: 0000320193
+          - <<: *cash_row_0
+            metric_code: capital_expenditures
+            source_occurrence_id: capex-loss
+            concept_local_name: PaymentsToAcquirePropertyPlantAndEquipment
+            raw_value: '-0.25'
+            value_decimal: '-0.25'
+            decimals: '2'
+            unit_ref: USD-other-ref
+          - <<: *cash_row_0
+            metric_code: capital_expenditures
+            source_occurrence_id: capex-zero
+            concept_local_name: PaymentsToAcquirePropertyPlantAndEquipment
+            raw_value: '0'
+            value_decimal: '0'
+            decimals: '2'
+            unit_ref: USD-other-ref
+            period_start: '2025-01-01'
+          - <<: *cash_row_0
+            source_occurrence_id: ocf-zero
+            raw_value: '0'
+            value_decimal: '0'
+            period_start: '2025-01-01'
+          - <<: *cash_row_0
+            metric_code: capital_expenditures
+            source_occurrence_id: capex-positive
+            concept_local_name: PaymentsToAcquirePropertyPlantAndEquipment
+            raw_value: '025.000'
+            value_decimal: '25'
+            decimals: '2'
+            unit_ref: USD-other-ref
+            period_start: '2025-02-01'
+      - &cash_input_1
+        input: ref('stg_silver_filing_metadata')
+        rows:
+          - &cash_row_1
+            cik: 0000320193
+            accession_number: 0000320193-25-000001
+            form: 10-Q
+            filing_date: '2025-11-01'
+            report_date: '2025-09-30'
+            primary_document: filing.htm
+            metadata_run_id: metadata-run
+            run_record_path: /verified/run.json
+            submissions_path: /verified/submissions.json
+            submissions_url: https://data.sec.gov/submissions/CIK0000320193.json
+            submissions_retrieved_at: '2026-01-01T00:00:00+00:00'
+            submissions_size_bytes: 100
+            submissions_sha256: snapshot-checksum
+    expect:
+      rows:
+      - source_occurrence_id: ocf-a
+        metric_code: operating_cash_flow
+        value_decimal: '-10'
+        period_start: '2025-07-01'
+        period_end: '2025-09-30'
+        accession_number: 0000320193-25-000001
+        supporting_occurrence_count: 3
+        supporting_occurrence_ids:
+        - ocf-a
+        - ocf-b
+        - ocf-last
+        period_label: reported_duration
+        selection_rule_version: '1'
+        selection_reason: AGREEING_ELIGIBLE_OCCURRENCES
+        raw_value: '-10'
+      - source_occurrence_id: capex-loss
+        metric_code: capital_expenditures
+        value_decimal: '-0.25'
+        period_start: '2025-07-01'
+        period_end: '2025-09-30'
+        accession_number: 0000320193-25-000001
+        supporting_occurrence_count: 1
+        supporting_occurrence_ids:
+        - capex-loss
+        period_label: reported_duration
+        selection_rule_version: '1'
+        selection_reason: SINGLE_ELIGIBLE_OCCURRENCE
+        raw_value: '-0.25'
+      - source_occurrence_id: capex-zero
+        metric_code: capital_expenditures
+        value_decimal: '0'
+        period_start: '2025-01-01'
+        period_end: '2025-09-30'
+        accession_number: 0000320193-25-000001
+        supporting_occurrence_count: 1
+        supporting_occurrence_ids:
+        - capex-zero
+        period_label: reported_duration
+        selection_rule_version: '1'
+        selection_reason: SINGLE_ELIGIBLE_OCCURRENCE
+        raw_value: '0'
+      - source_occurrence_id: ocf-zero
+        metric_code: operating_cash_flow
+        value_decimal: '0'
+        period_start: '2025-01-01'
+        period_end: '2025-09-30'
+        accession_number: 0000320193-25-000001
+        supporting_occurrence_count: 1
+        supporting_occurrence_ids:
+        - ocf-zero
+        period_label: reported_duration
+        selection_rule_version: '1'
+        selection_reason: SINGLE_ELIGIBLE_OCCURRENCE
+        raw_value: '0'
+      - source_occurrence_id: capex-positive
+        metric_code: capital_expenditures
+        value_decimal: '25'
+        period_start: '2025-02-01'
+        period_end: '2025-09-30'
+        accession_number: 0000320193-25-000001
+        supporting_occurrence_count: 1
+        supporting_occurrence_ids:
+        - capex-positive
+        period_label: reported_duration
+        selection_rule_version: '1'
+        selection_reason: SINGLE_ELIGIBLE_OCCURRENCE
+        raw_value: '025.000'
+  - name: metric_units_losses_and_ordered_agreement_issues
+    model: int_cash_flow_metric_selection_issues
+    description: Negative operating cash flow and positive, negative and zero PP&E acquisition payments
+      retain their tagged signs; agreeing occurrences keep ordered lineage.
+    given:
+      - *cash_input_0
+      - *cash_input_1
+      - &cash_input_2
+        input: ref('stg_silver_active_filings')
+        rows:
+          - &cash_row_2
+            cik: 0000320193
+            accession_number: 0000320193-25-000001
+            source_document_name: filing.xml
+            source_sha256: checksum
+    expect:
+      rows: []
+  - name: metric_and_duration_conflicts_are_isolated_selected
+    model: int_reported_cash_flow_metrics
+    description: An eighteenth-decimal difference is a conflict even with different accuracy; null accuracy
+      agrees only with nulls.
+    given:
+      - &cash_input_3
+        input: ref('int_financial_metric_candidates')
+        format: sql
+        rows: |
+          select
+              cast('operating_cash_flow' as VARCHAR) as metric_code,
+              cast('1' as INTEGER) as concept_priority,
+              cast('0000320193' as VARCHAR) as cik,
+              cast('0000320193-25-000001' as VARCHAR) as accession_number,
+              cast('ocf-value-a' as VARCHAR) as source_occurrence_id,
+              cast('filing.xml' as VARCHAR) as source_document_name,
+              cast('checksum' as VARCHAR) as source_sha256,
+              cast('3' as BIGINT) as source_ordinal,
+              cast('silver-run' as VARCHAR) as processing_run_id,
+              cast('1' as VARCHAR) as parser_version,
+              cast('1' as VARCHAR) as schema_version,
+              cast('http://fasb.org/us-gaap/2025' as VARCHAR) as concept_namespace,
+              cast('NetCashProvidedByUsedInOperatingActivities' as VARCHAR) as concept_local_name,
+              cast('-10' as VARCHAR) as raw_value,
+              cast('100.000000000000000001' as DECIMAL(38,18)) as value_decimal,
+              cast('-6' as VARCHAR) as decimals,
+              cast(null as VARCHAR) as precision,
+              cast('USD' as VARCHAR) as unit_ref,
+              cast('{http://www.xbrl.org/2003/iso4217}USD' as VARCHAR) as unit_expression,
+              cast('context' as VARCHAR) as context_ref,
+              cast('http://www.sec.gov/CIK' as VARCHAR) as entity_scheme,
+              cast('320193' as VARCHAR) as entity_identifier,
+              cast('duration' as VARCHAR) as period_kind,
+              cast('2025-01-01' as DATE) as period_start,
+              cast('2025-09-30' as DATE) as period_end,
+              cast(null as DATE) as period_instant,
+              cast('0' as BIGINT) as dimension_count,
+              cast(false as BOOLEAN) as has_dimensions,
+              cast('92' as BIGINT) as duration_days,
+              cast(true as BOOLEAN) as is_usd
+          union all
+          select
+              cast('operating_cash_flow' as VARCHAR) as metric_code,
+              cast('1' as INTEGER) as concept_priority,
+              cast('0000320193' as VARCHAR) as cik,
+              cast('0000320193-25-000001' as VARCHAR) as accession_number,
+              cast('ocf-value-b' as VARCHAR) as source_occurrence_id,
+              cast('filing.xml' as VARCHAR) as source_document_name,
+              cast('checksum' as VARCHAR) as source_sha256,
+              cast('3' as BIGINT) as source_ordinal,
+              cast('silver-run' as VARCHAR) as processing_run_id,
+              cast('1' as VARCHAR) as parser_version,
+              cast('1' as VARCHAR) as schema_version,
+              cast('http://fasb.org/us-gaap/2025' as VARCHAR) as concept_namespace,
+              cast('NetCashProvidedByUsedInOperatingActivities' as VARCHAR) as concept_local_name,
+              cast('-10' as VARCHAR) as raw_value,
+              cast('100.000000000000000002' as DECIMAL(38,18)) as value_decimal,
+              cast('0' as VARCHAR) as decimals,
+              cast(null as VARCHAR) as precision,
+              cast('USD' as VARCHAR) as unit_ref,
+              cast('{http://www.xbrl.org/2003/iso4217}USD' as VARCHAR) as unit_expression,
+              cast('context' as VARCHAR) as context_ref,
+              cast('http://www.sec.gov/CIK' as VARCHAR) as entity_scheme,
+              cast('320193' as VARCHAR) as entity_identifier,
+              cast('duration' as VARCHAR) as period_kind,
+              cast('2025-01-01' as DATE) as period_start,
+              cast('2025-09-30' as DATE) as period_end,
+              cast(null as DATE) as period_instant,
+              cast('0' as BIGINT) as dimension_count,
+              cast(false as BOOLEAN) as has_dimensions,
+              cast('92' as BIGINT) as duration_days,
+              cast(true as BOOLEAN) as is_usd
+          union all
+          select
+              cast('operating_cash_flow' as VARCHAR) as metric_code,
+              cast('1' as INTEGER) as concept_priority,
+              cast('0000320193' as VARCHAR) as cik,
+              cast('0000320193-25-000001' as VARCHAR) as accession_number,
+              cast('ocf-decimal-null' as VARCHAR) as source_occurrence_id,
+              cast('filing.xml' as VARCHAR) as source_document_name,
+              cast('checksum' as VARCHAR) as source_sha256,
+              cast('3' as BIGINT) as source_ordinal,
+              cast('silver-run' as VARCHAR) as processing_run_id,
+              cast('1' as VARCHAR) as parser_version,
+              cast('1' as VARCHAR) as schema_version,
+              cast('http://fasb.org/us-gaap/2025' as VARCHAR) as concept_namespace,
+              cast('NetCashProvidedByUsedInOperatingActivities' as VARCHAR) as concept_local_name,
+              cast('-10' as VARCHAR) as raw_value,
+              cast('-10' as DECIMAL(38,18)) as value_decimal,
+              cast(null as VARCHAR) as decimals,
+              cast(null as VARCHAR) as precision,
+              cast('USD' as VARCHAR) as unit_ref,
+              cast('{http://www.xbrl.org/2003/iso4217}USD' as VARCHAR) as unit_expression,
+              cast('context' as VARCHAR) as context_ref,
+              cast('http://www.sec.gov/CIK' as VARCHAR) as entity_scheme,
+              cast('320193' as VARCHAR) as entity_identifier,
+              cast('duration' as VARCHAR) as period_kind,
+              cast('2025-02-01' as DATE) as period_start,
+              cast('2025-09-30' as DATE) as period_end,
+              cast(null as DATE) as period_instant,
+              cast('0' as BIGINT) as dimension_count,
+              cast(false as BOOLEAN) as has_dimensions,
+              cast('92' as BIGINT) as duration_days,
+              cast(true as BOOLEAN) as is_usd
+          union all
+          select
+              cast('operating_cash_flow' as VARCHAR) as metric_code,
+              cast('1' as INTEGER) as concept_priority,
+              cast('0000320193' as VARCHAR) as cik,
+              cast('0000320193-25-000001' as VARCHAR) as accession_number,
+              cast('ocf-decimal-text' as VARCHAR) as source_occurrence_id,
+              cast('filing.xml' as VARCHAR) as source_document_name,
+              cast('checksum' as VARCHAR) as source_sha256,
+              cast('3' as BIGINT) as source_ordinal,
+              cast('silver-run' as VARCHAR) as processing_run_id,
+              cast('1' as VARCHAR) as parser_version,
+              cast('1' as VARCHAR) as schema_version,
+              cast('http://fasb.org/us-gaap/2025' as VARCHAR) as concept_namespace,
+              cast('NetCashProvidedByUsedInOperatingActivities' as VARCHAR) as concept_local_name,
+              cast('-10' as VARCHAR) as raw_value,
+              cast('-10' as DECIMAL(38,18)) as value_decimal,
+              cast('-6' as VARCHAR) as decimals,
+              cast(null as VARCHAR) as precision,
+              cast('USD' as VARCHAR) as unit_ref,
+              cast('{http://www.xbrl.org/2003/iso4217}USD' as VARCHAR) as unit_expression,
+              cast('context' as VARCHAR) as context_ref,
+              cast('http://www.sec.gov/CIK' as VARCHAR) as entity_scheme,
+              cast('320193' as VARCHAR) as entity_identifier,
+              cast('duration' as VARCHAR) as period_kind,
+              cast('2025-02-01' as DATE) as period_start,
+              cast('2025-09-30' as DATE) as period_end,
+              cast(null as DATE) as period_instant,
+              cast('0' as BIGINT) as dimension_count,
+              cast(false as BOOLEAN) as has_dimensions,
+              cast('92' as BIGINT) as duration_days,
+              cast(true as BOOLEAN) as is_usd
+          union all
+          select
+              cast('capital_expenditures' as VARCHAR) as metric_code,
+              cast('1' as INTEGER) as concept_priority,
+              cast('0000320193' as VARCHAR) as cik,
+              cast('0000320193-25-000001' as VARCHAR) as accession_number,
+              cast('capex-precision-null' as VARCHAR) as source_occurrence_id,
+              cast('filing.xml' as VARCHAR) as source_document_name,
+              cast('checksum' as VARCHAR) as source_sha256,
+              cast('3' as BIGINT) as source_ordinal,
+              cast('silver-run' as VARCHAR) as processing_run_id,
+              cast('1' as VARCHAR) as parser_version,
+              cast('1' as VARCHAR) as schema_version,
+              cast('http://fasb.org/us-gaap/2025' as VARCHAR) as concept_namespace,
+              cast('PaymentsToAcquirePropertyPlantAndEquipment' as VARCHAR) as concept_local_name,
+              cast('-0.25' as VARCHAR) as raw_value,
+              cast('-0.25' as DECIMAL(38,18)) as value_decimal,
+              cast('2' as VARCHAR) as decimals,
+              cast(null as VARCHAR) as precision,
+              cast('USD-other-ref' as VARCHAR) as unit_ref,
+              cast('{http://www.xbrl.org/2003/iso4217}USD' as VARCHAR) as unit_expression,
+              cast('context' as VARCHAR) as context_ref,
+              cast('http://www.sec.gov/CIK' as VARCHAR) as entity_scheme,
+              cast('320193' as VARCHAR) as entity_identifier,
+              cast('duration' as VARCHAR) as period_kind,
+              cast('2025-03-01' as DATE) as period_start,
+              cast('2025-09-30' as DATE) as period_end,
+              cast(null as DATE) as period_instant,
+              cast('0' as BIGINT) as dimension_count,
+              cast(false as BOOLEAN) as has_dimensions,
+              cast('92' as BIGINT) as duration_days,
+              cast(true as BOOLEAN) as is_usd
+          union all
+          select
+              cast('capital_expenditures' as VARCHAR) as metric_code,
+              cast('1' as INTEGER) as concept_priority,
+              cast('0000320193' as VARCHAR) as cik,
+              cast('0000320193-25-000001' as VARCHAR) as accession_number,
+              cast('capex-precision-text' as VARCHAR) as source_occurrence_id,
+              cast('filing.xml' as VARCHAR) as source_document_name,
+              cast('checksum' as VARCHAR) as source_sha256,
+              cast('3' as BIGINT) as source_ordinal,
+              cast('silver-run' as VARCHAR) as processing_run_id,
+              cast('1' as VARCHAR) as parser_version,
+              cast('1' as VARCHAR) as schema_version,
+              cast('http://fasb.org/us-gaap/2025' as VARCHAR) as concept_namespace,
+              cast('PaymentsToAcquirePropertyPlantAndEquipment' as VARCHAR) as concept_local_name,
+              cast('-0.25' as VARCHAR) as raw_value,
+              cast('-0.25' as DECIMAL(38,18)) as value_decimal,
+              cast('2' as VARCHAR) as decimals,
+              cast('3' as VARCHAR) as precision,
+              cast('USD-other-ref' as VARCHAR) as unit_ref,
+              cast('{http://www.xbrl.org/2003/iso4217}USD' as VARCHAR) as unit_expression,
+              cast('context' as VARCHAR) as context_ref,
+              cast('http://www.sec.gov/CIK' as VARCHAR) as entity_scheme,
+              cast('320193' as VARCHAR) as entity_identifier,
+              cast('duration' as VARCHAR) as period_kind,
+              cast('2025-03-01' as DATE) as period_start,
+              cast('2025-09-30' as DATE) as period_end,
+              cast(null as DATE) as period_instant,
+              cast('0' as BIGINT) as dimension_count,
+              cast(false as BOOLEAN) as has_dimensions,
+              cast('92' as BIGINT) as duration_days,
+              cast(true as BOOLEAN) as is_usd
+          union all
+          select
+              cast('capital_expenditures' as VARCHAR) as metric_code,
+              cast('1' as INTEGER) as concept_priority,
+              cast('0000320193' as VARCHAR) as cik,
+              cast('0000320193-25-000001' as VARCHAR) as accession_number,
+              cast('capex-decimal-inf' as VARCHAR) as source_occurrence_id,
+              cast('filing.xml' as VARCHAR) as source_document_name,
+              cast('checksum' as VARCHAR) as source_sha256,
+              cast('3' as BIGINT) as source_ordinal,
+              cast('silver-run' as VARCHAR) as processing_run_id,
+              cast('1' as VARCHAR) as parser_version,
+              cast('1' as VARCHAR) as schema_version,
+              cast('http://fasb.org/us-gaap/2025' as VARCHAR) as concept_namespace,
+              cast('PaymentsToAcquirePropertyPlantAndEquipment' as VARCHAR) as concept_local_name,
+              cast('-0.25' as VARCHAR) as raw_value,
+              cast('-0.25' as DECIMAL(38,18)) as value_decimal,
+              cast('INF' as VARCHAR) as decimals,
+              cast(null as VARCHAR) as precision,
+              cast('USD-other-ref' as VARCHAR) as unit_ref,
+              cast('{http://www.xbrl.org/2003/iso4217}USD' as VARCHAR) as unit_expression,
+              cast('context' as VARCHAR) as context_ref,
+              cast('http://www.sec.gov/CIK' as VARCHAR) as entity_scheme,
+              cast('320193' as VARCHAR) as entity_identifier,
+              cast('duration' as VARCHAR) as period_kind,
+              cast('2025-04-01' as DATE) as period_start,
+              cast('2025-09-30' as DATE) as period_end,
+              cast(null as DATE) as period_instant,
+              cast('0' as BIGINT) as dimension_count,
+              cast(false as BOOLEAN) as has_dimensions,
+              cast('92' as BIGINT) as duration_days,
+              cast(true as BOOLEAN) as is_usd
+          union all
+          select
+              cast('capital_expenditures' as VARCHAR) as metric_code,
+              cast('1' as INTEGER) as concept_priority,
+              cast('0000320193' as VARCHAR) as cik,
+              cast('0000320193-25-000001' as VARCHAR) as accession_number,
+              cast('capex-decimal-two' as VARCHAR) as source_occurrence_id,
+              cast('filing.xml' as VARCHAR) as source_document_name,
+              cast('checksum' as VARCHAR) as source_sha256,
+              cast('3' as BIGINT) as source_ordinal,
+              cast('silver-run' as VARCHAR) as processing_run_id,
+              cast('1' as VARCHAR) as parser_version,
+              cast('1' as VARCHAR) as schema_version,
+              cast('http://fasb.org/us-gaap/2025' as VARCHAR) as concept_namespace,
+              cast('PaymentsToAcquirePropertyPlantAndEquipment' as VARCHAR) as concept_local_name,
+              cast('-0.25' as VARCHAR) as raw_value,
+              cast('-0.25' as DECIMAL(38,18)) as value_decimal,
+              cast('2' as VARCHAR) as decimals,
+              cast(null as VARCHAR) as precision,
+              cast('USD-other-ref' as VARCHAR) as unit_ref,
+              cast('{http://www.xbrl.org/2003/iso4217}USD' as VARCHAR) as unit_expression,
+              cast('context' as VARCHAR) as context_ref,
+              cast('http://www.sec.gov/CIK' as VARCHAR) as entity_scheme,
+              cast('320193' as VARCHAR) as entity_identifier,
+              cast('duration' as VARCHAR) as period_kind,
+              cast('2025-04-01' as DATE) as period_start,
+              cast('2025-09-30' as DATE) as period_end,
+              cast(null as DATE) as period_instant,
+              cast('0' as BIGINT) as dimension_count,
+              cast(false as BOOLEAN) as has_dimensions,
+              cast('92' as BIGINT) as duration_days,
+              cast(true as BOOLEAN) as is_usd
+          union all
+          select
+              cast('operating_cash_flow' as VARCHAR) as metric_code,
+              cast('1' as INTEGER) as concept_priority,
+              cast('0000320193' as VARCHAR) as cik,
+              cast('0000320193-25-000001' as VARCHAR) as accession_number,
+              cast('ocf-good' as VARCHAR) as source_occurrence_id,
+              cast('filing.xml' as VARCHAR) as source_document_name,
+              cast('checksum' as VARCHAR) as source_sha256,
+              cast('3' as BIGINT) as source_ordinal,
+              cast('silver-run' as VARCHAR) as processing_run_id,
+              cast('1' as VARCHAR) as parser_version,
+              cast('1' as VARCHAR) as schema_version,
+              cast('http://fasb.org/us-gaap/2025' as VARCHAR) as concept_namespace,
+              cast('NetCashProvidedByUsedInOperatingActivities' as VARCHAR) as concept_local_name,
+              cast('-10' as VARCHAR) as raw_value,
+              cast('-10' as DECIMAL(38,18)) as value_decimal,
+              cast(null as VARCHAR) as decimals,
+              cast(null as VARCHAR) as precision,
+              cast('USD' as VARCHAR) as unit_ref,
+              cast('{http://www.xbrl.org/2003/iso4217}USD' as VARCHAR) as unit_expression,
+              cast('context' as VARCHAR) as context_ref,
+              cast('http://www.sec.gov/CIK' as VARCHAR) as entity_scheme,
+              cast('320193' as VARCHAR) as entity_identifier,
+              cast('duration' as VARCHAR) as period_kind,
+              cast('2025-07-01' as DATE) as period_start,
+              cast('2025-09-30' as DATE) as period_end,
+              cast(null as DATE) as period_instant,
+              cast('0' as BIGINT) as dimension_count,
+              cast(false as BOOLEAN) as has_dimensions,
+              cast('92' as BIGINT) as duration_days,
+              cast(true as BOOLEAN) as is_usd
+          union all
+          select
+              cast('operating_cash_flow' as VARCHAR) as metric_code,
+              cast('1' as INTEGER) as concept_priority,
+              cast('0000320193' as VARCHAR) as cik,
+              cast('0000320193-25-000001' as VARCHAR) as accession_number,
+              cast('ocf-good-repeat' as VARCHAR) as source_occurrence_id,
+              cast('filing.xml' as VARCHAR) as source_document_name,
+              cast('checksum' as VARCHAR) as source_sha256,
+              cast('3' as BIGINT) as source_ordinal,
+              cast('silver-run' as VARCHAR) as processing_run_id,
+              cast('1' as VARCHAR) as parser_version,
+              cast('1' as VARCHAR) as schema_version,
+              cast('http://fasb.org/us-gaap/2025' as VARCHAR) as concept_namespace,
+              cast('NetCashProvidedByUsedInOperatingActivities' as VARCHAR) as concept_local_name,
+              cast('-10' as VARCHAR) as raw_value,
+              cast('-10' as DECIMAL(38,18)) as value_decimal,
+              cast(null as VARCHAR) as decimals,
+              cast(null as VARCHAR) as precision,
+              cast('USD' as VARCHAR) as unit_ref,
+              cast('{http://www.xbrl.org/2003/iso4217}USD' as VARCHAR) as unit_expression,
+              cast('context' as VARCHAR) as context_ref,
+              cast('http://www.sec.gov/CIK' as VARCHAR) as entity_scheme,
+              cast('320193' as VARCHAR) as entity_identifier,
+              cast('duration' as VARCHAR) as period_kind,
+              cast('2025-07-01' as DATE) as period_start,
+              cast('2025-09-30' as DATE) as period_end,
+              cast(null as DATE) as period_instant,
+              cast('0' as BIGINT) as dimension_count,
+              cast(false as BOOLEAN) as has_dimensions,
+              cast('92' as BIGINT) as duration_days,
+              cast(true as BOOLEAN) as is_usd
+          union all
+          select
+              cast('capital_expenditures' as VARCHAR) as metric_code,
+              cast('1' as INTEGER) as concept_priority,
+              cast('0000320193' as VARCHAR) as cik,
+              cast('0000320193-25-000001' as VARCHAR) as accession_number,
+              cast('capex-good' as VARCHAR) as source_occurrence_id,
+              cast('filing.xml' as VARCHAR) as source_document_name,
+              cast('checksum' as VARCHAR) as source_sha256,
+              cast('3' as BIGINT) as source_ordinal,
+              cast('silver-run' as VARCHAR) as processing_run_id,
+              cast('1' as VARCHAR) as parser_version,
+              cast('1' as VARCHAR) as schema_version,
+              cast('http://fasb.org/us-gaap/2025' as VARCHAR) as concept_namespace,
+              cast('PaymentsToAcquirePropertyPlantAndEquipment' as VARCHAR) as concept_local_name,
+              cast('-0.25' as VARCHAR) as raw_value,
+              cast('-0.25' as DECIMAL(38,18)) as value_decimal,
+              cast('2' as VARCHAR) as decimals,
+              cast(null as VARCHAR) as precision,
+              cast('USD-other-ref' as VARCHAR) as unit_ref,
+              cast('{http://www.xbrl.org/2003/iso4217}USD' as VARCHAR) as unit_expression,
+              cast('context' as VARCHAR) as context_ref,
+              cast('http://www.sec.gov/CIK' as VARCHAR) as entity_scheme,
+              cast('320193' as VARCHAR) as entity_identifier,
+              cast('duration' as VARCHAR) as period_kind,
+              cast('2025-07-01' as DATE) as period_start,
+              cast('2025-09-30' as DATE) as period_end,
+              cast(null as DATE) as period_instant,
+              cast('0' as BIGINT) as dimension_count,
+              cast(false as BOOLEAN) as has_dimensions,
+              cast('92' as BIGINT) as duration_days,
+              cast(true as BOOLEAN) as is_usd
+      - &cash_input_4
+        input: ref('stg_silver_filing_metadata')
+        rows:
+          - <<: *cash_row_1
+    expect:
+      rows:
+      - source_occurrence_id: ocf-good
+        metric_code: operating_cash_flow
+        value_decimal: '-10'
+        period_start: '2025-07-01'
+        period_end: '2025-09-30'
+        accession_number: 0000320193-25-000001
+        supporting_occurrence_count: 2
+        supporting_occurrence_ids:
+        - ocf-good
+        - ocf-good-repeat
+        period_label: reported_duration
+        selection_rule_version: '1'
+        selection_reason: AGREEING_ELIGIBLE_OCCURRENCES
+      - source_occurrence_id: capex-good
+        metric_code: capital_expenditures
+        value_decimal: '-0.25'
+        period_start: '2025-07-01'
+        period_end: '2025-09-30'
+        accession_number: 0000320193-25-000001
+        supporting_occurrence_count: 1
+        supporting_occurrence_ids:
+        - capex-good
+        period_label: reported_duration
+        selection_rule_version: '1'
+        selection_reason: SINGLE_ELIGIBLE_OCCURRENCE
+  - name: metric_and_duration_conflicts_are_isolated_issues
+    model: int_cash_flow_metric_selection_issues
+    description: An eighteenth-decimal difference is a conflict even with different accuracy; null accuracy
+      agrees only with nulls.
+    given:
+      - *cash_input_3
+      - *cash_input_4
+      - &cash_input_5
+        input: ref('stg_silver_active_filings')
+        rows:
+          - <<: *cash_row_2
+    expect:
+      rows:
+      - metric_code: operating_cash_flow
+        accession_number: 0000320193-25-000001
+        issue_code: METRIC_VALUE_CONFLICT
+        severity: WARNING
+        report_date: '2025-09-30'
+        period_start: '2025-01-01'
+        period_end: '2025-09-30'
+        source_occurrence_ids:
+        - ocf-value-a
+        - ocf-value-b
+      - metric_code: operating_cash_flow
+        accession_number: 0000320193-25-000001
+        issue_code: METRIC_ACCURACY_UNRESOLVED
+        severity: WARNING
+        report_date: '2025-09-30'
+        period_start: '2025-02-01'
+        period_end: '2025-09-30'
+        source_occurrence_ids:
+        - ocf-decimal-null
+        - ocf-decimal-text
+      - metric_code: capital_expenditures
+        accession_number: 0000320193-25-000001
+        issue_code: METRIC_ACCURACY_UNRESOLVED
+        severity: WARNING
+        report_date: '2025-09-30'
+        period_start: '2025-03-01'
+        period_end: '2025-09-30'
+        source_occurrence_ids:
+        - capex-precision-null
+        - capex-precision-text
+      - metric_code: capital_expenditures
+        accession_number: 0000320193-25-000001
+        issue_code: METRIC_ACCURACY_UNRESOLVED
+        severity: WARNING
+        report_date: '2025-09-30'
+        period_start: '2025-04-01'
+        period_end: '2025-09-30'
+        source_occurrence_ids:
+        - capex-decimal-inf
+        - capex-decimal-two
+  - name: eligibility_and_wrong_units_selected
+    model: int_reported_cash_flow_metrics
+    description: Invalid entities, periods, dimensions and units remain inspectable candidates but do not
+      participate in selection.
+    given:
+      - &cash_input_6
+        input: ref('int_financial_metric_candidates')
+        rows:
+          - <<: *cash_row_0
+            source_occurrence_id: ocf-valid
+          - <<: *cash_row_0
+            metric_code: capital_expenditures
+            source_occurrence_id: capex-valid
+            concept_local_name: PaymentsToAcquirePropertyPlantAndEquipment
+            raw_value: '-0.25'
+            value_decimal: '-0.25'
+            decimals: '2'
+            unit_ref: USD-other-ref
+          - <<: *cash_row_0
+            source_occurrence_id: operating_cash_flow-dimension
+            dimension_count: 1
+            has_dimensions: true
+          - <<: *cash_row_0
+            source_occurrence_id: operating_cash_flow-flag
+            has_dimensions: true
+          - <<: *cash_row_0
+            source_occurrence_id: operating_cash_flow-comparative
+            period_start: '2024-07-01'
+            period_end: '2024-09-30'
+          - <<: *cash_row_0
+            source_occurrence_id: operating_cash_flow-entity
+            entity_identifier: '123'
+          - <<: *cash_row_0
+            source_occurrence_id: operating_cash_flow-scheme
+            entity_scheme: urn:company
+          - <<: *cash_row_0
+            source_occurrence_id: operating_cash_flow-letters
+            entity_identifier: CIK320193
+          - <<: *cash_row_0
+            source_occurrence_id: operating_cash_flow-spaces
+            entity_identifier: '320193 '
+          - <<: *cash_row_0
+            source_occurrence_id: operating_cash_flow-zero-id
+            entity_identifier: '0000000000'
+          - <<: *cash_row_0
+            source_occurrence_id: operating_cash_flow-unicode
+            entity_identifier: "\uFF13\uFF12\uFF10\uFF11\uFF19\uFF13"
+          - <<: *cash_row_0
+            source_occurrence_id: operating_cash_flow-long-id
+            entity_identifier: 00000320193
+          - <<: *cash_row_0
+            source_occurrence_id: operating_cash_flow-sign
+            entity_identifier: '+320193'
+          - <<: *cash_row_0
+            source_occurrence_id: operating_cash_flow-bad-period
+            period_start: '2025-10-01'
+          - <<: *cash_row_0
+            source_occurrence_id: operating_cash_flow-null-start
+            period_start: null
+          - <<: *cash_row_0
+            source_occurrence_id: operating_cash_flow-null-end
+            period_end: null
+          - <<: *cash_row_0
+            source_occurrence_id: operating_cash_flow-instant
+            period_kind: instant
+          - <<: *cash_row_0
+            source_occurrence_id: operating_cash_flow-instant-date
+            period_instant: '2025-09-30'
+          - <<: *cash_row_0
+            source_occurrence_id: operating_cash_flow-null-value
+            value_decimal: null
+          - <<: *cash_row_0
+            source_occurrence_id: operating_cash_flow-eur
+            unit_expression: '{http://www.xbrl.org/2003/iso4217}EUR'
+          - <<: *cash_row_0
+            source_occurrence_id: operating_cash_flow-shares
+            unit_expression: '{http://www.xbrl.org/2003/instance}shares'
+          - <<: *cash_row_0
+            source_occurrence_id: operating_cash_flow-product
+            unit_expression: '{http://www.xbrl.org/2003/iso4217}USD * {http://www.xbrl.org/2003/instance}shares'
+          - <<: *cash_row_0
+            metric_code: capital_expenditures
+            source_occurrence_id: capital_expenditures-dimension
+            concept_local_name: PaymentsToAcquirePropertyPlantAndEquipment
+            raw_value: '-0.25'
+            value_decimal: '-0.25'
+            decimals: '2'
+            unit_ref: USD-other-ref
+            dimension_count: 1
+            has_dimensions: true
+          - <<: *cash_row_0
+            metric_code: capital_expenditures
+            source_occurrence_id: capital_expenditures-flag
+            concept_local_name: PaymentsToAcquirePropertyPlantAndEquipment
+            raw_value: '-0.25'
+            value_decimal: '-0.25'
+            decimals: '2'
+            unit_ref: USD-other-ref
+            has_dimensions: true
+          - <<: *cash_row_0
+            metric_code: capital_expenditures
+            source_occurrence_id: capital_expenditures-comparative
+            concept_local_name: PaymentsToAcquirePropertyPlantAndEquipment
+            raw_value: '-0.25'
+            value_decimal: '-0.25'
+            decimals: '2'
+            unit_ref: USD-other-ref
+            period_start: '2024-07-01'
+            period_end: '2024-09-30'
+          - <<: *cash_row_0
+            metric_code: capital_expenditures
+            source_occurrence_id: capital_expenditures-entity
+            concept_local_name: PaymentsToAcquirePropertyPlantAndEquipment
+            raw_value: '-0.25'
+            value_decimal: '-0.25'
+            decimals: '2'
+            unit_ref: USD-other-ref
+            entity_identifier: '123'
+          - <<: *cash_row_0
+            metric_code: capital_expenditures
+            source_occurrence_id: capital_expenditures-scheme
+            concept_local_name: PaymentsToAcquirePropertyPlantAndEquipment
+            raw_value: '-0.25'
+            value_decimal: '-0.25'
+            decimals: '2'
+            unit_ref: USD-other-ref
+            entity_scheme: urn:company
+          - <<: *cash_row_0
+            metric_code: capital_expenditures
+            source_occurrence_id: capital_expenditures-letters
+            concept_local_name: PaymentsToAcquirePropertyPlantAndEquipment
+            raw_value: '-0.25'
+            value_decimal: '-0.25'
+            decimals: '2'
+            unit_ref: USD-other-ref
+            entity_identifier: CIK320193
+          - <<: *cash_row_0
+            metric_code: capital_expenditures
+            source_occurrence_id: capital_expenditures-spaces
+            concept_local_name: PaymentsToAcquirePropertyPlantAndEquipment
+            raw_value: '-0.25'
+            value_decimal: '-0.25'
+            decimals: '2'
+            unit_ref: USD-other-ref
+            entity_identifier: '320193 '
+          - <<: *cash_row_0
+            metric_code: capital_expenditures
+            source_occurrence_id: capital_expenditures-zero-id
+            concept_local_name: PaymentsToAcquirePropertyPlantAndEquipment
+            raw_value: '-0.25'
+            value_decimal: '-0.25'
+            decimals: '2'
+            unit_ref: USD-other-ref
+            entity_identifier: '0000000000'
+          - <<: *cash_row_0
+            metric_code: capital_expenditures
+            source_occurrence_id: capital_expenditures-unicode
+            concept_local_name: PaymentsToAcquirePropertyPlantAndEquipment
+            raw_value: '-0.25'
+            value_decimal: '-0.25'
+            decimals: '2'
+            unit_ref: USD-other-ref
+            entity_identifier: "\uFF13\uFF12\uFF10\uFF11\uFF19\uFF13"
+          - <<: *cash_row_0
+            metric_code: capital_expenditures
+            source_occurrence_id: capital_expenditures-long-id
+            concept_local_name: PaymentsToAcquirePropertyPlantAndEquipment
+            raw_value: '-0.25'
+            value_decimal: '-0.25'
+            decimals: '2'
+            unit_ref: USD-other-ref
+            entity_identifier: 00000320193
+          - <<: *cash_row_0
+            metric_code: capital_expenditures
+            source_occurrence_id: capital_expenditures-sign
+            concept_local_name: PaymentsToAcquirePropertyPlantAndEquipment
+            raw_value: '-0.25'
+            value_decimal: '-0.25'
+            decimals: '2'
+            unit_ref: USD-other-ref
+            entity_identifier: '+320193'
+          - <<: *cash_row_0
+            metric_code: capital_expenditures
+            source_occurrence_id: capital_expenditures-bad-period
+            concept_local_name: PaymentsToAcquirePropertyPlantAndEquipment
+            raw_value: '-0.25'
+            value_decimal: '-0.25'
+            decimals: '2'
+            unit_ref: USD-other-ref
+            period_start: '2025-10-01'
+          - <<: *cash_row_0
+            metric_code: capital_expenditures
+            source_occurrence_id: capital_expenditures-null-start
+            concept_local_name: PaymentsToAcquirePropertyPlantAndEquipment
+            raw_value: '-0.25'
+            value_decimal: '-0.25'
+            decimals: '2'
+            unit_ref: USD-other-ref
+            period_start: null
+          - <<: *cash_row_0
+            metric_code: capital_expenditures
+            source_occurrence_id: capital_expenditures-null-end
+            concept_local_name: PaymentsToAcquirePropertyPlantAndEquipment
+            raw_value: '-0.25'
+            value_decimal: '-0.25'
+            decimals: '2'
+            unit_ref: USD-other-ref
+            period_end: null
+          - <<: *cash_row_0
+            metric_code: capital_expenditures
+            source_occurrence_id: capital_expenditures-instant
+            concept_local_name: PaymentsToAcquirePropertyPlantAndEquipment
+            raw_value: '-0.25'
+            value_decimal: '-0.25'
+            decimals: '2'
+            unit_ref: USD-other-ref
+            period_kind: instant
+          - <<: *cash_row_0
+            metric_code: capital_expenditures
+            source_occurrence_id: capital_expenditures-instant-date
+            concept_local_name: PaymentsToAcquirePropertyPlantAndEquipment
+            raw_value: '-0.25'
+            value_decimal: '-0.25'
+            decimals: '2'
+            unit_ref: USD-other-ref
+            period_instant: '2025-09-30'
+          - <<: *cash_row_0
+            metric_code: capital_expenditures
+            source_occurrence_id: capital_expenditures-null-value
+            concept_local_name: PaymentsToAcquirePropertyPlantAndEquipment
+            raw_value: '-0.25'
+            value_decimal: null
+            decimals: '2'
+            unit_ref: USD-other-ref
+          - <<: *cash_row_0
+            metric_code: capital_expenditures
+            source_occurrence_id: capital_expenditures-eur
+            concept_local_name: PaymentsToAcquirePropertyPlantAndEquipment
+            raw_value: '-0.25'
+            value_decimal: '-0.25'
+            decimals: '2'
+            unit_ref: USD-other-ref
+            unit_expression: '{http://www.xbrl.org/2003/iso4217}EUR'
+            is_usd: false
+          - <<: *cash_row_0
+            metric_code: capital_expenditures
+            source_occurrence_id: capital_expenditures-shares
+            concept_local_name: PaymentsToAcquirePropertyPlantAndEquipment
+            raw_value: '-0.25'
+            value_decimal: '-0.25'
+            decimals: '2'
+            unit_ref: USD-other-ref
+            unit_expression: '{http://www.xbrl.org/2003/instance}shares'
+            is_usd: false
+          - <<: *cash_row_0
+            metric_code: capital_expenditures
+            source_occurrence_id: capital_expenditures-product
+            concept_local_name: PaymentsToAcquirePropertyPlantAndEquipment
+            raw_value: '-0.25'
+            value_decimal: '-0.25'
+            decimals: '2'
+            unit_ref: USD-other-ref
+            unit_expression: '{http://www.xbrl.org/2003/iso4217}USD * {http://www.xbrl.org/2003/instance}shares'
+            is_usd: false
+          - <<: *cash_row_0
+            source_occurrence_id: operating_cash_flow-divided
+            unit_expression: ({http://www.xbrl.org/2003/iso4217}USD) / ({http://www.xbrl.org/2003/instance}shares)
+            is_usd: false
+          - <<: *cash_row_0
+            metric_code: capital_expenditures
+            source_occurrence_id: capex-plain-usd
+            concept_local_name: PaymentsToAcquirePropertyPlantAndEquipment
+            raw_value: '-0.25'
+            value_decimal: '-0.25'
+            decimals: '2'
+            unit_ref: USD-other-ref
+            unit_expression: ({http://www.xbrl.org/2003/iso4217}USD) / ({http://www.xbrl.org/2003/instance}shares)
+            is_usd: false
+          - <<: *cash_row_0
+            metric_code: capital_expenditures
+            source_occurrence_id: capex-eur-divided
+            concept_local_name: PaymentsToAcquirePropertyPlantAndEquipment
+            raw_value: '-0.25'
+            value_decimal: '-0.25'
+            decimals: '2'
+            unit_ref: USD-other-ref
+            unit_expression: ({http://www.xbrl.org/2003/iso4217}EUR) / ({http://www.xbrl.org/2003/instance}shares)
+            is_usd: false
+      - &cash_input_7
+        input: ref('stg_silver_filing_metadata')
+        rows:
+          - <<: *cash_row_1
+    expect:
+      rows:
+      - source_occurrence_id: ocf-valid
+        metric_code: operating_cash_flow
+        value_decimal: '-10'
+        period_start: '2025-07-01'
+        period_end: '2025-09-30'
+        accession_number: 0000320193-25-000001
+        supporting_occurrence_count: 1
+        supporting_occurrence_ids:
+        - ocf-valid
+        period_label: reported_duration
+        selection_rule_version: '1'
+        selection_reason: SINGLE_ELIGIBLE_OCCURRENCE
+      - source_occurrence_id: capex-valid
+        metric_code: capital_expenditures
+        value_decimal: '-0.25'
+        period_start: '2025-07-01'
+        period_end: '2025-09-30'
+        accession_number: 0000320193-25-000001
+        supporting_occurrence_count: 1
+        supporting_occurrence_ids:
+        - capex-valid
+        period_label: reported_duration
+        selection_rule_version: '1'
+        selection_reason: SINGLE_ELIGIBLE_OCCURRENCE
+  - name: eligibility_and_wrong_units_issues
+    model: int_cash_flow_metric_selection_issues
+    description: Invalid entities, periods, dimensions and units remain inspectable candidates but do not
+      participate in selection.
+    given:
+      - *cash_input_6
+      - *cash_input_7
+      - &cash_input_8
+        input: ref('stg_silver_active_filings')
+        rows:
+          - <<: *cash_row_2
+    expect:
+      rows: []
+  - name: separate_durations_accessions_and_companies_selected
+    model: int_reported_cash_flow_metrics
+    description: Exact durations and amended accessions are independent; companies never share supporting
+      lineage.
+    given:
+      - &cash_input_9
+        input: ref('int_financial_metric_candidates')
+        rows:
+          - <<: *cash_row_0
+            source_occurrence_id: ocf-quarter
+          - <<: *cash_row_0
+            source_occurrence_id: ocf-long
+            value_decimal: '-20'
+            period_start: '2025-01-01'
+          - <<: *cash_row_0
+            metric_code: capital_expenditures
+            source_occurrence_id: capex-quarter
+            concept_local_name: PaymentsToAcquirePropertyPlantAndEquipment
+            raw_value: '-0.25'
+            value_decimal: '-0.25'
+            decimals: '2'
+            unit_ref: USD-other-ref
+          - <<: *cash_row_0
+            metric_code: capital_expenditures
+            source_occurrence_id: capex-long
+            concept_local_name: PaymentsToAcquirePropertyPlantAndEquipment
+            raw_value: '-0.25'
+            value_decimal: '-0.50'
+            decimals: '2'
+            unit_ref: USD-other-ref
+            period_start: '2025-01-01'
+          - <<: *cash_row_0
+            accession_number: 0000320193-25-000002
+            source_occurrence_id: ocf-amendment
+          - <<: *cash_row_0
+            metric_code: capital_expenditures
+            accession_number: 0000320193-25-000002
+            source_occurrence_id: capex-amendment
+            concept_local_name: PaymentsToAcquirePropertyPlantAndEquipment
+            raw_value: '-0.25'
+            value_decimal: '-0.25'
+            decimals: '2'
+            unit_ref: USD-other-ref
+          - <<: *cash_row_0
+            cik: '0000000002'
+            source_occurrence_id: other-company
+            entity_identifier: '2'
+      - &cash_input_10
+        input: ref('stg_silver_filing_metadata')
+        rows:
+          - <<: *cash_row_1
+          - <<: *cash_row_1
+            accession_number: 0000320193-25-000002
+            form: 10-Q/A
+          - <<: *cash_row_1
+            cik: '0000000002'
+    expect:
+      rows:
+      - source_occurrence_id: ocf-quarter
+        metric_code: operating_cash_flow
+        value_decimal: '-10'
+        period_start: '2025-07-01'
+        period_end: '2025-09-30'
+        accession_number: 0000320193-25-000001
+        supporting_occurrence_count: 1
+        supporting_occurrence_ids:
+        - ocf-quarter
+        period_label: reported_duration
+        selection_rule_version: '1'
+        selection_reason: SINGLE_ELIGIBLE_OCCURRENCE
+        cik: 0000320193
+      - source_occurrence_id: ocf-long
+        metric_code: operating_cash_flow
+        value_decimal: '-20'
+        period_start: '2025-01-01'
+        period_end: '2025-09-30'
+        accession_number: 0000320193-25-000001
+        supporting_occurrence_count: 1
+        supporting_occurrence_ids:
+        - ocf-long
+        period_label: reported_duration
+        selection_rule_version: '1'
+        selection_reason: SINGLE_ELIGIBLE_OCCURRENCE
+        cik: 0000320193
+      - source_occurrence_id: capex-quarter
+        metric_code: capital_expenditures
+        value_decimal: '-0.25'
+        period_start: '2025-07-01'
+        period_end: '2025-09-30'
+        accession_number: 0000320193-25-000001
+        supporting_occurrence_count: 1
+        supporting_occurrence_ids:
+        - capex-quarter
+        period_label: reported_duration
+        selection_rule_version: '1'
+        selection_reason: SINGLE_ELIGIBLE_OCCURRENCE
+        cik: 0000320193
+      - source_occurrence_id: capex-long
+        metric_code: capital_expenditures
+        value_decimal: '-0.50'
+        period_start: '2025-01-01'
+        period_end: '2025-09-30'
+        accession_number: 0000320193-25-000001
+        supporting_occurrence_count: 1
+        supporting_occurrence_ids:
+        - capex-long
+        period_label: reported_duration
+        selection_rule_version: '1'
+        selection_reason: SINGLE_ELIGIBLE_OCCURRENCE
+        cik: 0000320193
+      - source_occurrence_id: ocf-amendment
+        metric_code: operating_cash_flow
+        value_decimal: '-10'
+        period_start: '2025-07-01'
+        period_end: '2025-09-30'
+        accession_number: 0000320193-25-000002
+        supporting_occurrence_count: 1
+        supporting_occurrence_ids:
+        - ocf-amendment
+        period_label: reported_duration
+        selection_rule_version: '1'
+        selection_reason: SINGLE_ELIGIBLE_OCCURRENCE
+        cik: 0000320193
+      - source_occurrence_id: capex-amendment
+        metric_code: capital_expenditures
+        value_decimal: '-0.25'
+        period_start: '2025-07-01'
+        period_end: '2025-09-30'
+        accession_number: 0000320193-25-000002
+        supporting_occurrence_count: 1
+        supporting_occurrence_ids:
+        - capex-amendment
+        period_label: reported_duration
+        selection_rule_version: '1'
+        selection_reason: SINGLE_ELIGIBLE_OCCURRENCE
+        cik: 0000320193
+      - source_occurrence_id: other-company
+        metric_code: operating_cash_flow
+        value_decimal: '-10'
+        period_start: '2025-07-01'
+        period_end: '2025-09-30'
+        accession_number: 0000320193-25-000001
+        supporting_occurrence_count: 1
+        supporting_occurrence_ids:
+        - other-company
+        period_label: reported_duration
+        selection_rule_version: '1'
+        selection_reason: SINGLE_ELIGIBLE_OCCURRENCE
+        cik: '0000000002'
+  - name: separate_durations_accessions_and_companies_issues
+    model: int_cash_flow_metric_selection_issues
+    description: Exact durations and amended accessions are independent; companies never share supporting
+      lineage.
+    given:
+      - *cash_input_9
+      - *cash_input_10
+      - &cash_input_11
+        input: ref('stg_silver_active_filings')
+        rows:
+          - <<: *cash_row_2
+          - <<: *cash_row_2
+            accession_number: 0000320193-25-000002
+          - <<: *cash_row_2
+            cik: '0000000002'
+    expect:
+      rows:
+      - metric_code: capital_expenditures
+        accession_number: 0000320193-25-000001
+        issue_code: NO_ELIGIBLE_METRIC
+        severity: WARNING
+        report_date: '2025-09-30'
+        period_start: null
+        period_end: null
+        source_occurrence_ids: []
+        cik: '0000000002'
+  - name: missing_metric_and_all_ambiguous_selected
+    model: int_reported_cash_flow_metrics
+    description: A missing metric does not suppress the other; all-ambiguous groups are not reported as
+      absent.
+    given:
+      - &cash_input_12
+        input: ref('int_financial_metric_candidates')
+        rows:
+          - <<: *cash_row_0
+            metric_code: capital_expenditures
+            source_occurrence_id: only-eps
+            concept_local_name: PaymentsToAcquirePropertyPlantAndEquipment
+            raw_value: '-0.25'
+            value_decimal: '-0.25'
+            decimals: '2'
+            unit_ref: USD-other-ref
+          - <<: *cash_row_0
+            accession_number: 0000320193-25-000002
+            source_occurrence_id: only-ni
+          - <<: *cash_row_0
+            accession_number: 0000320193-25-000003
+            source_occurrence_id: ocf-conflict-a
+            value_decimal: '1'
+          - <<: *cash_row_0
+            accession_number: 0000320193-25-000003
+            source_occurrence_id: ocf-conflict-b
+            value_decimal: '2'
+          - <<: *cash_row_0
+            metric_code: capital_expenditures
+            accession_number: 0000320193-25-000003
+            source_occurrence_id: capex-independent
+            concept_local_name: PaymentsToAcquirePropertyPlantAndEquipment
+            raw_value: '-0.25'
+            value_decimal: '-0.25'
+            decimals: '2'
+            unit_ref: USD-other-ref
+      - &cash_input_13
+        input: ref('stg_silver_filing_metadata')
+        rows:
+          - <<: *cash_row_1
+          - <<: *cash_row_1
+            accession_number: 0000320193-25-000002
+          - <<: *cash_row_1
+            accession_number: 0000320193-25-000003
+    expect:
+      rows:
+      - source_occurrence_id: only-eps
+        metric_code: capital_expenditures
+        value_decimal: '-0.25'
+        period_start: '2025-07-01'
+        period_end: '2025-09-30'
+        accession_number: 0000320193-25-000001
+        supporting_occurrence_count: 1
+        supporting_occurrence_ids:
+        - only-eps
+        period_label: reported_duration
+        selection_rule_version: '1'
+        selection_reason: SINGLE_ELIGIBLE_OCCURRENCE
+      - source_occurrence_id: only-ni
+        metric_code: operating_cash_flow
+        value_decimal: '-10'
+        period_start: '2025-07-01'
+        period_end: '2025-09-30'
+        accession_number: 0000320193-25-000002
+        supporting_occurrence_count: 1
+        supporting_occurrence_ids:
+        - only-ni
+        period_label: reported_duration
+        selection_rule_version: '1'
+        selection_reason: SINGLE_ELIGIBLE_OCCURRENCE
+      - source_occurrence_id: capex-independent
+        metric_code: capital_expenditures
+        value_decimal: '-0.25'
+        period_start: '2025-07-01'
+        period_end: '2025-09-30'
+        accession_number: 0000320193-25-000003
+        supporting_occurrence_count: 1
+        supporting_occurrence_ids:
+        - capex-independent
+        period_label: reported_duration
+        selection_rule_version: '1'
+        selection_reason: SINGLE_ELIGIBLE_OCCURRENCE
+  - name: missing_metric_and_all_ambiguous_issues
+    model: int_cash_flow_metric_selection_issues
+    description: A missing metric does not suppress the other; all-ambiguous groups are not reported as
+      absent.
+    given:
+      - *cash_input_12
+      - *cash_input_13
+      - &cash_input_14
+        input: ref('stg_silver_active_filings')
+        rows:
+          - <<: *cash_row_2
+          - <<: *cash_row_2
+            accession_number: 0000320193-25-000002
+          - <<: *cash_row_2
+            accession_number: 0000320193-25-000003
+    expect:
+      rows:
+      - metric_code: operating_cash_flow
+        accession_number: 0000320193-25-000001
+        issue_code: NO_ELIGIBLE_METRIC
+        severity: WARNING
+        report_date: '2025-09-30'
+        period_start: null
+        period_end: null
+        source_occurrence_ids: []
+      - metric_code: capital_expenditures
+        accession_number: 0000320193-25-000002
+        issue_code: NO_ELIGIBLE_METRIC
+        severity: WARNING
+        report_date: '2025-09-30'
+        period_start: null
+        period_end: null
+        source_occurrence_ids: []
+      - metric_code: operating_cash_flow
+        accession_number: 0000320193-25-000003
+        issue_code: METRIC_VALUE_CONFLICT
+        severity: WARNING
+        report_date: '2025-09-30'
+        period_start: '2025-07-01'
+        period_end: '2025-09-30'
+        source_occurrence_ids:
+        - ocf-conflict-a
+        - ocf-conflict-b
+  - name: filing_issue_precedence_for_each_metric_selected
+    model: int_reported_cash_flow_metrics
+    description: Both metrics expose missing metadata, unsupported forms and missing report dates with one
+      filing issue apiece.
+    given:
+      - &cash_input_15
+        input: ref('int_financial_metric_candidates')
+        rows:
+          - <<: *cash_row_0
+            source_occurrence_id: unused
+      - &cash_input_16
+        input: ref('stg_silver_filing_metadata')
+        rows:
+          - <<: *cash_row_1
+            cik: '0000000002'
+          - <<: *cash_row_1
+            accession_number: 0000320193-25-000002
+            form: 8-K
+            report_date: null
+          - <<: *cash_row_1
+            accession_number: 0000320193-25-000003
+            report_date: null
+          - <<: *cash_row_1
+            accession_number: 0000320193-25-000004
+    expect:
+      rows: []
+  - name: filing_issue_precedence_for_each_metric_issues
+    model: int_cash_flow_metric_selection_issues
+    description: Both metrics expose missing metadata, unsupported forms and missing report dates with one
+      filing issue apiece.
+    given:
+      - *cash_input_15
+      - *cash_input_16
+      - &cash_input_17
+        input: ref('stg_silver_active_filings')
+        rows:
+          - <<: *cash_row_2
+          - <<: *cash_row_2
+            accession_number: 0000320193-25-000002
+          - <<: *cash_row_2
+            accession_number: 0000320193-25-000003
+          - <<: *cash_row_2
+            accession_number: 0000320193-25-000004
+    expect:
+      rows:
+      - metric_code: operating_cash_flow
+        accession_number: 0000320193-25-000001
+        issue_code: MISSING_FILING_METADATA
+        severity: ERROR
+        report_date: null
+        period_start: null
+        period_end: null
+        source_occurrence_ids: []
+      - metric_code: capital_expenditures
+        accession_number: 0000320193-25-000001
+        issue_code: MISSING_FILING_METADATA
+        severity: ERROR
+        report_date: null
+        period_start: null
+        period_end: null
+        source_occurrence_ids: []
+      - metric_code: operating_cash_flow
+        accession_number: 0000320193-25-000002
+        issue_code: UNSUPPORTED_FORM
+        severity: WARNING
+        report_date: null
+        period_start: null
+        period_end: null
+        source_occurrence_ids: []
+      - metric_code: capital_expenditures
+        accession_number: 0000320193-25-000002
+        issue_code: UNSUPPORTED_FORM
+        severity: WARNING
+        report_date: null
+        period_start: null
+        period_end: null
+        source_occurrence_ids: []
+      - metric_code: operating_cash_flow
+        accession_number: 0000320193-25-000003
+        issue_code: MISSING_REPORT_DATE
+        severity: ERROR
+        report_date: null
+        period_start: null
+        period_end: null
+        source_occurrence_ids: []
+      - metric_code: capital_expenditures
+        accession_number: 0000320193-25-000003
+        issue_code: MISSING_REPORT_DATE
+        severity: ERROR
+        report_date: null
+        period_start: null
+        period_end: null
+        source_occurrence_ids: []
+      - metric_code: operating_cash_flow
+        accession_number: 0000320193-25-000004
+        issue_code: NO_ELIGIBLE_METRIC
+        severity: WARNING
+        report_date: '2025-09-30'
+        period_start: null
+        period_end: null
+        source_occurrence_ids: []
+      - metric_code: capital_expenditures
+        accession_number: 0000320193-25-000004
+        issue_code: NO_ELIGIBLE_METRIC
+        severity: WARNING
+        report_date: '2025-09-30'
+        period_start: null
+        period_end: null
+        source_occurrence_ids: []
+  - name: typed_empty_int_reported_cash_flow_metrics
+    model: int_reported_cash_flow_metrics
+    given:
+      - &cash_input_18
+        input: ref('int_financial_metric_candidates')
+        format: sql
+        rows: |
+          select
+              cast(null as VARCHAR) as metric_code,
+              cast(null as INTEGER) as concept_priority,
+              cast(null as VARCHAR) as cik,
+              cast(null as VARCHAR) as accession_number,
+              cast(null as VARCHAR) as source_occurrence_id,
+              cast(null as VARCHAR) as source_document_name,
+              cast(null as VARCHAR) as source_sha256,
+              cast(null as BIGINT) as source_ordinal,
+              cast(null as VARCHAR) as processing_run_id,
+              cast(null as VARCHAR) as parser_version,
+              cast(null as VARCHAR) as schema_version,
+              cast(null as VARCHAR) as concept_namespace,
+              cast(null as VARCHAR) as concept_local_name,
+              cast(null as VARCHAR) as raw_value,
+              cast(null as DECIMAL(38,18)) as value_decimal,
+              cast(null as VARCHAR) as decimals,
+              cast(null as VARCHAR) as precision,
+              cast(null as VARCHAR) as unit_ref,
+              cast(null as VARCHAR) as unit_expression,
+              cast(null as VARCHAR) as context_ref,
+              cast(null as VARCHAR) as entity_scheme,
+              cast(null as VARCHAR) as entity_identifier,
+              cast(null as VARCHAR) as period_kind,
+              cast(null as DATE) as period_start,
+              cast(null as DATE) as period_end,
+              cast(null as DATE) as period_instant,
+              cast(null as BIGINT) as dimension_count,
+              cast(null as BOOLEAN) as has_dimensions,
+              cast(null as BIGINT) as duration_days,
+              cast(null as BOOLEAN) as is_usd
+          where false
+      - &cash_input_19
+        input: ref('stg_silver_filing_metadata')
+        format: sql
+        rows: |
+          select
+              cast(null as VARCHAR) as cik,
+              cast(null as VARCHAR) as accession_number,
+              cast(null as VARCHAR) as form,
+              cast(null as DATE) as filing_date,
+              cast(null as DATE) as report_date,
+              cast(null as VARCHAR) as primary_document,
+              cast(null as VARCHAR) as metadata_run_id,
+              cast(null as VARCHAR) as run_record_path,
+              cast(null as VARCHAR) as submissions_path,
+              cast(null as VARCHAR) as submissions_url,
+              cast(null as TIMESTAMPTZ) as submissions_retrieved_at,
+              cast(null as BIGINT) as submissions_size_bytes,
+              cast(null as VARCHAR) as submissions_sha256
+          where false
+    expect:
+      rows: []
+  - name: typed_empty_int_cash_flow_metric_selection_issues
+    model: int_cash_flow_metric_selection_issues
+    given:
+      - &cash_input_20
+        input: ref('int_financial_metric_candidates')
+        format: sql
+        rows: |
+          select
+              cast(null as VARCHAR) as metric_code,
+              cast(null as INTEGER) as concept_priority,
+              cast(null as VARCHAR) as cik,
+              cast(null as VARCHAR) as accession_number,
+              cast(null as VARCHAR) as source_occurrence_id,
+              cast(null as VARCHAR) as source_document_name,
+              cast(null as VARCHAR) as source_sha256,
+              cast(null as BIGINT) as source_ordinal,
+              cast(null as VARCHAR) as processing_run_id,
+              cast(null as VARCHAR) as parser_version,
+              cast(null as VARCHAR) as schema_version,
+              cast(null as VARCHAR) as concept_namespace,
+              cast(null as VARCHAR) as concept_local_name,
+              cast(null as VARCHAR) as raw_value,
+              cast(null as DECIMAL(38,18)) as value_decimal,
+              cast(null as VARCHAR) as decimals,
+              cast(null as VARCHAR) as precision,
+              cast(null as VARCHAR) as unit_ref,
+              cast(null as VARCHAR) as unit_expression,
+              cast(null as VARCHAR) as context_ref,
+              cast(null as VARCHAR) as entity_scheme,
+              cast(null as VARCHAR) as entity_identifier,
+              cast(null as VARCHAR) as period_kind,
+              cast(null as DATE) as period_start,
+              cast(null as DATE) as period_end,
+              cast(null as DATE) as period_instant,
+              cast(null as BIGINT) as dimension_count,
+              cast(null as BOOLEAN) as has_dimensions,
+              cast(null as BIGINT) as duration_days,
+              cast(null as BOOLEAN) as is_usd
+          where false
+      - &cash_input_21
+        input: ref('stg_silver_filing_metadata')
+        format: sql
+        rows: |
+          select
+              cast(null as VARCHAR) as cik,
+              cast(null as VARCHAR) as accession_number,
+              cast(null as VARCHAR) as form,
+              cast(null as DATE) as filing_date,
+              cast(null as DATE) as report_date,
+              cast(null as VARCHAR) as primary_document,
+              cast(null as VARCHAR) as metadata_run_id,
+              cast(null as VARCHAR) as run_record_path,
+              cast(null as VARCHAR) as submissions_path,
+              cast(null as VARCHAR) as submissions_url,
+              cast(null as TIMESTAMPTZ) as submissions_retrieved_at,
+              cast(null as BIGINT) as submissions_size_bytes,
+              cast(null as VARCHAR) as submissions_sha256
+          where false
+      - &cash_input_22
+        input: ref('stg_silver_active_filings')
+        format: sql
+        rows: |
+          select
+              cast(null as VARCHAR) as cik,
+              cast(null as VARCHAR) as accession_number,
+              cast(null as VARCHAR) as source_document_name,
+              cast(null as VARCHAR) as source_sha256,
+              cast(null as VARCHAR) as silver_status,
+              cast(null as VARCHAR) as parser_version,
+              cast(null as VARCHAR) as schema_version,
+              cast(null as VARCHAR) as activation_run_id,
+              cast(null as TIMESTAMP WITH TIME ZONE) as activated_at,
+              cast(null as VARCHAR) as version_path,
+              cast(null as VARCHAR) as publication_path,
+              cast(null as VARCHAR) as publication_sha256,
+              cast(null as BIGINT) as accepted_count,
+              cast(null as BIGINT) as dimension_count,
+              cast(null as BIGINT) as rejected_count,
+              cast(null as BIGINT) as candidate_count
+          where false
+    expect:
+      rows: []
+  - name: only_approved_cash_flow_concepts_enter_candidates
+    model: int_financial_metric_candidates
+    given:
+      - &cash_input_23
+        input: ref('stg_silver_facts')
+        rows:
+          - &cash_row_3
+            cik: 0000320193
+            accession_number: 0000320193-25-000001
+            source_occurrence_id: NetCashProvidedByUsedInOperatingActivities
+            source_document_name: filing.xml
+            source_sha256: checksum
+            source_ordinal: 3
+            processing_run_id: silver-run
+            parser_version: '1'
+            schema_version: '1'
+            concept_namespace: http://fasb.org/us-gaap/2025
+            concept_local_name: NetCashProvidedByUsedInOperatingActivities
+            raw_value: '-10'
+            value_decimal: '-10'
+            decimals: '-6'
+            precision: null
+            unit_ref: USD
+            unit_expression: '{http://www.xbrl.org/2003/iso4217}USD'
+            context_ref: context
+            entity_scheme: http://www.sec.gov/CIK
+            entity_identifier: '320193'
+            period_kind: DURATION
+            period_start: '2025-07-01'
+            period_end: '2025-09-30'
+            period_instant: null
+            is_nil: false
+          - <<: *cash_row_3
+            source_occurrence_id: PaymentsToAcquirePropertyPlantAndEquipment
+            concept_local_name: PaymentsToAcquirePropertyPlantAndEquipment
+          - <<: *cash_row_3
+            source_occurrence_id: NetCashProvidedByUsedInInvestingActivities
+            concept_local_name: NetCashProvidedByUsedInInvestingActivities
+          - <<: *cash_row_3
+            source_occurrence_id: PropertyPlantAndEquipmentNet
+            concept_local_name: PropertyPlantAndEquipmentNet
+          - <<: *cash_row_3
+            source_occurrence_id: DepreciationDepletionAndAmortization
+            concept_local_name: DepreciationDepletionAndAmortization
+          - <<: *cash_row_3
+            source_occurrence_id: PaymentsToAcquireBusinessesNetOfCashAcquired
+            concept_local_name: PaymentsToAcquireBusinessesNetOfCashAcquired
+          - <<: *cash_row_3
+            source_occurrence_id: ProceedsFromSaleOfPropertyPlantAndEquipment
+            concept_local_name: ProceedsFromSaleOfPropertyPlantAndEquipment
+          - <<: *cash_row_3
+            source_occurrence_id: extension
+            concept_namespace: http://company.example/taxonomy
+      - &cash_input_24
+        input: ref('stg_silver_active_filings')
+        rows:
+          - <<: *cash_row_2
+      - &cash_input_25
+        input: ref('metric_concept_map')
+        rows:
+          - &cash_row_4
+            metric_code: revenue
+            concept_namespace_prefix: http://fasb.org/us-gaap/
+            concept_local_name: RevenueFromContractWithCustomerExcludingAssessedTax
+            concept_priority: 1
+            expected_period_kind: duration
+          - <<: *cash_row_4
+            concept_local_name: SalesRevenueNet
+            concept_priority: 2
+          - <<: *cash_row_4
+            concept_local_name: Revenues
+            concept_priority: 3
+          - <<: *cash_row_4
+            metric_code: net_income
+            concept_local_name: NetIncomeLoss
+          - <<: *cash_row_4
+            metric_code: diluted_eps
+            concept_local_name: EarningsPerShareDiluted
+          - <<: *cash_row_4
+            metric_code: total_assets
+            concept_local_name: Assets
+            expected_period_kind: instant
+          - <<: *cash_row_4
+            metric_code: total_liabilities
+            concept_local_name: Liabilities
+            expected_period_kind: instant
+          - <<: *cash_row_4
+            metric_code: cash_and_equivalents
+            concept_local_name: CashAndCashEquivalentsAtCarryingValue
+            expected_period_kind: instant
+          - <<: *cash_row_4
+            metric_code: operating_cash_flow
+            concept_local_name: NetCashProvidedByUsedInOperatingActivities
+          - <<: *cash_row_4
+            metric_code: capital_expenditures
+            concept_local_name: PaymentsToAcquirePropertyPlantAndEquipment
+      - &cash_input_26
+        input: ref('stg_silver_fact_dimensions')
+        rows: []
+    expect:
+      rows:
+      - source_occurrence_id: NetCashProvidedByUsedInOperatingActivities
+        metric_code: operating_cash_flow
+        is_usd: true
+      - source_occurrence_id: PaymentsToAcquirePropertyPlantAndEquipment
+        metric_code: capital_expenditures
+        is_usd: true
