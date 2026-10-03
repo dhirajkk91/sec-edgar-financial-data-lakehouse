@@ -1,0 +1,1377 @@
+unit_tests:
+  - name: agreeing_instants_signed_values_and_lineage_selected
+    model: int_reported_balance_sheet_metrics
+    description: All three reported metrics are selected; exact values ignore raw formatting, context and
+      unit IDs; priority precedes ordinal and ID.
+    given:
+      - &agreeing_instants_signed_values_and_lineage_candidates
+        input: ref('int_financial_metric_candidates')
+        rows:
+          - &balance_occurrence
+            metric_code: total_assets
+            concept_priority: 1
+            cik: 0000320193
+            accession_number: 0000320193-25-000001
+            source_occurrence_id: assets-last
+            source_document_name: filing.xml
+            source_sha256: checksum
+            source_ordinal: 3
+            processing_run_id: silver-run
+            parser_version: '1'
+            schema_version: '1'
+            concept_namespace: http://fasb.org/us-gaap/2025
+            concept_local_name: Assets
+            raw_value: '10.000000000000000001'
+            value_decimal: '10.000000000000000001'
+            decimals: '-6'
+            precision: null
+            unit_ref: USD
+            unit_expression: '{http://www.xbrl.org/2003/iso4217}USD'
+            context_ref: context
+            entity_scheme: http://www.sec.gov/CIK
+            entity_identifier: '320193'
+            period_kind: instant
+            period_start: null
+            period_end: null
+            period_instant: '2025-09-30'
+            dimension_count: 0
+            has_dimensions: false
+            duration_days: null
+            is_usd: true
+          - <<: *balance_occurrence
+            source_occurrence_id: assets-b
+            metric_code: total_assets
+            concept_local_name: Assets
+            source_ordinal: 1
+            raw_value: '010.000000000000000001'
+            context_ref: other
+            unit_ref: other
+          - <<: *balance_occurrence
+            source_occurrence_id: assets-a
+            metric_code: total_assets
+            concept_local_name: Assets
+            source_ordinal: 1
+            entity_identifier: 0000320193
+            entity_scheme: https://www.sec.gov/CIK
+          - <<: *balance_occurrence
+            source_occurrence_id: assets-low-priority
+            metric_code: total_assets
+            concept_local_name: Assets
+            concept_priority: 2
+            source_ordinal: 0
+          - <<: *balance_occurrence
+            source_occurrence_id: liabilities-zero
+            metric_code: total_liabilities
+            concept_local_name: Liabilities
+            value_decimal: '0'
+            raw_value: '0'
+          - <<: *balance_occurrence
+            source_occurrence_id: cash-negative
+            metric_code: cash_and_equivalents
+            concept_local_name: CashAndCashEquivalentsAtCarryingValue
+            value_decimal: '-5'
+            raw_value: '-5'
+      - &agreeing_instants_signed_values_and_lineage_metadata
+        input: ref('stg_silver_filing_metadata')
+        rows:
+          - &balance_metadata
+            cik: 0000320193
+            accession_number: 0000320193-25-000001
+            form: 10-Q
+            filing_date: '2025-11-01'
+            report_date: '2025-09-30'
+            primary_document: filing.htm
+            metadata_run_id: metadata-run
+            run_record_path: /verified/run.json
+            submissions_path: /verified/submissions.json
+            submissions_url: https://data.sec.gov/submissions/CIK0000320193.json
+            submissions_retrieved_at: '2026-01-01T00:00:00+00:00'
+            submissions_size_bytes: 100
+            submissions_sha256: snapshot-checksum
+    expect:
+      rows:
+      - source_occurrence_id: assets-a
+        cik: 0000320193
+        accession_number: 0000320193-25-000001
+        metric_code: total_assets
+        value_decimal: '10.000000000000000001'
+        period_kind: instant
+        period_start: null
+        period_end: null
+        period_instant: '2025-09-30'
+        duration_days: null
+        is_usd: true
+        period_label: reported_instant
+        selection_rule_version: '1'
+        selection_reason: AGREEING_ELIGIBLE_OCCURRENCES
+        supporting_occurrence_count: 4
+        supporting_occurrence_ids:
+        - assets-a
+        - assets-b
+        - assets-last
+        - assets-low-priority
+      - source_occurrence_id: liabilities-zero
+        cik: 0000320193
+        accession_number: 0000320193-25-000001
+        metric_code: total_liabilities
+        value_decimal: '0'
+        period_kind: instant
+        period_start: null
+        period_end: null
+        period_instant: '2025-09-30'
+        duration_days: null
+        is_usd: true
+        period_label: reported_instant
+        selection_rule_version: '1'
+        selection_reason: SINGLE_ELIGIBLE_OCCURRENCE
+        supporting_occurrence_count: 1
+        supporting_occurrence_ids:
+        - liabilities-zero
+      - source_occurrence_id: cash-negative
+        cik: 0000320193
+        accession_number: 0000320193-25-000001
+        metric_code: cash_and_equivalents
+        value_decimal: '-5'
+        period_kind: instant
+        period_start: null
+        period_end: null
+        period_instant: '2025-09-30'
+        duration_days: null
+        is_usd: true
+        period_label: reported_instant
+        selection_rule_version: '1'
+        selection_reason: SINGLE_ELIGIBLE_OCCURRENCE
+        supporting_occurrence_count: 1
+        supporting_occurrence_ids:
+        - cash-negative
+  - name: agreeing_instants_signed_values_and_lineage_issues
+    model: int_balance_sheet_metric_selection_issues
+    description: All three reported metrics are selected; exact values ignore raw formatting, context and
+      unit IDs; priority precedes ordinal and ID.
+    given:
+      - *agreeing_instants_signed_values_and_lineage_candidates
+      - *agreeing_instants_signed_values_and_lineage_metadata
+      - input: ref('stg_silver_active_filings')
+        rows:
+          - &balance_active
+            cik: 0000320193
+            accession_number: 0000320193-25-000001
+            source_document_name: filing.xml
+            source_sha256: checksum
+    expect:
+      rows: []
+  - name: exact_conflicts_and_null_aware_accuracy_selected
+    model: int_reported_balance_sheet_metrics
+    description: Eighteenth-fractional-digit disagreement takes precedence over accuracy; ambiguity affects
+      only that metric and accession.
+    given:
+      - &exact_conflicts_and_null_aware_accuracy_candidates
+        input: ref('int_financial_metric_candidates')
+        rows:
+          - <<: *balance_occurrence
+            source_occurrence_id: value-a
+            metric_code: total_assets
+            concept_local_name: Assets
+          - <<: *balance_occurrence
+            source_occurrence_id: value-b
+            metric_code: total_assets
+            concept_local_name: Assets
+            value_decimal: '10.000000000000000002'
+            decimals: '0'
+            concept_priority: 2
+          - <<: *balance_occurrence
+            source_occurrence_id: decimal-null
+            metric_code: total_liabilities
+            concept_local_name: Liabilities
+            decimals: null
+          - <<: *balance_occurrence
+            source_occurrence_id: decimal-text
+            metric_code: total_liabilities
+            concept_local_name: Liabilities
+          - <<: *balance_occurrence
+            source_occurrence_id: cash-valid
+            metric_code: cash_and_equivalents
+            concept_local_name: CashAndCashEquivalentsAtCarryingValue
+          - <<: *balance_occurrence
+            source_occurrence_id: precision-null
+            metric_code: total_assets
+            concept_local_name: Assets
+            accession_number: 0000320193-25-000002
+          - <<: *balance_occurrence
+            source_occurrence_id: precision-text
+            metric_code: total_assets
+            concept_local_name: Assets
+            accession_number: 0000320193-25-000002
+            precision: '6'
+          - <<: *balance_occurrence
+            source_occurrence_id: liability-null-a
+            metric_code: total_liabilities
+            concept_local_name: Liabilities
+            accession_number: 0000320193-25-000002
+            decimals: null
+            precision: null
+          - <<: *balance_occurrence
+            source_occurrence_id: liability-null-b
+            metric_code: total_liabilities
+            concept_local_name: Liabilities
+            accession_number: 0000320193-25-000002
+            decimals: null
+            precision: null
+          - <<: *balance_occurrence
+            source_occurrence_id: cash-inf
+            metric_code: cash_and_equivalents
+            concept_local_name: CashAndCashEquivalentsAtCarryingValue
+            accession_number: 0000320193-25-000002
+            decimals: INF
+          - <<: *balance_occurrence
+            source_occurrence_id: cash-text
+            metric_code: cash_and_equivalents
+            concept_local_name: CashAndCashEquivalentsAtCarryingValue
+            accession_number: 0000320193-25-000002
+      - &exact_conflicts_and_null_aware_accuracy_metadata
+        input: ref('stg_silver_filing_metadata')
+        rows:
+          - <<: *balance_metadata
+          - <<: *balance_metadata
+            accession_number: 0000320193-25-000002
+    expect:
+      rows:
+      - source_occurrence_id: cash-valid
+        cik: 0000320193
+        accession_number: 0000320193-25-000001
+        metric_code: cash_and_equivalents
+        value_decimal: '10.000000000000000001'
+        period_kind: instant
+        period_start: null
+        period_end: null
+        period_instant: '2025-09-30'
+        duration_days: null
+        is_usd: true
+        period_label: reported_instant
+        selection_rule_version: '1'
+        selection_reason: SINGLE_ELIGIBLE_OCCURRENCE
+        supporting_occurrence_count: 1
+        supporting_occurrence_ids:
+        - cash-valid
+      - source_occurrence_id: liability-null-a
+        cik: 0000320193
+        accession_number: 0000320193-25-000002
+        metric_code: total_liabilities
+        value_decimal: '10.000000000000000001'
+        period_kind: instant
+        period_start: null
+        period_end: null
+        period_instant: '2025-09-30'
+        duration_days: null
+        is_usd: true
+        period_label: reported_instant
+        selection_rule_version: '1'
+        selection_reason: AGREEING_ELIGIBLE_OCCURRENCES
+        supporting_occurrence_count: 2
+        supporting_occurrence_ids:
+        - liability-null-a
+        - liability-null-b
+  - name: exact_conflicts_and_null_aware_accuracy_issues
+    model: int_balance_sheet_metric_selection_issues
+    description: Eighteenth-fractional-digit disagreement takes precedence over accuracy; ambiguity affects
+      only that metric and accession.
+    given:
+      - *exact_conflicts_and_null_aware_accuracy_candidates
+      - *exact_conflicts_and_null_aware_accuracy_metadata
+      - input: ref('stg_silver_active_filings')
+        rows:
+          - <<: *balance_active
+          - <<: *balance_active
+            accession_number: 0000320193-25-000002
+    expect:
+      rows:
+      - cik: 0000320193
+        accession_number: 0000320193-25-000001
+        metric_code: total_assets
+        issue_code: METRIC_VALUE_CONFLICT
+        severity: ERROR
+        report_date: '2025-09-30'
+        period_instant: '2025-09-30'
+        source_occurrence_ids:
+        - value-a
+        - value-b
+      - cik: 0000320193
+        accession_number: 0000320193-25-000001
+        metric_code: total_liabilities
+        issue_code: METRIC_ACCURACY_UNRESOLVED
+        severity: ERROR
+        report_date: '2025-09-30'
+        period_instant: '2025-09-30'
+        source_occurrence_ids:
+        - decimal-null
+        - decimal-text
+      - cik: 0000320193
+        accession_number: 0000320193-25-000002
+        metric_code: total_assets
+        issue_code: METRIC_ACCURACY_UNRESOLVED
+        severity: ERROR
+        report_date: '2025-09-30'
+        period_instant: '2025-09-30'
+        source_occurrence_ids:
+        - precision-null
+        - precision-text
+      - cik: 0000320193
+        accession_number: 0000320193-25-000002
+        metric_code: cash_and_equivalents
+        issue_code: METRIC_ACCURACY_UNRESOLVED
+        severity: ERROR
+        report_date: '2025-09-30'
+        period_instant: '2025-09-30'
+        source_occurrence_ids:
+        - cash-inf
+        - cash-text
+  - name: instant_eligibility_excludes_only_candidates_selected
+    model: int_reported_balance_sheet_metrics
+    description: Comparative instants, duration evidence, wrong units, dimensions and malformed entity identifiers
+      cannot influence the current report-date result.
+    given:
+      - &instant_eligibility_excludes_only_candidates_candidates
+        input: ref('int_financial_metric_candidates')
+        rows:
+          - <<: *balance_occurrence
+            source_occurrence_id: assets-valid
+            metric_code: total_assets
+            concept_local_name: Assets
+          - <<: *balance_occurrence
+            source_occurrence_id: liabilities-valid
+            metric_code: total_liabilities
+            concept_local_name: Liabilities
+          - <<: *balance_occurrence
+            source_occurrence_id: cash-valid
+            metric_code: cash_and_equivalents
+            concept_local_name: CashAndCashEquivalentsAtCarryingValue
+          - <<: *balance_occurrence
+            source_occurrence_id: excluded-comparative
+            metric_code: total_assets
+            concept_local_name: Assets
+            period_instant: '2024-09-30'
+          - <<: *balance_occurrence
+            source_occurrence_id: excluded-duration
+            metric_code: total_assets
+            concept_local_name: Assets
+            period_kind: duration
+          - <<: *balance_occurrence
+            source_occurrence_id: excluded-missing-date
+            metric_code: total_assets
+            concept_local_name: Assets
+            period_instant: null
+          - <<: *balance_occurrence
+            source_occurrence_id: excluded-start
+            metric_code: total_assets
+            concept_local_name: Assets
+            period_start: '2025-01-01'
+          - <<: *balance_occurrence
+            source_occurrence_id: excluded-end
+            metric_code: total_assets
+            concept_local_name: Assets
+            period_end: '2025-09-30'
+          - <<: *balance_occurrence
+            source_occurrence_id: excluded-dimensions
+            metric_code: total_assets
+            concept_local_name: Assets
+            dimension_count: 1
+            has_dimensions: true
+          - <<: *balance_occurrence
+            source_occurrence_id: excluded-dimension-flag
+            metric_code: total_assets
+            concept_local_name: Assets
+            has_dimensions: true
+          - <<: *balance_occurrence
+            source_occurrence_id: excluded-null-value
+            metric_code: total_assets
+            concept_local_name: Assets
+            value_decimal: null
+          - <<: *balance_occurrence
+            source_occurrence_id: excluded-eur
+            metric_code: total_assets
+            concept_local_name: Assets
+            unit_expression: '{http://www.xbrl.org/2003/iso4217}EUR'
+            is_usd: false
+          - <<: *balance_occurrence
+            source_occurrence_id: excluded-divided-unit
+            metric_code: total_assets
+            concept_local_name: Assets
+            unit_expression: ({http://www.xbrl.org/2003/iso4217}USD) / ({http://www.xbrl.org/2003/instance}shares)
+            is_usd: false
+          - <<: *balance_occurrence
+            source_occurrence_id: excluded-product-unit
+            metric_code: total_assets
+            concept_local_name: Assets
+            unit_expression: '{http://www.xbrl.org/2003/iso4217}USD * {http://www.xbrl.org/2003/iso4217}USD'
+            is_usd: false
+          - <<: *balance_occurrence
+            source_occurrence_id: excluded-wrong-entity
+            metric_code: total_assets
+            concept_local_name: Assets
+            entity_identifier: '123'
+          - <<: *balance_occurrence
+            source_occurrence_id: excluded-bad-scheme
+            metric_code: total_assets
+            concept_local_name: Assets
+            entity_scheme: urn:company
+          - <<: *balance_occurrence
+            source_occurrence_id: excluded-letters
+            metric_code: total_assets
+            concept_local_name: Assets
+            entity_identifier: CIK320193
+          - <<: *balance_occurrence
+            source_occurrence_id: excluded-whitespace
+            metric_code: total_assets
+            concept_local_name: Assets
+            entity_identifier: '320193 '
+          - <<: *balance_occurrence
+            source_occurrence_id: excluded-sign
+            metric_code: total_assets
+            concept_local_name: Assets
+            entity_identifier: '+320193'
+          - <<: *balance_occurrence
+            source_occurrence_id: excluded-zero-cik
+            metric_code: total_assets
+            concept_local_name: Assets
+            entity_identifier: '0000000000'
+          - <<: *balance_occurrence
+            source_occurrence_id: excluded-long-id
+            metric_code: total_assets
+            concept_local_name: Assets
+            entity_identifier: 00000320193
+          - <<: *balance_occurrence
+            source_occurrence_id: excluded-unicode
+            metric_code: total_assets
+            concept_local_name: Assets
+            entity_identifier: "\uFF13\uFF12\uFF10\uFF11\uFF19\uFF13"
+      - &instant_eligibility_excludes_only_candidates_metadata
+        input: ref('stg_silver_filing_metadata')
+        rows:
+          - <<: *balance_metadata
+    expect:
+      rows:
+      - source_occurrence_id: assets-valid
+        cik: 0000320193
+        accession_number: 0000320193-25-000001
+        metric_code: total_assets
+        value_decimal: '10.000000000000000001'
+        period_kind: instant
+        period_start: null
+        period_end: null
+        period_instant: '2025-09-30'
+        duration_days: null
+        is_usd: true
+        period_label: reported_instant
+        selection_rule_version: '1'
+        selection_reason: SINGLE_ELIGIBLE_OCCURRENCE
+        supporting_occurrence_count: 1
+        supporting_occurrence_ids:
+        - assets-valid
+      - source_occurrence_id: liabilities-valid
+        cik: 0000320193
+        accession_number: 0000320193-25-000001
+        metric_code: total_liabilities
+        value_decimal: '10.000000000000000001'
+        period_kind: instant
+        period_start: null
+        period_end: null
+        period_instant: '2025-09-30'
+        duration_days: null
+        is_usd: true
+        period_label: reported_instant
+        selection_rule_version: '1'
+        selection_reason: SINGLE_ELIGIBLE_OCCURRENCE
+        supporting_occurrence_count: 1
+        supporting_occurrence_ids:
+        - liabilities-valid
+      - source_occurrence_id: cash-valid
+        cik: 0000320193
+        accession_number: 0000320193-25-000001
+        metric_code: cash_and_equivalents
+        value_decimal: '10.000000000000000001'
+        period_kind: instant
+        period_start: null
+        period_end: null
+        period_instant: '2025-09-30'
+        duration_days: null
+        is_usd: true
+        period_label: reported_instant
+        selection_rule_version: '1'
+        selection_reason: SINGLE_ELIGIBLE_OCCURRENCE
+        supporting_occurrence_count: 1
+        supporting_occurrence_ids:
+        - cash-valid
+  - name: instant_eligibility_excludes_only_candidates_issues
+    model: int_balance_sheet_metric_selection_issues
+    description: Comparative instants, duration evidence, wrong units, dimensions and malformed entity identifiers
+      cannot influence the current report-date result.
+    given:
+      - *instant_eligibility_excludes_only_candidates_candidates
+      - *instant_eligibility_excludes_only_candidates_metadata
+      - input: ref('stg_silver_active_filings')
+        rows:
+          - <<: *balance_active
+    expect:
+      rows: []
+  - name: missing_metrics_companies_and_amendments_selected
+    model: int_reported_balance_sheet_metrics
+    description: Missing assets do not suppress liabilities or cash; companies and amended accessions have
+      independent lineage.
+    given:
+      - &missing_metrics_companies_and_amendments_candidates
+        input: ref('int_financial_metric_candidates')
+        rows:
+          - <<: *balance_occurrence
+            source_occurrence_id: original-liabilities
+            metric_code: total_liabilities
+            concept_local_name: Liabilities
+          - <<: *balance_occurrence
+            source_occurrence_id: original-cash
+            metric_code: cash_and_equivalents
+            concept_local_name: CashAndCashEquivalentsAtCarryingValue
+          - <<: *balance_occurrence
+            source_occurrence_id: amended-assets
+            metric_code: total_assets
+            concept_local_name: Assets
+            accession_number: 0000320193-25-000002
+            value_decimal: '20'
+          - <<: *balance_occurrence
+            source_occurrence_id: amended-liabilities
+            metric_code: total_liabilities
+            concept_local_name: Liabilities
+            accession_number: 0000320193-25-000002
+          - <<: *balance_occurrence
+            source_occurrence_id: amended-cash
+            metric_code: cash_and_equivalents
+            concept_local_name: CashAndCashEquivalentsAtCarryingValue
+            accession_number: 0000320193-25-000002
+          - <<: *balance_occurrence
+            source_occurrence_id: other-assets
+            metric_code: total_assets
+            concept_local_name: Assets
+            cik: '0000000002'
+            entity_identifier: '2'
+            value_decimal: '30'
+          - <<: *balance_occurrence
+            source_occurrence_id: other-liabilities
+            metric_code: total_liabilities
+            concept_local_name: Liabilities
+            cik: '0000000002'
+            entity_identifier: '2'
+      - &missing_metrics_companies_and_amendments_metadata
+        input: ref('stg_silver_filing_metadata')
+        rows:
+          - <<: *balance_metadata
+          - <<: *balance_metadata
+            accession_number: 0000320193-25-000002
+            form: 10-Q/A
+          - <<: *balance_metadata
+            cik: '0000000002'
+    expect:
+      rows:
+      - source_occurrence_id: original-liabilities
+        cik: 0000320193
+        accession_number: 0000320193-25-000001
+        metric_code: total_liabilities
+        value_decimal: '10.000000000000000001'
+        period_kind: instant
+        period_start: null
+        period_end: null
+        period_instant: '2025-09-30'
+        duration_days: null
+        is_usd: true
+        period_label: reported_instant
+        selection_rule_version: '1'
+        selection_reason: SINGLE_ELIGIBLE_OCCURRENCE
+        supporting_occurrence_count: 1
+        supporting_occurrence_ids:
+        - original-liabilities
+      - source_occurrence_id: original-cash
+        cik: 0000320193
+        accession_number: 0000320193-25-000001
+        metric_code: cash_and_equivalents
+        value_decimal: '10.000000000000000001'
+        period_kind: instant
+        period_start: null
+        period_end: null
+        period_instant: '2025-09-30'
+        duration_days: null
+        is_usd: true
+        period_label: reported_instant
+        selection_rule_version: '1'
+        selection_reason: SINGLE_ELIGIBLE_OCCURRENCE
+        supporting_occurrence_count: 1
+        supporting_occurrence_ids:
+        - original-cash
+      - source_occurrence_id: amended-assets
+        cik: 0000320193
+        accession_number: 0000320193-25-000002
+        metric_code: total_assets
+        value_decimal: '20'
+        period_kind: instant
+        period_start: null
+        period_end: null
+        period_instant: '2025-09-30'
+        duration_days: null
+        is_usd: true
+        period_label: reported_instant
+        selection_rule_version: '1'
+        selection_reason: SINGLE_ELIGIBLE_OCCURRENCE
+        supporting_occurrence_count: 1
+        supporting_occurrence_ids:
+        - amended-assets
+      - source_occurrence_id: amended-liabilities
+        cik: 0000320193
+        accession_number: 0000320193-25-000002
+        metric_code: total_liabilities
+        value_decimal: '10.000000000000000001'
+        period_kind: instant
+        period_start: null
+        period_end: null
+        period_instant: '2025-09-30'
+        duration_days: null
+        is_usd: true
+        period_label: reported_instant
+        selection_rule_version: '1'
+        selection_reason: SINGLE_ELIGIBLE_OCCURRENCE
+        supporting_occurrence_count: 1
+        supporting_occurrence_ids:
+        - amended-liabilities
+      - source_occurrence_id: amended-cash
+        cik: 0000320193
+        accession_number: 0000320193-25-000002
+        metric_code: cash_and_equivalents
+        value_decimal: '10.000000000000000001'
+        period_kind: instant
+        period_start: null
+        period_end: null
+        period_instant: '2025-09-30'
+        duration_days: null
+        is_usd: true
+        period_label: reported_instant
+        selection_rule_version: '1'
+        selection_reason: SINGLE_ELIGIBLE_OCCURRENCE
+        supporting_occurrence_count: 1
+        supporting_occurrence_ids:
+        - amended-cash
+      - source_occurrence_id: other-assets
+        cik: '0000000002'
+        accession_number: 0000320193-25-000001
+        metric_code: total_assets
+        value_decimal: '30'
+        period_kind: instant
+        period_start: null
+        period_end: null
+        period_instant: '2025-09-30'
+        duration_days: null
+        is_usd: true
+        period_label: reported_instant
+        selection_rule_version: '1'
+        selection_reason: SINGLE_ELIGIBLE_OCCURRENCE
+        supporting_occurrence_count: 1
+        supporting_occurrence_ids:
+        - other-assets
+      - source_occurrence_id: other-liabilities
+        cik: '0000000002'
+        accession_number: 0000320193-25-000001
+        metric_code: total_liabilities
+        value_decimal: '10.000000000000000001'
+        period_kind: instant
+        period_start: null
+        period_end: null
+        period_instant: '2025-09-30'
+        duration_days: null
+        is_usd: true
+        period_label: reported_instant
+        selection_rule_version: '1'
+        selection_reason: SINGLE_ELIGIBLE_OCCURRENCE
+        supporting_occurrence_count: 1
+        supporting_occurrence_ids:
+        - other-liabilities
+  - name: missing_metrics_companies_and_amendments_issues
+    model: int_balance_sheet_metric_selection_issues
+    description: Missing assets do not suppress liabilities or cash; companies and amended accessions have
+      independent lineage.
+    given:
+      - *missing_metrics_companies_and_amendments_candidates
+      - *missing_metrics_companies_and_amendments_metadata
+      - input: ref('stg_silver_active_filings')
+        rows:
+          - <<: *balance_active
+          - <<: *balance_active
+            accession_number: 0000320193-25-000002
+          - <<: *balance_active
+            cik: '0000000002'
+    expect:
+      rows:
+      - cik: 0000320193
+        accession_number: 0000320193-25-000001
+        metric_code: total_assets
+        issue_code: NO_ELIGIBLE_METRIC
+        severity: ERROR
+        report_date: '2025-09-30'
+        period_instant: null
+        source_occurrence_ids: []
+      - cik: '0000000002'
+        accession_number: 0000320193-25-000001
+        metric_code: cash_and_equivalents
+        issue_code: NO_ELIGIBLE_METRIC
+        severity: ERROR
+        report_date: '2025-09-30'
+        period_instant: null
+        source_occurrence_ids: []
+  - name: active_filings_without_candidates_and_precedence_selected
+    model: int_reported_balance_sheet_metrics
+    description: Active filings without candidates remain visible; missing metadata, unsupported form and
+      missing report date take precedence over absence.
+    given:
+      - &active_filings_without_candidates_and_precedence_candidates
+        input: ref('int_financial_metric_candidates')
+        rows: []
+      - &active_filings_without_candidates_and_precedence_metadata
+        input: ref('stg_silver_filing_metadata')
+        rows:
+          - <<: *balance_metadata
+            cik: '0000000002'
+          - <<: *balance_metadata
+            accession_number: 0000320193-25-000002
+            form: 8-K
+          - <<: *balance_metadata
+            accession_number: 0000320193-25-000003
+            report_date: null
+          - <<: *balance_metadata
+            accession_number: 0000320193-25-000004
+    expect:
+      rows: []
+  - name: active_filings_without_candidates_and_precedence_issues
+    model: int_balance_sheet_metric_selection_issues
+    description: Active filings without candidates remain visible; missing metadata, unsupported form and
+      missing report date take precedence over absence.
+    given:
+      - *active_filings_without_candidates_and_precedence_candidates
+      - *active_filings_without_candidates_and_precedence_metadata
+      - input: ref('stg_silver_active_filings')
+        rows:
+          - <<: *balance_active
+          - <<: *balance_active
+            accession_number: 0000320193-25-000002
+          - <<: *balance_active
+            accession_number: 0000320193-25-000003
+          - <<: *balance_active
+            accession_number: 0000320193-25-000004
+    expect:
+      rows:
+      - cik: 0000320193
+        accession_number: 0000320193-25-000001
+        metric_code: total_assets
+        issue_code: MISSING_FILING_METADATA
+        severity: ERROR
+        report_date: null
+        period_instant: null
+        source_occurrence_ids: []
+      - cik: 0000320193
+        accession_number: 0000320193-25-000001
+        metric_code: total_liabilities
+        issue_code: MISSING_FILING_METADATA
+        severity: ERROR
+        report_date: null
+        period_instant: null
+        source_occurrence_ids: []
+      - cik: 0000320193
+        accession_number: 0000320193-25-000001
+        metric_code: cash_and_equivalents
+        issue_code: MISSING_FILING_METADATA
+        severity: ERROR
+        report_date: null
+        period_instant: null
+        source_occurrence_ids: []
+      - cik: 0000320193
+        accession_number: 0000320193-25-000002
+        metric_code: total_assets
+        issue_code: UNSUPPORTED_FORM
+        severity: WARNING
+        report_date: '2025-09-30'
+        period_instant: null
+        source_occurrence_ids: []
+      - cik: 0000320193
+        accession_number: 0000320193-25-000002
+        metric_code: total_liabilities
+        issue_code: UNSUPPORTED_FORM
+        severity: WARNING
+        report_date: '2025-09-30'
+        period_instant: null
+        source_occurrence_ids: []
+      - cik: 0000320193
+        accession_number: 0000320193-25-000002
+        metric_code: cash_and_equivalents
+        issue_code: UNSUPPORTED_FORM
+        severity: WARNING
+        report_date: '2025-09-30'
+        period_instant: null
+        source_occurrence_ids: []
+      - cik: 0000320193
+        accession_number: 0000320193-25-000003
+        metric_code: total_assets
+        issue_code: MISSING_REPORT_DATE
+        severity: ERROR
+        report_date: null
+        period_instant: null
+        source_occurrence_ids: []
+      - cik: 0000320193
+        accession_number: 0000320193-25-000003
+        metric_code: total_liabilities
+        issue_code: MISSING_REPORT_DATE
+        severity: ERROR
+        report_date: null
+        period_instant: null
+        source_occurrence_ids: []
+      - cik: 0000320193
+        accession_number: 0000320193-25-000003
+        metric_code: cash_and_equivalents
+        issue_code: MISSING_REPORT_DATE
+        severity: ERROR
+        report_date: null
+        period_instant: null
+        source_occurrence_ids: []
+      - cik: 0000320193
+        accession_number: 0000320193-25-000004
+        metric_code: total_assets
+        issue_code: NO_ELIGIBLE_METRIC
+        severity: ERROR
+        report_date: '2025-09-30'
+        period_instant: null
+        source_occurrence_ids: []
+      - cik: 0000320193
+        accession_number: 0000320193-25-000004
+        metric_code: total_liabilities
+        issue_code: NO_ELIGIBLE_METRIC
+        severity: ERROR
+        report_date: '2025-09-30'
+        period_instant: null
+        source_occurrence_ids: []
+      - cik: 0000320193
+        accession_number: 0000320193-25-000004
+        metric_code: cash_and_equivalents
+        issue_code: NO_ELIGIBLE_METRIC
+        severity: ERROR
+        report_date: '2025-09-30'
+        period_instant: null
+        source_occurrence_ids: []
+  - name: typed_empty_int_reported_balance_sheet_metrics
+    model: int_reported_balance_sheet_metrics
+    given:
+    - input: ref('int_financial_metric_candidates')
+      format: sql
+      rows: |
+        select
+            cast(null as VARCHAR) as metric_code,
+            cast(null as INTEGER) as concept_priority,
+            cast(null as VARCHAR) as cik,
+            cast(null as VARCHAR) as accession_number,
+            cast(null as VARCHAR) as source_occurrence_id,
+            cast(null as VARCHAR) as source_document_name,
+            cast(null as VARCHAR) as source_sha256,
+            cast(null as BIGINT) as source_ordinal,
+            cast(null as VARCHAR) as processing_run_id,
+            cast(null as VARCHAR) as parser_version,
+            cast(null as VARCHAR) as schema_version,
+            cast(null as VARCHAR) as concept_namespace,
+            cast(null as VARCHAR) as concept_local_name,
+            cast(null as VARCHAR) as raw_value,
+            cast(null as DECIMAL(38,18)) as value_decimal,
+            cast(null as VARCHAR) as decimals,
+            cast(null as VARCHAR) as precision,
+            cast(null as VARCHAR) as unit_ref,
+            cast(null as VARCHAR) as unit_expression,
+            cast(null as VARCHAR) as context_ref,
+            cast(null as VARCHAR) as entity_scheme,
+            cast(null as VARCHAR) as entity_identifier,
+            cast(null as VARCHAR) as period_kind,
+            cast(null as DATE) as period_start,
+            cast(null as DATE) as period_end,
+            cast(null as DATE) as period_instant,
+            cast(null as BIGINT) as dimension_count,
+            cast(null as BOOLEAN) as has_dimensions,
+            cast(null as BIGINT) as duration_days,
+            cast(null as BOOLEAN) as is_usd
+        where false
+    - input: ref('stg_silver_filing_metadata')
+      format: sql
+      rows: |
+        select
+            cast(null as VARCHAR) as cik,
+            cast(null as VARCHAR) as accession_number,
+            cast(null as VARCHAR) as form,
+            cast(null as DATE) as filing_date,
+            cast(null as DATE) as report_date,
+            cast(null as VARCHAR) as primary_document,
+            cast(null as VARCHAR) as metadata_run_id,
+            cast(null as VARCHAR) as run_record_path,
+            cast(null as VARCHAR) as submissions_path,
+            cast(null as VARCHAR) as submissions_url,
+            cast(null as TIMESTAMPTZ) as submissions_retrieved_at,
+            cast(null as BIGINT) as submissions_size_bytes,
+            cast(null as VARCHAR) as submissions_sha256
+        where false
+    expect:
+      rows: []
+  - name: typed_empty_int_balance_sheet_metric_selection_issues
+    model: int_balance_sheet_metric_selection_issues
+    given:
+    - input: ref('int_financial_metric_candidates')
+      format: sql
+      rows: |
+        select
+            cast(null as VARCHAR) as metric_code,
+            cast(null as INTEGER) as concept_priority,
+            cast(null as VARCHAR) as cik,
+            cast(null as VARCHAR) as accession_number,
+            cast(null as VARCHAR) as source_occurrence_id,
+            cast(null as VARCHAR) as source_document_name,
+            cast(null as VARCHAR) as source_sha256,
+            cast(null as BIGINT) as source_ordinal,
+            cast(null as VARCHAR) as processing_run_id,
+            cast(null as VARCHAR) as parser_version,
+            cast(null as VARCHAR) as schema_version,
+            cast(null as VARCHAR) as concept_namespace,
+            cast(null as VARCHAR) as concept_local_name,
+            cast(null as VARCHAR) as raw_value,
+            cast(null as DECIMAL(38,18)) as value_decimal,
+            cast(null as VARCHAR) as decimals,
+            cast(null as VARCHAR) as precision,
+            cast(null as VARCHAR) as unit_ref,
+            cast(null as VARCHAR) as unit_expression,
+            cast(null as VARCHAR) as context_ref,
+            cast(null as VARCHAR) as entity_scheme,
+            cast(null as VARCHAR) as entity_identifier,
+            cast(null as VARCHAR) as period_kind,
+            cast(null as DATE) as period_start,
+            cast(null as DATE) as period_end,
+            cast(null as DATE) as period_instant,
+            cast(null as BIGINT) as dimension_count,
+            cast(null as BOOLEAN) as has_dimensions,
+            cast(null as BIGINT) as duration_days,
+            cast(null as BOOLEAN) as is_usd
+        where false
+    - input: ref('stg_silver_filing_metadata')
+      format: sql
+      rows: |
+        select
+            cast(null as VARCHAR) as cik,
+            cast(null as VARCHAR) as accession_number,
+            cast(null as VARCHAR) as form,
+            cast(null as DATE) as filing_date,
+            cast(null as DATE) as report_date,
+            cast(null as VARCHAR) as primary_document,
+            cast(null as VARCHAR) as metadata_run_id,
+            cast(null as VARCHAR) as run_record_path,
+            cast(null as VARCHAR) as submissions_path,
+            cast(null as VARCHAR) as submissions_url,
+            cast(null as TIMESTAMPTZ) as submissions_retrieved_at,
+            cast(null as BIGINT) as submissions_size_bytes,
+            cast(null as VARCHAR) as submissions_sha256
+        where false
+    - input: ref('stg_silver_active_filings')
+      format: sql
+      rows: |
+        select
+            cast(null as VARCHAR) as cik,
+            cast(null as VARCHAR) as accession_number,
+            cast(null as VARCHAR) as source_document_name,
+            cast(null as VARCHAR) as source_sha256,
+            cast(null as VARCHAR) as silver_status,
+            cast(null as VARCHAR) as parser_version,
+            cast(null as VARCHAR) as schema_version,
+            cast(null as VARCHAR) as activation_run_id,
+            cast(null as TIMESTAMP WITH TIME ZONE) as activated_at,
+            cast(null as VARCHAR) as version_path,
+            cast(null as VARCHAR) as publication_path,
+            cast(null as VARCHAR) as publication_sha256,
+            cast(null as BIGINT) as accepted_count,
+            cast(null as BIGINT) as dimension_count,
+            cast(null as BIGINT) as rejected_count,
+            cast(null as BIGINT) as candidate_count
+        where false
+    expect:
+      rows: []
+  - name: exact_balance_sheet_concepts_and_instant_mapping
+    model: int_financial_metric_candidates
+    given:
+    - input: ref('stg_silver_facts')
+      rows:
+      - cik: 0000320193
+        accession_number: 0000320193-25-000001
+        source_occurrence_id: Assets
+        source_document_name: filing.xml
+        source_sha256: checksum
+        source_ordinal: 3
+        processing_run_id: silver-run
+        parser_version: '1'
+        schema_version: '1'
+        concept_namespace: http://fasb.org/us-gaap/2025
+        concept_local_name: Assets
+        raw_value: '10.000000000000000001'
+        value_decimal: '10.000000000000000001'
+        decimals: '-6'
+        precision: null
+        unit_ref: USD
+        unit_expression: '{http://www.xbrl.org/2003/iso4217}USD'
+        context_ref: context
+        entity_scheme: http://www.sec.gov/CIK
+        entity_identifier: '320193'
+        period_kind: INSTANT
+        period_start: null
+        period_end: null
+        period_instant: '2025-09-30'
+        is_nil: false
+      - cik: 0000320193
+        accession_number: 0000320193-25-000001
+        source_occurrence_id: Liabilities
+        source_document_name: filing.xml
+        source_sha256: checksum
+        source_ordinal: 3
+        processing_run_id: silver-run
+        parser_version: '1'
+        schema_version: '1'
+        concept_namespace: http://fasb.org/us-gaap/2025
+        concept_local_name: Liabilities
+        raw_value: '10.000000000000000001'
+        value_decimal: '10.000000000000000001'
+        decimals: '-6'
+        precision: null
+        unit_ref: USD
+        unit_expression: '{http://www.xbrl.org/2003/iso4217}USD'
+        context_ref: context
+        entity_scheme: http://www.sec.gov/CIK
+        entity_identifier: '320193'
+        period_kind: INSTANT
+        period_start: null
+        period_end: null
+        period_instant: '2025-09-30'
+        is_nil: false
+      - cik: 0000320193
+        accession_number: 0000320193-25-000001
+        source_occurrence_id: CashAndCashEquivalentsAtCarryingValue
+        source_document_name: filing.xml
+        source_sha256: checksum
+        source_ordinal: 3
+        processing_run_id: silver-run
+        parser_version: '1'
+        schema_version: '1'
+        concept_namespace: http://fasb.org/us-gaap/2025
+        concept_local_name: CashAndCashEquivalentsAtCarryingValue
+        raw_value: '10.000000000000000001'
+        value_decimal: '10.000000000000000001'
+        decimals: '-6'
+        precision: null
+        unit_ref: USD
+        unit_expression: '{http://www.xbrl.org/2003/iso4217}USD'
+        context_ref: context
+        entity_scheme: http://www.sec.gov/CIK
+        entity_identifier: '320193'
+        period_kind: INSTANT
+        period_start: null
+        period_end: null
+        period_instant: '2025-09-30'
+        is_nil: false
+      - cik: 0000320193
+        accession_number: 0000320193-25-000001
+        source_occurrence_id: AssetsCurrent
+        source_document_name: filing.xml
+        source_sha256: checksum
+        source_ordinal: 3
+        processing_run_id: silver-run
+        parser_version: '1'
+        schema_version: '1'
+        concept_namespace: http://fasb.org/us-gaap/2025
+        concept_local_name: AssetsCurrent
+        raw_value: '10.000000000000000001'
+        value_decimal: '10.000000000000000001'
+        decimals: '-6'
+        precision: null
+        unit_ref: USD
+        unit_expression: '{http://www.xbrl.org/2003/iso4217}USD'
+        context_ref: context
+        entity_scheme: http://www.sec.gov/CIK
+        entity_identifier: '320193'
+        period_kind: INSTANT
+        period_start: null
+        period_end: null
+        period_instant: '2025-09-30'
+        is_nil: false
+      - cik: 0000320193
+        accession_number: 0000320193-25-000001
+        source_occurrence_id: LiabilitiesCurrent
+        source_document_name: filing.xml
+        source_sha256: checksum
+        source_ordinal: 3
+        processing_run_id: silver-run
+        parser_version: '1'
+        schema_version: '1'
+        concept_namespace: http://fasb.org/us-gaap/2025
+        concept_local_name: LiabilitiesCurrent
+        raw_value: '10.000000000000000001'
+        value_decimal: '10.000000000000000001'
+        decimals: '-6'
+        precision: null
+        unit_ref: USD
+        unit_expression: '{http://www.xbrl.org/2003/iso4217}USD'
+        context_ref: context
+        entity_scheme: http://www.sec.gov/CIK
+        entity_identifier: '320193'
+        period_kind: INSTANT
+        period_start: null
+        period_end: null
+        period_instant: '2025-09-30'
+        is_nil: false
+      - cik: 0000320193
+        accession_number: 0000320193-25-000001
+        source_occurrence_id: LiabilitiesAndStockholdersEquity
+        source_document_name: filing.xml
+        source_sha256: checksum
+        source_ordinal: 3
+        processing_run_id: silver-run
+        parser_version: '1'
+        schema_version: '1'
+        concept_namespace: http://fasb.org/us-gaap/2025
+        concept_local_name: LiabilitiesAndStockholdersEquity
+        raw_value: '10.000000000000000001'
+        value_decimal: '10.000000000000000001'
+        decimals: '-6'
+        precision: null
+        unit_ref: USD
+        unit_expression: '{http://www.xbrl.org/2003/iso4217}USD'
+        context_ref: context
+        entity_scheme: http://www.sec.gov/CIK
+        entity_identifier: '320193'
+        period_kind: INSTANT
+        period_start: null
+        period_end: null
+        period_instant: '2025-09-30'
+        is_nil: false
+      - cik: 0000320193
+        accession_number: 0000320193-25-000001
+        source_occurrence_id: CashCashEquivalentsRestrictedCashAndRestrictedCashEquivalents
+        source_document_name: filing.xml
+        source_sha256: checksum
+        source_ordinal: 3
+        processing_run_id: silver-run
+        parser_version: '1'
+        schema_version: '1'
+        concept_namespace: http://fasb.org/us-gaap/2025
+        concept_local_name: CashCashEquivalentsRestrictedCashAndRestrictedCashEquivalents
+        raw_value: '10.000000000000000001'
+        value_decimal: '10.000000000000000001'
+        decimals: '-6'
+        precision: null
+        unit_ref: USD
+        unit_expression: '{http://www.xbrl.org/2003/iso4217}USD'
+        context_ref: context
+        entity_scheme: http://www.sec.gov/CIK
+        entity_identifier: '320193'
+        period_kind: INSTANT
+        period_start: null
+        period_end: null
+        period_instant: '2025-09-30'
+        is_nil: false
+      - cik: 0000320193
+        accession_number: 0000320193-25-000001
+        source_occurrence_id: RestrictedCashAndCashEquivalents
+        source_document_name: filing.xml
+        source_sha256: checksum
+        source_ordinal: 3
+        processing_run_id: silver-run
+        parser_version: '1'
+        schema_version: '1'
+        concept_namespace: http://fasb.org/us-gaap/2025
+        concept_local_name: RestrictedCashAndCashEquivalents
+        raw_value: '10.000000000000000001'
+        value_decimal: '10.000000000000000001'
+        decimals: '-6'
+        precision: null
+        unit_ref: USD
+        unit_expression: '{http://www.xbrl.org/2003/iso4217}USD'
+        context_ref: context
+        entity_scheme: http://www.sec.gov/CIK
+        entity_identifier: '320193'
+        period_kind: INSTANT
+        period_start: null
+        period_end: null
+        period_instant: '2025-09-30'
+        is_nil: false
+      - cik: 0000320193
+        accession_number: 0000320193-25-000001
+        source_occurrence_id: MarketableSecuritiesCurrent
+        source_document_name: filing.xml
+        source_sha256: checksum
+        source_ordinal: 3
+        processing_run_id: silver-run
+        parser_version: '1'
+        schema_version: '1'
+        concept_namespace: http://fasb.org/us-gaap/2025
+        concept_local_name: MarketableSecuritiesCurrent
+        raw_value: '10.000000000000000001'
+        value_decimal: '10.000000000000000001'
+        decimals: '-6'
+        precision: null
+        unit_ref: USD
+        unit_expression: '{http://www.xbrl.org/2003/iso4217}USD'
+        context_ref: context
+        entity_scheme: http://www.sec.gov/CIK
+        entity_identifier: '320193'
+        period_kind: INSTANT
+        period_start: null
+        period_end: null
+        period_instant: '2025-09-30'
+        is_nil: false
+      - cik: 0000320193
+        accession_number: 0000320193-25-000001
+        source_occurrence_id: extension
+        source_document_name: filing.xml
+        source_sha256: checksum
+        source_ordinal: 3
+        processing_run_id: silver-run
+        parser_version: '1'
+        schema_version: '1'
+        concept_namespace: http://company.example/taxonomy
+        concept_local_name: Assets
+        raw_value: '10.000000000000000001'
+        value_decimal: '10.000000000000000001'
+        decimals: '-6'
+        precision: null
+        unit_ref: USD
+        unit_expression: '{http://www.xbrl.org/2003/iso4217}USD'
+        context_ref: context
+        entity_scheme: http://www.sec.gov/CIK
+        entity_identifier: '320193'
+        period_kind: INSTANT
+        period_start: null
+        period_end: null
+        period_instant: '2025-09-30'
+        is_nil: false
+      - cik: 0000320193
+        accession_number: 0000320193-25-000001
+        source_occurrence_id: wrong-period
+        source_document_name: filing.xml
+        source_sha256: checksum
+        source_ordinal: 3
+        processing_run_id: silver-run
+        parser_version: '1'
+        schema_version: '1'
+        concept_namespace: http://fasb.org/us-gaap/2025
+        concept_local_name: Assets
+        raw_value: '10.000000000000000001'
+        value_decimal: '10.000000000000000001'
+        decimals: '-6'
+        precision: null
+        unit_ref: USD
+        unit_expression: '{http://www.xbrl.org/2003/iso4217}USD'
+        context_ref: context
+        entity_scheme: http://www.sec.gov/CIK
+        entity_identifier: '320193'
+        period_kind: DURATION
+        period_start: null
+        period_end: null
+        period_instant: '2025-09-30'
+        is_nil: false
+      - cik: 0000320193
+        accession_number: 0000320193-25-000001
+        source_occurrence_id: wrong-checksum
+        source_document_name: filing.xml
+        source_sha256: inactive
+        source_ordinal: 3
+        processing_run_id: silver-run
+        parser_version: '1'
+        schema_version: '1'
+        concept_namespace: http://fasb.org/us-gaap/2025
+        concept_local_name: Assets
+        raw_value: '10.000000000000000001'
+        value_decimal: '10.000000000000000001'
+        decimals: '-6'
+        precision: null
+        unit_ref: USD
+        unit_expression: '{http://www.xbrl.org/2003/iso4217}USD'
+        context_ref: context
+        entity_scheme: http://www.sec.gov/CIK
+        entity_identifier: '320193'
+        period_kind: INSTANT
+        period_start: null
+        period_end: null
+        period_instant: '2025-09-30'
+        is_nil: false
+    - input: ref('stg_silver_active_filings')
+      rows:
+      - cik: 0000320193
+        accession_number: 0000320193-25-000001
+        source_document_name: filing.xml
+        source_sha256: checksum
+    - input: ref('metric_concept_map')
+      rows:
+      - metric_code: revenue
+        concept_namespace_prefix: http://fasb.org/us-gaap/
+        concept_local_name: RevenueFromContractWithCustomerExcludingAssessedTax
+        concept_priority: 1
+        expected_period_kind: duration
+      - metric_code: revenue
+        concept_namespace_prefix: http://fasb.org/us-gaap/
+        concept_local_name: SalesRevenueNet
+        concept_priority: 2
+        expected_period_kind: duration
+      - metric_code: revenue
+        concept_namespace_prefix: http://fasb.org/us-gaap/
+        concept_local_name: Revenues
+        concept_priority: 3
+        expected_period_kind: duration
+      - metric_code: net_income
+        concept_namespace_prefix: http://fasb.org/us-gaap/
+        concept_local_name: NetIncomeLoss
+        concept_priority: 1
+        expected_period_kind: duration
+      - metric_code: diluted_eps
+        concept_namespace_prefix: http://fasb.org/us-gaap/
+        concept_local_name: EarningsPerShareDiluted
+        concept_priority: 1
+        expected_period_kind: duration
+      - metric_code: total_assets
+        concept_namespace_prefix: http://fasb.org/us-gaap/
+        concept_local_name: Assets
+        concept_priority: 1
+        expected_period_kind: instant
+      - metric_code: total_liabilities
+        concept_namespace_prefix: http://fasb.org/us-gaap/
+        concept_local_name: Liabilities
+        concept_priority: 1
+        expected_period_kind: instant
+      - metric_code: cash_and_equivalents
+        concept_namespace_prefix: http://fasb.org/us-gaap/
+        concept_local_name: CashAndCashEquivalentsAtCarryingValue
+        concept_priority: 1
+        expected_period_kind: instant
+    - input: ref('stg_silver_fact_dimensions')
+      rows: []
+    expect:
+      rows:
+      - source_occurrence_id: Assets
+        metric_code: total_assets
+        period_kind: instant
+        period_instant: '2025-09-30'
+        period_start: null
+        period_end: null
+        duration_days: null
+        is_usd: true
+      - source_occurrence_id: Liabilities
+        metric_code: total_liabilities
+        period_kind: instant
+        period_instant: '2025-09-30'
+        period_start: null
+        period_end: null
+        duration_days: null
+        is_usd: true
+      - source_occurrence_id: CashAndCashEquivalentsAtCarryingValue
+        metric_code: cash_and_equivalents
+        period_kind: instant
+        period_instant: '2025-09-30'
+        period_start: null
+        period_end: null
+        duration_days: null
+        is_usd: true
