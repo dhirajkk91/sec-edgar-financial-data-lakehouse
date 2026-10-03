@@ -35,7 +35,7 @@ models:
                 to: ref('stg_silver_facts')
                 field: source_occurrence_id
   - name: int_financial_metric_candidates
-    description: One active Silver revenue occurrence per row; preserves comparative periods and dimensions without selecting a winner.
+    description: One active Silver mapped revenue, net-income or diluted-EPS occurrence per row; preserves comparative periods and dimensions without selecting a winner.
     columns:
       - name: source_occurrence_id
         data_tests:
@@ -58,7 +58,7 @@ models:
           - not_null
           - accepted_values:
               arguments:
-                values: [revenue]
+                values: [revenue, net_income, diluted_eps]
       - name: period_kind
         description: Lowercase period label matched exactly to the concept map.
         data_tests:
@@ -203,9 +203,108 @@ models:
       - name: details
         data_tests: [not_null]
 
+  - name: int_reported_income_metrics
+    description: One agreed reported net-income or diluted-EPS value per CIK, accession, metric and exact duration; all supporting occurrences remain traceable.
+    columns:
+      - name: source_occurrence_id
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('int_financial_metric_candidates')
+                field: source_occurrence_id
+      - name: value_decimal
+        description: Exact representative DECIMAL(38,18), selected only after every eligible value and accuracy attribute agrees.
+        data_tests: [not_null]
+      - name: supporting_occurrence_ids
+        description: All eligible IDs ordered by concept priority, source ordinal and occurrence ID, including the representative.
+        data_tests: [not_null]
+      - name: supporting_occurrence_count
+        data_tests: [not_null]
+      - name: period_label
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: [reported_duration]
+      - name: selection_reason
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: [SINGLE_ELIGIBLE_OCCURRENCE, AGREEING_ELIGIBLE_OCCURRENCES]
+      - name: selection_rule_version
+        description: Version of the eligibility, agreement and representative rules.
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['1']
+      - name: form
+        description: Verified form; original and amended accessions stay separate.
+        data_tests: [not_null]
+      - name: filing_date
+        data_tests: [not_null]
+      - name: report_date
+        data_tests: [not_null]
+      - name: metadata_run_id
+        data_tests: [not_null]
+      - name: submissions_sha256
+        data_tests: [not_null]
+      - name: cik
+        data_tests: [not_null]
+      - name: accession_number
+        data_tests: [not_null]
+      - name: metric_code
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: [net_income, diluted_eps]
+      - name: period_start
+        data_tests: [not_null]
+      - name: period_end
+        data_tests: [not_null]
+  - name: int_income_metric_selection_issues
+    description: One precedence-ordered filing and metric problem or one ambiguity per exact eligible income-metric duration; excluded candidates remain inspectable.
+    columns:
+      - name: cik
+        data_tests: [not_null]
+      - name: accession_number
+        data_tests: [not_null]
+      - name: metric_code
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: [net_income, diluted_eps]
+      - name: issue_code
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: [MISSING_FILING_METADATA, UNSUPPORTED_FORM, MISSING_REPORT_DATE, NO_ELIGIBLE_METRIC, METRIC_VALUE_CONFLICT, METRIC_ACCURACY_UNRESOLVED]
+      - name: severity
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: [ERROR, WARNING]
+      - name: report_date
+        description: Verified date when available; null is allowed.
+      - name: period_start
+        description: Exact ambiguous period boundary; null for filing-level issues.
+      - name: period_end
+        description: Exact ambiguous period boundary; null for filing-level issues.
+      - name: source_occurrence_ids
+        description: Eligible ambiguity IDs in representative order, or a typed empty array for filing and metric problems.
+        data_tests: [not_null]
+      - name: details
+        data_tests: [not_null]
+
 seeds:
   - name: metric_concept_map
-    description: Revenue concept mappings; one row per metric, namespace prefix, concept and period kind. Priority is evidence for later selection.
+    description: Revenue, net-income and diluted-EPS concept mappings; one row per metric, namespace prefix, concept and period kind. Priority is evidence for later selection.
     columns:
       - name: metric_code
         data_tests: [not_null]

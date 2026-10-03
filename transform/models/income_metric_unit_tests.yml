@@ -1,0 +1,1498 @@
+unit_tests:
+  - name: metric_units_losses_and_ordered_agreement_selected
+    model: int_reported_income_metrics
+    description: Metric-specific units accept reported losses and zero; raw formatting, context and unit IDs
+      do not split agreeing groups.
+    given:
+      - &metric_units_losses_and_ordered_agreement_candidates
+        input: ref('int_financial_metric_candidates')
+        rows:
+          - &income_occurrence
+            metric_code: net_income
+            concept_priority: 1
+            cik: 0000320193
+            accession_number: 0000320193-25-000001
+            source_occurrence_id: ni-last
+            source_document_name: filing.xml
+            source_sha256: checksum
+            source_ordinal: 3
+            processing_run_id: silver-run
+            parser_version: '1'
+            schema_version: '1'
+            concept_namespace: http://fasb.org/us-gaap/2025
+            concept_local_name: NetIncomeLoss
+            raw_value: '-10'
+            value_decimal: '-10'
+            decimals: '-6'
+            precision: null
+            unit_ref: USD
+            unit_expression: '{http://www.xbrl.org/2003/iso4217}USD'
+            context_ref: context
+            entity_scheme: http://www.sec.gov/CIK
+            entity_identifier: '320193'
+            period_kind: duration
+            period_start: '2025-07-01'
+            period_end: '2025-09-30'
+            period_instant: null
+            dimension_count: 0
+            has_dimensions: false
+            duration_days: 92
+            is_usd: true
+          - <<: *income_occurrence
+            source_occurrence_id: ni-b
+            source_ordinal: 1
+            raw_value: '-010.000'
+            context_ref: other
+            unit_ref: other
+          - <<: *income_occurrence
+            source_occurrence_id: ni-a
+            source_ordinal: 1
+            entity_identifier: 0000320193
+            entity_scheme: https://www.sec.gov/CIK
+          - <<: *income_occurrence
+            source_occurrence_id: eps-loss
+            metric_code: diluted_eps
+            concept_local_name: EarningsPerShareDiluted
+            unit_expression: ({http://www.xbrl.org/2003/iso4217}USD) / ({http://www.xbrl.org/2003/instance}shares)
+            is_usd: false
+            unit_ref: USD-per-share
+            decimals: '2'
+            value_decimal: '-0.25'
+            raw_value: '-0.25'
+          - <<: *income_occurrence
+            source_occurrence_id: eps-zero
+            metric_code: diluted_eps
+            concept_local_name: EarningsPerShareDiluted
+            unit_expression: ({http://www.xbrl.org/2003/iso4217}USD) / ({http://www.xbrl.org/2003/instance}shares)
+            is_usd: false
+            unit_ref: USD-per-share
+            decimals: '2'
+            value_decimal: '0'
+            raw_value: '0'
+            period_start: '2025-01-01'
+          - <<: *income_occurrence
+            source_occurrence_id: ni-zero
+            period_start: '2025-01-01'
+            value_decimal: '0'
+            raw_value: '0'
+      - &metric_units_losses_and_ordered_agreement_metadata
+        input: ref('stg_silver_filing_metadata')
+        rows:
+          - &income_metadata
+            cik: 0000320193
+            accession_number: 0000320193-25-000001
+            form: 10-Q
+            filing_date: '2025-11-01'
+            report_date: '2025-09-30'
+            primary_document: filing.htm
+            metadata_run_id: metadata-run
+            run_record_path: /verified/run.json
+            submissions_path: /verified/submissions.json
+            submissions_url: https://data.sec.gov/submissions/CIK0000320193.json
+            submissions_retrieved_at: '2026-01-01T00:00:00+00:00'
+            submissions_size_bytes: 100
+            submissions_sha256: snapshot-checksum
+    expect:
+      rows:
+      - source_occurrence_id: ni-a
+        metric_code: net_income
+        value_decimal: '-10'
+        period_start: '2025-07-01'
+        period_end: '2025-09-30'
+        accession_number: 0000320193-25-000001
+        supporting_occurrence_count: 3
+        supporting_occurrence_ids:
+        - ni-a
+        - ni-b
+        - ni-last
+        period_label: reported_duration
+        selection_rule_version: '1'
+        selection_reason: AGREEING_ELIGIBLE_OCCURRENCES
+      - source_occurrence_id: eps-loss
+        metric_code: diluted_eps
+        value_decimal: '-0.25'
+        period_start: '2025-07-01'
+        period_end: '2025-09-30'
+        accession_number: 0000320193-25-000001
+        supporting_occurrence_count: 1
+        supporting_occurrence_ids:
+        - eps-loss
+        period_label: reported_duration
+        selection_rule_version: '1'
+        selection_reason: SINGLE_ELIGIBLE_OCCURRENCE
+      - source_occurrence_id: eps-zero
+        metric_code: diluted_eps
+        value_decimal: '0'
+        period_start: '2025-01-01'
+        period_end: '2025-09-30'
+        accession_number: 0000320193-25-000001
+        supporting_occurrence_count: 1
+        supporting_occurrence_ids:
+        - eps-zero
+        period_label: reported_duration
+        selection_rule_version: '1'
+        selection_reason: SINGLE_ELIGIBLE_OCCURRENCE
+      - source_occurrence_id: ni-zero
+        metric_code: net_income
+        value_decimal: '0'
+        period_start: '2025-01-01'
+        period_end: '2025-09-30'
+        accession_number: 0000320193-25-000001
+        supporting_occurrence_count: 1
+        supporting_occurrence_ids:
+        - ni-zero
+        period_label: reported_duration
+        selection_rule_version: '1'
+        selection_reason: SINGLE_ELIGIBLE_OCCURRENCE
+  - name: metric_units_losses_and_ordered_agreement_issues
+    model: int_income_metric_selection_issues
+    description: Metric-specific units accept reported losses and zero; raw formatting, context and unit IDs
+      do not split agreeing groups.
+    given:
+      - *metric_units_losses_and_ordered_agreement_candidates
+      - *metric_units_losses_and_ordered_agreement_metadata
+      - input: ref('stg_silver_active_filings')
+        rows:
+          - &income_active
+            cik: 0000320193
+            accession_number: 0000320193-25-000001
+            source_document_name: filing.xml
+            source_sha256: checksum
+    expect:
+      rows: []
+  - name: metric_and_duration_conflicts_are_isolated_selected
+    model: int_reported_income_metrics
+    description: An eighteenth-decimal difference is a conflict even with different accuracy; null accuracy
+      agrees only with nulls.
+    given:
+      - &metric_and_duration_conflicts_are_isolated_candidates
+        input: ref('int_financial_metric_candidates')
+        rows:
+          - <<: *income_occurrence
+            source_occurrence_id: ni-value-a
+            period_start: '2025-01-01'
+            value_decimal: '100.000000000000000001'
+          - <<: *income_occurrence
+            source_occurrence_id: ni-value-b
+            period_start: '2025-01-01'
+            value_decimal: '100.000000000000000002'
+            decimals: '0'
+          - <<: *income_occurrence
+            source_occurrence_id: ni-decimal-null
+            period_start: '2025-02-01'
+            decimals: null
+          - <<: *income_occurrence
+            source_occurrence_id: ni-decimal-text
+            period_start: '2025-02-01'
+            decimals: '-6'
+          - <<: *income_occurrence
+            source_occurrence_id: eps-precision-null
+            metric_code: diluted_eps
+            concept_local_name: EarningsPerShareDiluted
+            unit_expression: ({http://www.xbrl.org/2003/iso4217}USD) / ({http://www.xbrl.org/2003/instance}shares)
+            is_usd: false
+            unit_ref: USD-per-share
+            decimals: '2'
+            value_decimal: '-0.25'
+            raw_value: '-0.25'
+            period_start: '2025-03-01'
+          - <<: *income_occurrence
+            source_occurrence_id: eps-precision-text
+            metric_code: diluted_eps
+            concept_local_name: EarningsPerShareDiluted
+            unit_expression: ({http://www.xbrl.org/2003/iso4217}USD) / ({http://www.xbrl.org/2003/instance}shares)
+            is_usd: false
+            unit_ref: USD-per-share
+            decimals: '2'
+            value_decimal: '-0.25'
+            raw_value: '-0.25'
+            period_start: '2025-03-01'
+            precision: '3'
+          - <<: *income_occurrence
+            source_occurrence_id: eps-decimal-inf
+            metric_code: diluted_eps
+            concept_local_name: EarningsPerShareDiluted
+            unit_expression: ({http://www.xbrl.org/2003/iso4217}USD) / ({http://www.xbrl.org/2003/instance}shares)
+            is_usd: false
+            unit_ref: USD-per-share
+            decimals: INF
+            value_decimal: '-0.25'
+            raw_value: '-0.25'
+            period_start: '2025-04-01'
+          - <<: *income_occurrence
+            source_occurrence_id: eps-decimal-two
+            metric_code: diluted_eps
+            concept_local_name: EarningsPerShareDiluted
+            unit_expression: ({http://www.xbrl.org/2003/iso4217}USD) / ({http://www.xbrl.org/2003/instance}shares)
+            is_usd: false
+            unit_ref: USD-per-share
+            decimals: '2'
+            value_decimal: '-0.25'
+            raw_value: '-0.25'
+            period_start: '2025-04-01'
+          - <<: *income_occurrence
+            source_occurrence_id: ni-good
+            decimals: null
+            precision: null
+          - <<: *income_occurrence
+            source_occurrence_id: ni-good-repeat
+            decimals: null
+            precision: null
+          - <<: *income_occurrence
+            source_occurrence_id: eps-good
+            metric_code: diluted_eps
+            concept_local_name: EarningsPerShareDiluted
+            unit_expression: ({http://www.xbrl.org/2003/iso4217}USD) / ({http://www.xbrl.org/2003/instance}shares)
+            is_usd: false
+            unit_ref: USD-per-share
+            decimals: '2'
+            value_decimal: '-0.25'
+            raw_value: '-0.25'
+      - &metric_and_duration_conflicts_are_isolated_metadata
+        input: ref('stg_silver_filing_metadata')
+        rows:
+          - <<: *income_metadata
+    expect:
+      rows:
+      - source_occurrence_id: ni-good
+        metric_code: net_income
+        value_decimal: '-10'
+        period_start: '2025-07-01'
+        period_end: '2025-09-30'
+        accession_number: 0000320193-25-000001
+        supporting_occurrence_count: 2
+        supporting_occurrence_ids:
+        - ni-good
+        - ni-good-repeat
+        period_label: reported_duration
+        selection_rule_version: '1'
+        selection_reason: AGREEING_ELIGIBLE_OCCURRENCES
+      - source_occurrence_id: eps-good
+        metric_code: diluted_eps
+        value_decimal: '-0.25'
+        period_start: '2025-07-01'
+        period_end: '2025-09-30'
+        accession_number: 0000320193-25-000001
+        supporting_occurrence_count: 1
+        supporting_occurrence_ids:
+        - eps-good
+        period_label: reported_duration
+        selection_rule_version: '1'
+        selection_reason: SINGLE_ELIGIBLE_OCCURRENCE
+  - name: metric_and_duration_conflicts_are_isolated_issues
+    model: int_income_metric_selection_issues
+    description: An eighteenth-decimal difference is a conflict even with different accuracy; null accuracy
+      agrees only with nulls.
+    given:
+      - *metric_and_duration_conflicts_are_isolated_candidates
+      - *metric_and_duration_conflicts_are_isolated_metadata
+      - input: ref('stg_silver_active_filings')
+        rows:
+          - <<: *income_active
+    expect:
+      rows:
+      - metric_code: net_income
+        accession_number: 0000320193-25-000001
+        issue_code: METRIC_VALUE_CONFLICT
+        severity: ERROR
+        report_date: '2025-09-30'
+        period_start: '2025-01-01'
+        period_end: '2025-09-30'
+        source_occurrence_ids:
+        - ni-value-a
+        - ni-value-b
+      - metric_code: net_income
+        accession_number: 0000320193-25-000001
+        issue_code: METRIC_ACCURACY_UNRESOLVED
+        severity: ERROR
+        report_date: '2025-09-30'
+        period_start: '2025-02-01'
+        period_end: '2025-09-30'
+        source_occurrence_ids:
+        - ni-decimal-null
+        - ni-decimal-text
+      - metric_code: diluted_eps
+        accession_number: 0000320193-25-000001
+        issue_code: METRIC_ACCURACY_UNRESOLVED
+        severity: ERROR
+        report_date: '2025-09-30'
+        period_start: '2025-03-01'
+        period_end: '2025-09-30'
+        source_occurrence_ids:
+        - eps-precision-null
+        - eps-precision-text
+      - metric_code: diluted_eps
+        accession_number: 0000320193-25-000001
+        issue_code: METRIC_ACCURACY_UNRESOLVED
+        severity: ERROR
+        report_date: '2025-09-30'
+        period_start: '2025-04-01'
+        period_end: '2025-09-30'
+        source_occurrence_ids:
+        - eps-decimal-inf
+        - eps-decimal-two
+  - name: eligibility_and_wrong_units_selected
+    model: int_reported_income_metrics
+    description: Invalid entities, periods, dimensions and units remain inspectable candidates but do not
+      participate in selection.
+    given:
+      - &eligibility_and_wrong_units_candidates
+        input: ref('int_financial_metric_candidates')
+        rows:
+          - <<: *income_occurrence
+            source_occurrence_id: ni-valid
+          - <<: *income_occurrence
+            source_occurrence_id: eps-valid
+            metric_code: diluted_eps
+            concept_local_name: EarningsPerShareDiluted
+            unit_expression: ({http://www.xbrl.org/2003/iso4217}USD) / ({http://www.xbrl.org/2003/instance}shares)
+            is_usd: false
+            unit_ref: USD-per-share
+            decimals: '2'
+            value_decimal: '-0.25'
+            raw_value: '-0.25'
+          - <<: *income_occurrence
+            source_occurrence_id: net_income-dimension
+            dimension_count: 1
+            has_dimensions: true
+          - <<: *income_occurrence
+            source_occurrence_id: net_income-flag
+            has_dimensions: true
+          - <<: *income_occurrence
+            source_occurrence_id: net_income-comparative
+            period_start: '2024-07-01'
+            period_end: '2024-09-30'
+          - <<: *income_occurrence
+            source_occurrence_id: net_income-entity
+            entity_identifier: '123'
+          - <<: *income_occurrence
+            source_occurrence_id: net_income-scheme
+            entity_scheme: urn:company
+          - <<: *income_occurrence
+            source_occurrence_id: net_income-letters
+            entity_identifier: CIK320193
+          - <<: *income_occurrence
+            source_occurrence_id: net_income-spaces
+            entity_identifier: '320193 '
+          - <<: *income_occurrence
+            source_occurrence_id: net_income-zero-id
+            entity_identifier: '0000000000'
+          - <<: *income_occurrence
+            source_occurrence_id: net_income-unicode
+            entity_identifier: "\uFF13\uFF12\uFF10\uFF11\uFF19\uFF13"
+          - <<: *income_occurrence
+            source_occurrence_id: net_income-long-id
+            entity_identifier: 00000320193
+          - <<: *income_occurrence
+            source_occurrence_id: net_income-sign
+            entity_identifier: '+320193'
+          - <<: *income_occurrence
+            source_occurrence_id: net_income-bad-period
+            period_start: '2025-10-01'
+          - <<: *income_occurrence
+            source_occurrence_id: net_income-null-start
+            period_start: null
+          - <<: *income_occurrence
+            source_occurrence_id: net_income-null-end
+            period_end: null
+          - <<: *income_occurrence
+            source_occurrence_id: net_income-instant
+            period_kind: instant
+          - <<: *income_occurrence
+            source_occurrence_id: net_income-instant-date
+            period_instant: '2025-09-30'
+          - <<: *income_occurrence
+            source_occurrence_id: net_income-null-value
+            value_decimal: null
+          - <<: *income_occurrence
+            source_occurrence_id: net_income-eur
+            unit_expression: '{http://www.xbrl.org/2003/iso4217}EUR'
+          - <<: *income_occurrence
+            source_occurrence_id: net_income-shares
+            unit_expression: '{http://www.xbrl.org/2003/instance}shares'
+          - <<: *income_occurrence
+            source_occurrence_id: net_income-product
+            unit_expression: '{http://www.xbrl.org/2003/iso4217}USD * {http://www.xbrl.org/2003/instance}shares'
+          - <<: *income_occurrence
+            source_occurrence_id: diluted_eps-dimension
+            metric_code: diluted_eps
+            concept_local_name: EarningsPerShareDiluted
+            unit_expression: ({http://www.xbrl.org/2003/iso4217}USD) / ({http://www.xbrl.org/2003/instance}shares)
+            is_usd: false
+            unit_ref: USD-per-share
+            decimals: '2'
+            value_decimal: '-0.25'
+            raw_value: '-0.25'
+            dimension_count: 1
+            has_dimensions: true
+          - <<: *income_occurrence
+            source_occurrence_id: diluted_eps-flag
+            metric_code: diluted_eps
+            concept_local_name: EarningsPerShareDiluted
+            unit_expression: ({http://www.xbrl.org/2003/iso4217}USD) / ({http://www.xbrl.org/2003/instance}shares)
+            is_usd: false
+            unit_ref: USD-per-share
+            decimals: '2'
+            value_decimal: '-0.25'
+            raw_value: '-0.25'
+            has_dimensions: true
+          - <<: *income_occurrence
+            source_occurrence_id: diluted_eps-comparative
+            metric_code: diluted_eps
+            concept_local_name: EarningsPerShareDiluted
+            unit_expression: ({http://www.xbrl.org/2003/iso4217}USD) / ({http://www.xbrl.org/2003/instance}shares)
+            is_usd: false
+            unit_ref: USD-per-share
+            decimals: '2'
+            value_decimal: '-0.25'
+            raw_value: '-0.25'
+            period_start: '2024-07-01'
+            period_end: '2024-09-30'
+          - <<: *income_occurrence
+            source_occurrence_id: diluted_eps-entity
+            metric_code: diluted_eps
+            concept_local_name: EarningsPerShareDiluted
+            unit_expression: ({http://www.xbrl.org/2003/iso4217}USD) / ({http://www.xbrl.org/2003/instance}shares)
+            is_usd: false
+            unit_ref: USD-per-share
+            decimals: '2'
+            value_decimal: '-0.25'
+            raw_value: '-0.25'
+            entity_identifier: '123'
+          - <<: *income_occurrence
+            source_occurrence_id: diluted_eps-scheme
+            metric_code: diluted_eps
+            concept_local_name: EarningsPerShareDiluted
+            unit_expression: ({http://www.xbrl.org/2003/iso4217}USD) / ({http://www.xbrl.org/2003/instance}shares)
+            is_usd: false
+            unit_ref: USD-per-share
+            decimals: '2'
+            value_decimal: '-0.25'
+            raw_value: '-0.25'
+            entity_scheme: urn:company
+          - <<: *income_occurrence
+            source_occurrence_id: diluted_eps-letters
+            metric_code: diluted_eps
+            concept_local_name: EarningsPerShareDiluted
+            unit_expression: ({http://www.xbrl.org/2003/iso4217}USD) / ({http://www.xbrl.org/2003/instance}shares)
+            is_usd: false
+            unit_ref: USD-per-share
+            decimals: '2'
+            value_decimal: '-0.25'
+            raw_value: '-0.25'
+            entity_identifier: CIK320193
+          - <<: *income_occurrence
+            source_occurrence_id: diluted_eps-spaces
+            metric_code: diluted_eps
+            concept_local_name: EarningsPerShareDiluted
+            unit_expression: ({http://www.xbrl.org/2003/iso4217}USD) / ({http://www.xbrl.org/2003/instance}shares)
+            is_usd: false
+            unit_ref: USD-per-share
+            decimals: '2'
+            value_decimal: '-0.25'
+            raw_value: '-0.25'
+            entity_identifier: '320193 '
+          - <<: *income_occurrence
+            source_occurrence_id: diluted_eps-zero-id
+            metric_code: diluted_eps
+            concept_local_name: EarningsPerShareDiluted
+            unit_expression: ({http://www.xbrl.org/2003/iso4217}USD) / ({http://www.xbrl.org/2003/instance}shares)
+            is_usd: false
+            unit_ref: USD-per-share
+            decimals: '2'
+            value_decimal: '-0.25'
+            raw_value: '-0.25'
+            entity_identifier: '0000000000'
+          - <<: *income_occurrence
+            source_occurrence_id: diluted_eps-unicode
+            metric_code: diluted_eps
+            concept_local_name: EarningsPerShareDiluted
+            unit_expression: ({http://www.xbrl.org/2003/iso4217}USD) / ({http://www.xbrl.org/2003/instance}shares)
+            is_usd: false
+            unit_ref: USD-per-share
+            decimals: '2'
+            value_decimal: '-0.25'
+            raw_value: '-0.25'
+            entity_identifier: "\uFF13\uFF12\uFF10\uFF11\uFF19\uFF13"
+          - <<: *income_occurrence
+            source_occurrence_id: diluted_eps-long-id
+            metric_code: diluted_eps
+            concept_local_name: EarningsPerShareDiluted
+            unit_expression: ({http://www.xbrl.org/2003/iso4217}USD) / ({http://www.xbrl.org/2003/instance}shares)
+            is_usd: false
+            unit_ref: USD-per-share
+            decimals: '2'
+            value_decimal: '-0.25'
+            raw_value: '-0.25'
+            entity_identifier: 00000320193
+          - <<: *income_occurrence
+            source_occurrence_id: diluted_eps-sign
+            metric_code: diluted_eps
+            concept_local_name: EarningsPerShareDiluted
+            unit_expression: ({http://www.xbrl.org/2003/iso4217}USD) / ({http://www.xbrl.org/2003/instance}shares)
+            is_usd: false
+            unit_ref: USD-per-share
+            decimals: '2'
+            value_decimal: '-0.25'
+            raw_value: '-0.25'
+            entity_identifier: '+320193'
+          - <<: *income_occurrence
+            source_occurrence_id: diluted_eps-bad-period
+            metric_code: diluted_eps
+            concept_local_name: EarningsPerShareDiluted
+            unit_expression: ({http://www.xbrl.org/2003/iso4217}USD) / ({http://www.xbrl.org/2003/instance}shares)
+            is_usd: false
+            unit_ref: USD-per-share
+            decimals: '2'
+            value_decimal: '-0.25'
+            raw_value: '-0.25'
+            period_start: '2025-10-01'
+          - <<: *income_occurrence
+            source_occurrence_id: diluted_eps-null-start
+            metric_code: diluted_eps
+            concept_local_name: EarningsPerShareDiluted
+            unit_expression: ({http://www.xbrl.org/2003/iso4217}USD) / ({http://www.xbrl.org/2003/instance}shares)
+            is_usd: false
+            unit_ref: USD-per-share
+            decimals: '2'
+            value_decimal: '-0.25'
+            raw_value: '-0.25'
+            period_start: null
+          - <<: *income_occurrence
+            source_occurrence_id: diluted_eps-null-end
+            metric_code: diluted_eps
+            concept_local_name: EarningsPerShareDiluted
+            unit_expression: ({http://www.xbrl.org/2003/iso4217}USD) / ({http://www.xbrl.org/2003/instance}shares)
+            is_usd: false
+            unit_ref: USD-per-share
+            decimals: '2'
+            value_decimal: '-0.25'
+            raw_value: '-0.25'
+            period_end: null
+          - <<: *income_occurrence
+            source_occurrence_id: diluted_eps-instant
+            metric_code: diluted_eps
+            concept_local_name: EarningsPerShareDiluted
+            unit_expression: ({http://www.xbrl.org/2003/iso4217}USD) / ({http://www.xbrl.org/2003/instance}shares)
+            is_usd: false
+            unit_ref: USD-per-share
+            decimals: '2'
+            value_decimal: '-0.25'
+            raw_value: '-0.25'
+            period_kind: instant
+          - <<: *income_occurrence
+            source_occurrence_id: diluted_eps-instant-date
+            metric_code: diluted_eps
+            concept_local_name: EarningsPerShareDiluted
+            unit_expression: ({http://www.xbrl.org/2003/iso4217}USD) / ({http://www.xbrl.org/2003/instance}shares)
+            is_usd: false
+            unit_ref: USD-per-share
+            decimals: '2'
+            value_decimal: '-0.25'
+            raw_value: '-0.25'
+            period_instant: '2025-09-30'
+          - <<: *income_occurrence
+            source_occurrence_id: diluted_eps-null-value
+            metric_code: diluted_eps
+            concept_local_name: EarningsPerShareDiluted
+            unit_expression: ({http://www.xbrl.org/2003/iso4217}USD) / ({http://www.xbrl.org/2003/instance}shares)
+            is_usd: false
+            unit_ref: USD-per-share
+            decimals: '2'
+            value_decimal: null
+            raw_value: '-0.25'
+          - <<: *income_occurrence
+            source_occurrence_id: diluted_eps-eur
+            metric_code: diluted_eps
+            concept_local_name: EarningsPerShareDiluted
+            unit_expression: '{http://www.xbrl.org/2003/iso4217}EUR'
+            is_usd: false
+            unit_ref: USD-per-share
+            decimals: '2'
+            value_decimal: '-0.25'
+            raw_value: '-0.25'
+          - <<: *income_occurrence
+            source_occurrence_id: diluted_eps-shares
+            metric_code: diluted_eps
+            concept_local_name: EarningsPerShareDiluted
+            unit_expression: '{http://www.xbrl.org/2003/instance}shares'
+            is_usd: false
+            unit_ref: USD-per-share
+            decimals: '2'
+            value_decimal: '-0.25'
+            raw_value: '-0.25'
+          - <<: *income_occurrence
+            source_occurrence_id: diluted_eps-product
+            metric_code: diluted_eps
+            concept_local_name: EarningsPerShareDiluted
+            unit_expression: '{http://www.xbrl.org/2003/iso4217}USD * {http://www.xbrl.org/2003/instance}shares'
+            is_usd: false
+            unit_ref: USD-per-share
+            decimals: '2'
+            value_decimal: '-0.25'
+            raw_value: '-0.25'
+          - <<: *income_occurrence
+            source_occurrence_id: net_income-divided
+            unit_expression: ({http://www.xbrl.org/2003/iso4217}USD) / ({http://www.xbrl.org/2003/instance}shares)
+            is_usd: false
+          - <<: *income_occurrence
+            source_occurrence_id: eps-plain-usd
+            metric_code: diluted_eps
+            concept_local_name: EarningsPerShareDiluted
+            unit_expression: '{http://www.xbrl.org/2003/iso4217}USD'
+            is_usd: true
+            unit_ref: USD-per-share
+            decimals: '2'
+            value_decimal: '-0.25'
+            raw_value: '-0.25'
+          - <<: *income_occurrence
+            source_occurrence_id: eps-eur-divided
+            metric_code: diluted_eps
+            concept_local_name: EarningsPerShareDiluted
+            unit_expression: ({http://www.xbrl.org/2003/iso4217}EUR) / ({http://www.xbrl.org/2003/instance}shares)
+            is_usd: false
+            unit_ref: USD-per-share
+            decimals: '2'
+            value_decimal: '-0.25'
+            raw_value: '-0.25'
+      - &eligibility_and_wrong_units_metadata
+        input: ref('stg_silver_filing_metadata')
+        rows:
+          - <<: *income_metadata
+    expect:
+      rows:
+      - source_occurrence_id: ni-valid
+        metric_code: net_income
+        value_decimal: '-10'
+        period_start: '2025-07-01'
+        period_end: '2025-09-30'
+        accession_number: 0000320193-25-000001
+        supporting_occurrence_count: 1
+        supporting_occurrence_ids:
+        - ni-valid
+        period_label: reported_duration
+        selection_rule_version: '1'
+        selection_reason: SINGLE_ELIGIBLE_OCCURRENCE
+      - source_occurrence_id: eps-valid
+        metric_code: diluted_eps
+        value_decimal: '-0.25'
+        period_start: '2025-07-01'
+        period_end: '2025-09-30'
+        accession_number: 0000320193-25-000001
+        supporting_occurrence_count: 1
+        supporting_occurrence_ids:
+        - eps-valid
+        period_label: reported_duration
+        selection_rule_version: '1'
+        selection_reason: SINGLE_ELIGIBLE_OCCURRENCE
+  - name: eligibility_and_wrong_units_issues
+    model: int_income_metric_selection_issues
+    description: Invalid entities, periods, dimensions and units remain inspectable candidates but do not
+      participate in selection.
+    given:
+      - *eligibility_and_wrong_units_candidates
+      - *eligibility_and_wrong_units_metadata
+      - input: ref('stg_silver_active_filings')
+        rows:
+          - <<: *income_active
+    expect:
+      rows: []
+  - name: separate_durations_accessions_and_companies_selected
+    model: int_reported_income_metrics
+    description: Exact durations and amended accessions are independent; companies never share supporting
+      lineage.
+    given:
+      - &separate_durations_accessions_and_companies_candidates
+        input: ref('int_financial_metric_candidates')
+        rows:
+          - <<: *income_occurrence
+            source_occurrence_id: ni-quarter
+          - <<: *income_occurrence
+            source_occurrence_id: ni-long
+            period_start: '2025-01-01'
+            value_decimal: '-20'
+          - <<: *income_occurrence
+            source_occurrence_id: eps-quarter
+            metric_code: diluted_eps
+            concept_local_name: EarningsPerShareDiluted
+            unit_expression: ({http://www.xbrl.org/2003/iso4217}USD) / ({http://www.xbrl.org/2003/instance}shares)
+            is_usd: false
+            unit_ref: USD-per-share
+            decimals: '2'
+            value_decimal: '-0.25'
+            raw_value: '-0.25'
+          - <<: *income_occurrence
+            source_occurrence_id: eps-long
+            metric_code: diluted_eps
+            concept_local_name: EarningsPerShareDiluted
+            unit_expression: ({http://www.xbrl.org/2003/iso4217}USD) / ({http://www.xbrl.org/2003/instance}shares)
+            is_usd: false
+            unit_ref: USD-per-share
+            decimals: '2'
+            value_decimal: '-0.50'
+            raw_value: '-0.25'
+            period_start: '2025-01-01'
+          - <<: *income_occurrence
+            source_occurrence_id: ni-amendment
+            accession_number: 0000320193-25-000002
+          - <<: *income_occurrence
+            source_occurrence_id: eps-amendment
+            metric_code: diluted_eps
+            concept_local_name: EarningsPerShareDiluted
+            unit_expression: ({http://www.xbrl.org/2003/iso4217}USD) / ({http://www.xbrl.org/2003/instance}shares)
+            is_usd: false
+            unit_ref: USD-per-share
+            decimals: '2'
+            value_decimal: '-0.25'
+            raw_value: '-0.25'
+            accession_number: 0000320193-25-000002
+          - <<: *income_occurrence
+            source_occurrence_id: other-company
+            cik: '0000000002'
+            entity_identifier: '2'
+      - &separate_durations_accessions_and_companies_metadata
+        input: ref('stg_silver_filing_metadata')
+        rows:
+          - <<: *income_metadata
+          - <<: *income_metadata
+            accession_number: 0000320193-25-000002
+            form: 10-Q/A
+          - <<: *income_metadata
+            cik: '0000000002'
+    expect:
+      rows:
+      - source_occurrence_id: ni-quarter
+        metric_code: net_income
+        value_decimal: '-10'
+        period_start: '2025-07-01'
+        period_end: '2025-09-30'
+        accession_number: 0000320193-25-000001
+        supporting_occurrence_count: 1
+        supporting_occurrence_ids:
+        - ni-quarter
+        period_label: reported_duration
+        selection_rule_version: '1'
+        selection_reason: SINGLE_ELIGIBLE_OCCURRENCE
+        cik: 0000320193
+      - source_occurrence_id: ni-long
+        metric_code: net_income
+        value_decimal: '-20'
+        period_start: '2025-01-01'
+        period_end: '2025-09-30'
+        accession_number: 0000320193-25-000001
+        supporting_occurrence_count: 1
+        supporting_occurrence_ids:
+        - ni-long
+        period_label: reported_duration
+        selection_rule_version: '1'
+        selection_reason: SINGLE_ELIGIBLE_OCCURRENCE
+        cik: 0000320193
+      - source_occurrence_id: eps-quarter
+        metric_code: diluted_eps
+        value_decimal: '-0.25'
+        period_start: '2025-07-01'
+        period_end: '2025-09-30'
+        accession_number: 0000320193-25-000001
+        supporting_occurrence_count: 1
+        supporting_occurrence_ids:
+        - eps-quarter
+        period_label: reported_duration
+        selection_rule_version: '1'
+        selection_reason: SINGLE_ELIGIBLE_OCCURRENCE
+        cik: 0000320193
+      - source_occurrence_id: eps-long
+        metric_code: diluted_eps
+        value_decimal: '-0.50'
+        period_start: '2025-01-01'
+        period_end: '2025-09-30'
+        accession_number: 0000320193-25-000001
+        supporting_occurrence_count: 1
+        supporting_occurrence_ids:
+        - eps-long
+        period_label: reported_duration
+        selection_rule_version: '1'
+        selection_reason: SINGLE_ELIGIBLE_OCCURRENCE
+        cik: 0000320193
+      - source_occurrence_id: ni-amendment
+        metric_code: net_income
+        value_decimal: '-10'
+        period_start: '2025-07-01'
+        period_end: '2025-09-30'
+        accession_number: 0000320193-25-000002
+        supporting_occurrence_count: 1
+        supporting_occurrence_ids:
+        - ni-amendment
+        period_label: reported_duration
+        selection_rule_version: '1'
+        selection_reason: SINGLE_ELIGIBLE_OCCURRENCE
+        cik: 0000320193
+      - source_occurrence_id: eps-amendment
+        metric_code: diluted_eps
+        value_decimal: '-0.25'
+        period_start: '2025-07-01'
+        period_end: '2025-09-30'
+        accession_number: 0000320193-25-000002
+        supporting_occurrence_count: 1
+        supporting_occurrence_ids:
+        - eps-amendment
+        period_label: reported_duration
+        selection_rule_version: '1'
+        selection_reason: SINGLE_ELIGIBLE_OCCURRENCE
+        cik: 0000320193
+      - source_occurrence_id: other-company
+        metric_code: net_income
+        value_decimal: '-10'
+        period_start: '2025-07-01'
+        period_end: '2025-09-30'
+        accession_number: 0000320193-25-000001
+        supporting_occurrence_count: 1
+        supporting_occurrence_ids:
+        - other-company
+        period_label: reported_duration
+        selection_rule_version: '1'
+        selection_reason: SINGLE_ELIGIBLE_OCCURRENCE
+        cik: '0000000002'
+  - name: separate_durations_accessions_and_companies_issues
+    model: int_income_metric_selection_issues
+    description: Exact durations and amended accessions are independent; companies never share supporting
+      lineage.
+    given:
+      - *separate_durations_accessions_and_companies_candidates
+      - *separate_durations_accessions_and_companies_metadata
+      - input: ref('stg_silver_active_filings')
+        rows:
+          - <<: *income_active
+          - <<: *income_active
+            accession_number: 0000320193-25-000002
+          - <<: *income_active
+            cik: '0000000002'
+    expect:
+      rows:
+      - metric_code: diluted_eps
+        accession_number: 0000320193-25-000001
+        issue_code: NO_ELIGIBLE_METRIC
+        severity: ERROR
+        report_date: '2025-09-30'
+        period_start: null
+        period_end: null
+        source_occurrence_ids: []
+        cik: '0000000002'
+  - name: missing_metric_and_all_ambiguous_selected
+    model: int_reported_income_metrics
+    description: A missing metric does not suppress the other; all-ambiguous groups are not reported as absent.
+    given:
+      - &missing_metric_and_all_ambiguous_candidates
+        input: ref('int_financial_metric_candidates')
+        rows:
+          - <<: *income_occurrence
+            source_occurrence_id: only-eps
+            metric_code: diluted_eps
+            concept_local_name: EarningsPerShareDiluted
+            unit_expression: ({http://www.xbrl.org/2003/iso4217}USD) / ({http://www.xbrl.org/2003/instance}shares)
+            is_usd: false
+            unit_ref: USD-per-share
+            decimals: '2'
+            value_decimal: '-0.25'
+            raw_value: '-0.25'
+          - <<: *income_occurrence
+            source_occurrence_id: only-ni
+            accession_number: 0000320193-25-000002
+          - <<: *income_occurrence
+            source_occurrence_id: ni-conflict-a
+            accession_number: 0000320193-25-000003
+            value_decimal: '1'
+          - <<: *income_occurrence
+            source_occurrence_id: ni-conflict-b
+            accession_number: 0000320193-25-000003
+            value_decimal: '2'
+          - <<: *income_occurrence
+            source_occurrence_id: eps-independent
+            metric_code: diluted_eps
+            concept_local_name: EarningsPerShareDiluted
+            unit_expression: ({http://www.xbrl.org/2003/iso4217}USD) / ({http://www.xbrl.org/2003/instance}shares)
+            is_usd: false
+            unit_ref: USD-per-share
+            decimals: '2'
+            value_decimal: '-0.25'
+            raw_value: '-0.25'
+            accession_number: 0000320193-25-000003
+      - &missing_metric_and_all_ambiguous_metadata
+        input: ref('stg_silver_filing_metadata')
+        rows:
+          - <<: *income_metadata
+          - <<: *income_metadata
+            accession_number: 0000320193-25-000002
+          - <<: *income_metadata
+            accession_number: 0000320193-25-000003
+    expect:
+      rows:
+      - source_occurrence_id: only-eps
+        metric_code: diluted_eps
+        value_decimal: '-0.25'
+        period_start: '2025-07-01'
+        period_end: '2025-09-30'
+        accession_number: 0000320193-25-000001
+        supporting_occurrence_count: 1
+        supporting_occurrence_ids:
+        - only-eps
+        period_label: reported_duration
+        selection_rule_version: '1'
+        selection_reason: SINGLE_ELIGIBLE_OCCURRENCE
+      - source_occurrence_id: only-ni
+        metric_code: net_income
+        value_decimal: '-10'
+        period_start: '2025-07-01'
+        period_end: '2025-09-30'
+        accession_number: 0000320193-25-000002
+        supporting_occurrence_count: 1
+        supporting_occurrence_ids:
+        - only-ni
+        period_label: reported_duration
+        selection_rule_version: '1'
+        selection_reason: SINGLE_ELIGIBLE_OCCURRENCE
+      - source_occurrence_id: eps-independent
+        metric_code: diluted_eps
+        value_decimal: '-0.25'
+        period_start: '2025-07-01'
+        period_end: '2025-09-30'
+        accession_number: 0000320193-25-000003
+        supporting_occurrence_count: 1
+        supporting_occurrence_ids:
+        - eps-independent
+        period_label: reported_duration
+        selection_rule_version: '1'
+        selection_reason: SINGLE_ELIGIBLE_OCCURRENCE
+  - name: missing_metric_and_all_ambiguous_issues
+    model: int_income_metric_selection_issues
+    description: A missing metric does not suppress the other; all-ambiguous groups are not reported as absent.
+    given:
+      - *missing_metric_and_all_ambiguous_candidates
+      - *missing_metric_and_all_ambiguous_metadata
+      - input: ref('stg_silver_active_filings')
+        rows:
+          - <<: *income_active
+          - <<: *income_active
+            accession_number: 0000320193-25-000002
+          - <<: *income_active
+            accession_number: 0000320193-25-000003
+    expect:
+      rows:
+      - metric_code: net_income
+        accession_number: 0000320193-25-000001
+        issue_code: NO_ELIGIBLE_METRIC
+        severity: ERROR
+        report_date: '2025-09-30'
+        period_start: null
+        period_end: null
+        source_occurrence_ids: []
+      - metric_code: diluted_eps
+        accession_number: 0000320193-25-000002
+        issue_code: NO_ELIGIBLE_METRIC
+        severity: ERROR
+        report_date: '2025-09-30'
+        period_start: null
+        period_end: null
+        source_occurrence_ids: []
+      - metric_code: net_income
+        accession_number: 0000320193-25-000003
+        issue_code: METRIC_VALUE_CONFLICT
+        severity: ERROR
+        report_date: '2025-09-30'
+        period_start: '2025-07-01'
+        period_end: '2025-09-30'
+        source_occurrence_ids:
+        - ni-conflict-a
+        - ni-conflict-b
+  - name: filing_issue_precedence_for_each_metric_selected
+    model: int_reported_income_metrics
+    description: Both metrics expose missing metadata, unsupported forms and missing report dates with one
+      filing issue apiece.
+    given:
+      - &filing_issue_precedence_for_each_metric_candidates
+        input: ref('int_financial_metric_candidates')
+        rows:
+          - <<: *income_occurrence
+            source_occurrence_id: unused
+      - &filing_issue_precedence_for_each_metric_metadata
+        input: ref('stg_silver_filing_metadata')
+        rows:
+          - <<: *income_metadata
+            cik: '0000000002'
+          - <<: *income_metadata
+            accession_number: 0000320193-25-000002
+            form: 8-K
+            report_date: null
+          - <<: *income_metadata
+            accession_number: 0000320193-25-000003
+            report_date: null
+          - <<: *income_metadata
+            accession_number: 0000320193-25-000004
+    expect:
+      rows: []
+  - name: filing_issue_precedence_for_each_metric_issues
+    model: int_income_metric_selection_issues
+    description: Both metrics expose missing metadata, unsupported forms and missing report dates with one
+      filing issue apiece.
+    given:
+      - *filing_issue_precedence_for_each_metric_candidates
+      - *filing_issue_precedence_for_each_metric_metadata
+      - input: ref('stg_silver_active_filings')
+        rows:
+          - <<: *income_active
+          - <<: *income_active
+            accession_number: 0000320193-25-000002
+          - <<: *income_active
+            accession_number: 0000320193-25-000003
+          - <<: *income_active
+            accession_number: 0000320193-25-000004
+    expect:
+      rows:
+      - metric_code: net_income
+        accession_number: 0000320193-25-000001
+        issue_code: MISSING_FILING_METADATA
+        severity: ERROR
+        report_date: null
+        period_start: null
+        period_end: null
+        source_occurrence_ids: []
+      - metric_code: diluted_eps
+        accession_number: 0000320193-25-000001
+        issue_code: MISSING_FILING_METADATA
+        severity: ERROR
+        report_date: null
+        period_start: null
+        period_end: null
+        source_occurrence_ids: []
+      - metric_code: net_income
+        accession_number: 0000320193-25-000002
+        issue_code: UNSUPPORTED_FORM
+        severity: WARNING
+        report_date: null
+        period_start: null
+        period_end: null
+        source_occurrence_ids: []
+      - metric_code: diluted_eps
+        accession_number: 0000320193-25-000002
+        issue_code: UNSUPPORTED_FORM
+        severity: WARNING
+        report_date: null
+        period_start: null
+        period_end: null
+        source_occurrence_ids: []
+      - metric_code: net_income
+        accession_number: 0000320193-25-000003
+        issue_code: MISSING_REPORT_DATE
+        severity: ERROR
+        report_date: null
+        period_start: null
+        period_end: null
+        source_occurrence_ids: []
+      - metric_code: diluted_eps
+        accession_number: 0000320193-25-000003
+        issue_code: MISSING_REPORT_DATE
+        severity: ERROR
+        report_date: null
+        period_start: null
+        period_end: null
+        source_occurrence_ids: []
+      - metric_code: net_income
+        accession_number: 0000320193-25-000004
+        issue_code: NO_ELIGIBLE_METRIC
+        severity: ERROR
+        report_date: '2025-09-30'
+        period_start: null
+        period_end: null
+        source_occurrence_ids: []
+      - metric_code: diluted_eps
+        accession_number: 0000320193-25-000004
+        issue_code: NO_ELIGIBLE_METRIC
+        severity: ERROR
+        report_date: '2025-09-30'
+        period_start: null
+        period_end: null
+        source_occurrence_ids: []
+  - name: typed_empty_int_reported_income_metrics
+    model: int_reported_income_metrics
+    given:
+    - input: ref('int_financial_metric_candidates')
+      format: sql
+      rows: |
+        select
+            cast(null as VARCHAR) as metric_code,
+            cast(null as INTEGER) as concept_priority,
+            cast(null as VARCHAR) as cik,
+            cast(null as VARCHAR) as accession_number,
+            cast(null as VARCHAR) as source_occurrence_id,
+            cast(null as VARCHAR) as source_document_name,
+            cast(null as VARCHAR) as source_sha256,
+            cast(null as BIGINT) as source_ordinal,
+            cast(null as VARCHAR) as processing_run_id,
+            cast(null as VARCHAR) as parser_version,
+            cast(null as VARCHAR) as schema_version,
+            cast(null as VARCHAR) as concept_namespace,
+            cast(null as VARCHAR) as concept_local_name,
+            cast(null as VARCHAR) as raw_value,
+            cast(null as DECIMAL(38,18)) as value_decimal,
+            cast(null as VARCHAR) as decimals,
+            cast(null as VARCHAR) as precision,
+            cast(null as VARCHAR) as unit_ref,
+            cast(null as VARCHAR) as unit_expression,
+            cast(null as VARCHAR) as context_ref,
+            cast(null as VARCHAR) as entity_scheme,
+            cast(null as VARCHAR) as entity_identifier,
+            cast(null as VARCHAR) as period_kind,
+            cast(null as DATE) as period_start,
+            cast(null as DATE) as period_end,
+            cast(null as DATE) as period_instant,
+            cast(null as BIGINT) as dimension_count,
+            cast(null as BOOLEAN) as has_dimensions,
+            cast(null as BIGINT) as duration_days,
+            cast(null as BOOLEAN) as is_usd
+        where false
+    - input: ref('stg_silver_filing_metadata')
+      format: sql
+      rows: |
+        select
+            cast(null as VARCHAR) as cik,
+            cast(null as VARCHAR) as accession_number,
+            cast(null as VARCHAR) as form,
+            cast(null as DATE) as filing_date,
+            cast(null as DATE) as report_date,
+            cast(null as VARCHAR) as primary_document,
+            cast(null as VARCHAR) as metadata_run_id,
+            cast(null as VARCHAR) as run_record_path,
+            cast(null as VARCHAR) as submissions_path,
+            cast(null as VARCHAR) as submissions_url,
+            cast(null as TIMESTAMPTZ) as submissions_retrieved_at,
+            cast(null as BIGINT) as submissions_size_bytes,
+            cast(null as VARCHAR) as submissions_sha256
+        where false
+    expect:
+      rows: []
+  - name: typed_empty_int_income_metric_selection_issues
+    model: int_income_metric_selection_issues
+    given:
+    - input: ref('int_financial_metric_candidates')
+      format: sql
+      rows: |
+        select
+            cast(null as VARCHAR) as metric_code,
+            cast(null as INTEGER) as concept_priority,
+            cast(null as VARCHAR) as cik,
+            cast(null as VARCHAR) as accession_number,
+            cast(null as VARCHAR) as source_occurrence_id,
+            cast(null as VARCHAR) as source_document_name,
+            cast(null as VARCHAR) as source_sha256,
+            cast(null as BIGINT) as source_ordinal,
+            cast(null as VARCHAR) as processing_run_id,
+            cast(null as VARCHAR) as parser_version,
+            cast(null as VARCHAR) as schema_version,
+            cast(null as VARCHAR) as concept_namespace,
+            cast(null as VARCHAR) as concept_local_name,
+            cast(null as VARCHAR) as raw_value,
+            cast(null as DECIMAL(38,18)) as value_decimal,
+            cast(null as VARCHAR) as decimals,
+            cast(null as VARCHAR) as precision,
+            cast(null as VARCHAR) as unit_ref,
+            cast(null as VARCHAR) as unit_expression,
+            cast(null as VARCHAR) as context_ref,
+            cast(null as VARCHAR) as entity_scheme,
+            cast(null as VARCHAR) as entity_identifier,
+            cast(null as VARCHAR) as period_kind,
+            cast(null as DATE) as period_start,
+            cast(null as DATE) as period_end,
+            cast(null as DATE) as period_instant,
+            cast(null as BIGINT) as dimension_count,
+            cast(null as BOOLEAN) as has_dimensions,
+            cast(null as BIGINT) as duration_days,
+            cast(null as BOOLEAN) as is_usd
+        where false
+    - input: ref('stg_silver_filing_metadata')
+      format: sql
+      rows: |
+        select
+            cast(null as VARCHAR) as cik,
+            cast(null as VARCHAR) as accession_number,
+            cast(null as VARCHAR) as form,
+            cast(null as DATE) as filing_date,
+            cast(null as DATE) as report_date,
+            cast(null as VARCHAR) as primary_document,
+            cast(null as VARCHAR) as metadata_run_id,
+            cast(null as VARCHAR) as run_record_path,
+            cast(null as VARCHAR) as submissions_path,
+            cast(null as VARCHAR) as submissions_url,
+            cast(null as TIMESTAMPTZ) as submissions_retrieved_at,
+            cast(null as BIGINT) as submissions_size_bytes,
+            cast(null as VARCHAR) as submissions_sha256
+        where false
+    - input: ref('stg_silver_active_filings')
+      format: sql
+      rows: |
+        select
+            cast(null as VARCHAR) as cik,
+            cast(null as VARCHAR) as accession_number,
+            cast(null as VARCHAR) as source_document_name,
+            cast(null as VARCHAR) as source_sha256,
+            cast(null as VARCHAR) as silver_status,
+            cast(null as VARCHAR) as parser_version,
+            cast(null as VARCHAR) as schema_version,
+            cast(null as VARCHAR) as activation_run_id,
+            cast(null as TIMESTAMP WITH TIME ZONE) as activated_at,
+            cast(null as VARCHAR) as version_path,
+            cast(null as VARCHAR) as publication_path,
+            cast(null as VARCHAR) as publication_sha256,
+            cast(null as BIGINT) as accepted_count,
+            cast(null as BIGINT) as dimension_count,
+            cast(null as BIGINT) as rejected_count,
+            cast(null as BIGINT) as candidate_count
+        where false
+    expect:
+      rows: []
+  - name: approved_income_concepts_and_simple_usd_flag
+    model: int_financial_metric_candidates
+    given:
+    - input: ref('stg_silver_facts')
+      rows:
+      - cik: 0000320193
+        accession_number: 0000320193-25-000001
+        source_occurrence_id: NetIncomeLoss
+        source_document_name: filing.xml
+        source_sha256: checksum
+        source_ordinal: 3
+        processing_run_id: silver-run
+        parser_version: '1'
+        schema_version: '1'
+        concept_namespace: http://fasb.org/us-gaap/2025
+        concept_local_name: NetIncomeLoss
+        raw_value: '-10'
+        value_decimal: '-10'
+        decimals: '-6'
+        precision: null
+        unit_ref: USD
+        unit_expression: '{http://www.xbrl.org/2003/iso4217}USD'
+        context_ref: context
+        entity_scheme: http://www.sec.gov/CIK
+        entity_identifier: '320193'
+        period_kind: DURATION
+        period_start: '2025-07-01'
+        period_end: '2025-09-30'
+        period_instant: null
+        is_nil: false
+      - cik: 0000320193
+        accession_number: 0000320193-25-000001
+        source_occurrence_id: EarningsPerShareDiluted
+        source_document_name: filing.xml
+        source_sha256: checksum
+        source_ordinal: 3
+        processing_run_id: silver-run
+        parser_version: '1'
+        schema_version: '1'
+        concept_namespace: http://fasb.org/us-gaap/2025
+        concept_local_name: EarningsPerShareDiluted
+        raw_value: '-10'
+        value_decimal: '-10'
+        decimals: '-6'
+        precision: null
+        unit_ref: USD
+        unit_expression: ({http://www.xbrl.org/2003/iso4217}USD) / ({http://www.xbrl.org/2003/instance}shares)
+        context_ref: context
+        entity_scheme: http://www.sec.gov/CIK
+        entity_identifier: '320193'
+        period_kind: DURATION
+        period_start: '2025-07-01'
+        period_end: '2025-09-30'
+        period_instant: null
+        is_nil: false
+      - cik: 0000320193
+        accession_number: 0000320193-25-000001
+        source_occurrence_id: EarningsPerShareBasic
+        source_document_name: filing.xml
+        source_sha256: checksum
+        source_ordinal: 3
+        processing_run_id: silver-run
+        parser_version: '1'
+        schema_version: '1'
+        concept_namespace: http://fasb.org/us-gaap/2025
+        concept_local_name: EarningsPerShareBasic
+        raw_value: '-10'
+        value_decimal: '-10'
+        decimals: '-6'
+        precision: null
+        unit_ref: USD
+        unit_expression: ({http://www.xbrl.org/2003/iso4217}USD) / ({http://www.xbrl.org/2003/instance}shares)
+        context_ref: context
+        entity_scheme: http://www.sec.gov/CIK
+        entity_identifier: '320193'
+        period_kind: DURATION
+        period_start: '2025-07-01'
+        period_end: '2025-09-30'
+        period_instant: null
+        is_nil: false
+      - cik: 0000320193
+        accession_number: 0000320193-25-000001
+        source_occurrence_id: OperatingIncomeLoss
+        source_document_name: filing.xml
+        source_sha256: checksum
+        source_ordinal: 3
+        processing_run_id: silver-run
+        parser_version: '1'
+        schema_version: '1'
+        concept_namespace: http://fasb.org/us-gaap/2025
+        concept_local_name: OperatingIncomeLoss
+        raw_value: '-10'
+        value_decimal: '-10'
+        decimals: '-6'
+        precision: null
+        unit_ref: USD
+        unit_expression: '{http://www.xbrl.org/2003/iso4217}USD'
+        context_ref: context
+        entity_scheme: http://www.sec.gov/CIK
+        entity_identifier: '320193'
+        period_kind: DURATION
+        period_start: '2025-07-01'
+        period_end: '2025-09-30'
+        period_instant: null
+        is_nil: false
+      - cik: 0000320193
+        accession_number: 0000320193-25-000001
+        source_occurrence_id: ComprehensiveIncomeNetOfTax
+        source_document_name: filing.xml
+        source_sha256: checksum
+        source_ordinal: 3
+        processing_run_id: silver-run
+        parser_version: '1'
+        schema_version: '1'
+        concept_namespace: http://fasb.org/us-gaap/2025
+        concept_local_name: ComprehensiveIncomeNetOfTax
+        raw_value: '-10'
+        value_decimal: '-10'
+        decimals: '-6'
+        precision: null
+        unit_ref: USD
+        unit_expression: '{http://www.xbrl.org/2003/iso4217}USD'
+        context_ref: context
+        entity_scheme: http://www.sec.gov/CIK
+        entity_identifier: '320193'
+        period_kind: DURATION
+        period_start: '2025-07-01'
+        period_end: '2025-09-30'
+        period_instant: null
+        is_nil: false
+      - cik: 0000320193
+        accession_number: 0000320193-25-000001
+        source_occurrence_id: IncomeLossFromContinuingOperations
+        source_document_name: filing.xml
+        source_sha256: checksum
+        source_ordinal: 3
+        processing_run_id: silver-run
+        parser_version: '1'
+        schema_version: '1'
+        concept_namespace: http://fasb.org/us-gaap/2025
+        concept_local_name: IncomeLossFromContinuingOperations
+        raw_value: '-10'
+        value_decimal: '-10'
+        decimals: '-6'
+        precision: null
+        unit_ref: USD
+        unit_expression: '{http://www.xbrl.org/2003/iso4217}USD'
+        context_ref: context
+        entity_scheme: http://www.sec.gov/CIK
+        entity_identifier: '320193'
+        period_kind: DURATION
+        period_start: '2025-07-01'
+        period_end: '2025-09-30'
+        period_instant: null
+        is_nil: false
+      - cik: 0000320193
+        accession_number: 0000320193-25-000001
+        source_occurrence_id: EarningsPerShareDilutedFromContinuingOperations
+        source_document_name: filing.xml
+        source_sha256: checksum
+        source_ordinal: 3
+        processing_run_id: silver-run
+        parser_version: '1'
+        schema_version: '1'
+        concept_namespace: http://fasb.org/us-gaap/2025
+        concept_local_name: EarningsPerShareDilutedFromContinuingOperations
+        raw_value: '-10'
+        value_decimal: '-10'
+        decimals: '-6'
+        precision: null
+        unit_ref: USD
+        unit_expression: ({http://www.xbrl.org/2003/iso4217}USD) / ({http://www.xbrl.org/2003/instance}shares)
+        context_ref: context
+        entity_scheme: http://www.sec.gov/CIK
+        entity_identifier: '320193'
+        period_kind: DURATION
+        period_start: '2025-07-01'
+        period_end: '2025-09-30'
+        period_instant: null
+        is_nil: false
+      - cik: 0000320193
+        accession_number: 0000320193-25-000001
+        source_occurrence_id: extension
+        source_document_name: filing.xml
+        source_sha256: checksum
+        source_ordinal: 3
+        processing_run_id: silver-run
+        parser_version: '1'
+        schema_version: '1'
+        concept_namespace: http://company.example/taxonomy
+        concept_local_name: NetIncomeLoss
+        raw_value: '-10'
+        value_decimal: '-10'
+        decimals: '-6'
+        precision: null
+        unit_ref: USD
+        unit_expression: '{http://www.xbrl.org/2003/iso4217}USD'
+        context_ref: context
+        entity_scheme: http://www.sec.gov/CIK
+        entity_identifier: '320193'
+        period_kind: DURATION
+        period_start: '2025-07-01'
+        period_end: '2025-09-30'
+        period_instant: null
+        is_nil: false
+    - input: ref('stg_silver_active_filings')
+      rows:
+      - cik: 0000320193
+        accession_number: 0000320193-25-000001
+        source_document_name: filing.xml
+        source_sha256: checksum
+    - input: ref('metric_concept_map')
+      rows:
+      - metric_code: revenue
+        concept_namespace_prefix: http://fasb.org/us-gaap/
+        concept_local_name: RevenueFromContractWithCustomerExcludingAssessedTax
+        concept_priority: 1
+        expected_period_kind: duration
+      - metric_code: revenue
+        concept_namespace_prefix: http://fasb.org/us-gaap/
+        concept_local_name: SalesRevenueNet
+        concept_priority: 2
+        expected_period_kind: duration
+      - metric_code: revenue
+        concept_namespace_prefix: http://fasb.org/us-gaap/
+        concept_local_name: Revenues
+        concept_priority: 3
+        expected_period_kind: duration
+      - metric_code: net_income
+        concept_namespace_prefix: http://fasb.org/us-gaap/
+        concept_local_name: NetIncomeLoss
+        concept_priority: 1
+        expected_period_kind: duration
+      - metric_code: diluted_eps
+        concept_namespace_prefix: http://fasb.org/us-gaap/
+        concept_local_name: EarningsPerShareDiluted
+        concept_priority: 1
+        expected_period_kind: duration
+    - input: ref('stg_silver_fact_dimensions')
+      rows: []
+    expect:
+      rows:
+      - source_occurrence_id: NetIncomeLoss
+        metric_code: net_income
+        is_usd: true
+      - source_occurrence_id: EarningsPerShareDiluted
+        metric_code: diluted_eps
+        is_usd: false
