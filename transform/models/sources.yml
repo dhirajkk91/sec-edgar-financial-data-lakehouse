@@ -15,3 +15,5 @@ sources:
         description: One rejected numeric candidate with its source and reason.
       - name: filing_metadata
         description: Verified SEC metadata and first accepted discovery provenance per filing.
+      - name: filing_fiscal_metadata
+        description: Persisted fiscal DEI extraction evidence, including historical sources.

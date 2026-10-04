@@ -44,6 +44,11 @@ from sec_edgar_lakehouse.filing_fiscal_metadata import (
     FiscalMetadataOccurrence,
     extract_filing_fiscal_metadata,
 )
+from sec_edgar_lakehouse.filing_fiscal_metadata_storage import (
+    FilingFiscalMetadataLoadResult,
+    FiscalMetadataLoadError,
+    load_filing_fiscal_metadata,
+)
 from sec_edgar_lakehouse.filing_ingestion import (
     DownloadFailure,
     IngestionResult,
@@ -122,6 +127,7 @@ __all__ = [
     "FilingDiscovery",
     "FilingDocument",
     "FilingFiscalMetadata",
+    "FilingFiscalMetadataLoadResult",
     "FilingInventory",
     "FilingMetadataError",
     "FilingMetadataIssue",
@@ -130,6 +136,7 @@ __all__ = [
     "FiscalMetadataExtractionError",
     "FiscalMetadataInputError",
     "FiscalMetadataIssue",
+    "FiscalMetadataLoadError",
     "FiscalMetadataOccurrence",
     "IngestionResult",
     "InventoryEntry",
@@ -158,6 +165,7 @@ __all__ = [
     "extract_filing_facts",
     "extract_filing_fiscal_metadata",
     "ingest_filing",
+    "load_filing_fiscal_metadata",
     "load_filing_metadata",
     "process_company_filings",
     "publish_filing",
