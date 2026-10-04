@@ -501,6 +501,74 @@ models:
         data_tests: [not_null]
 
 
+  - name: stg_silver_filing_fiscal_metadata
+    description: Version 1 fiscal DEI evidence for the exact active source; complete and partial results
+      remain inspectable.
+    columns:
+    - name: cik
+      data_tests:
+      - not_null
+    - name: accession_number
+      data_tests:
+      - not_null
+    - name: source_document_name
+      data_tests:
+      - not_null
+    - name: source_sha256
+      data_tests:
+      - not_null
+    - name: extraction_version
+      data_tests:
+      - not_null
+      - accepted_values:
+          arguments:
+            values:
+            - '1'
+    - name: form
+      data_tests:
+      - not_null
+      - accepted_values:
+          arguments:
+            values:
+            - 10-K
+            - 10-K/A
+            - 10-Q
+            - 10-Q/A
+    - name: report_date
+      data_tests:
+      - not_null
+    - name: metadata_run_id
+      data_tests:
+      - not_null
+    - name: submissions_sha256
+      data_tests:
+      - not_null
+    - name: extraction_status
+      data_tests:
+      - not_null
+      - accepted_values:
+          arguments:
+            values:
+            - COMPLETE
+            - PARTIAL
+    - name: fiscal_year_focus
+    - name: fiscal_period_focus
+      data_tests:
+      - accepted_values:
+          arguments:
+            values:
+            - FY
+            - Q1
+            - Q2
+            - Q3
+    - name: document_period_end_date
+    - name: occurrences_json
+      data_tests:
+      - not_null
+    - name: issues_json
+      data_tests:
+      - not_null
+
 seeds:
   - name: metric_concept_map
     description: Approved revenue, income, balance-sheet and cash-flow concept mappings; one row per metric, namespace prefix, concept and period kind. Priority is evidence for later selection.

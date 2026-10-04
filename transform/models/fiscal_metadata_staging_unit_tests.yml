@@ -1,0 +1,65 @@
+unit_tests:
+  - name: fiscal_staging_matches_active_source_and_supported_version
+    model: stg_silver_filing_fiscal_metadata
+    given:
+      - input: source('silver', 'filing_fiscal_metadata')
+        rows:
+          - &fiscal_row
+            cik: 0000320193
+            accession_number: 0000320193-24-000123
+            source_document_name: filing.xml
+            source_sha256: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+            extraction_version: '1'
+            form: 10-K
+            report_date: '2024-09-28'
+            metadata_run_id: run
+            submissions_sha256: bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+            extraction_status: COMPLETE
+            fiscal_year_focus: 2024
+            fiscal_period_focus: FY
+            document_period_end_date: '2024-09-28'
+            occurrences_json: '[]'
+            issues_json: '[]'
+          - <<: *fiscal_row
+            source_sha256: old
+          - <<: *fiscal_row
+            source_document_name: old.xml
+          - <<: *fiscal_row
+            extraction_version: '2'
+          - <<: *fiscal_row
+            cik: '0000000002'
+          - <<: *fiscal_row
+            accession_number: 0000320193-24-000124
+          - <<: *fiscal_row
+            accession_number: 0000320193-24-000125
+            extraction_status: PARTIAL
+            fiscal_year_focus: null
+            issues_json: '[{"reason_code":"INVALID_FISCAL_FIELD"}]'
+      - input: ref('stg_silver_active_filings')
+        rows:
+        - cik: 0000320193
+          accession_number: 0000320193-24-000123
+          source_document_name: filing.xml
+          source_sha256: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+        - cik: 0000320193
+          accession_number: 0000320193-24-000125
+          source_document_name: filing.xml
+          source_sha256: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+    expect:
+      rows:
+      - accession_number: 0000320193-24-000123
+        source_document_name: filing.xml
+        source_sha256: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+        extraction_version: '1'
+        extraction_status: COMPLETE
+        fiscal_year_focus: 2024
+        occurrences_json: '[]'
+        issues_json: '[]'
+      - accession_number: 0000320193-24-000125
+        source_document_name: filing.xml
+        source_sha256: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+        extraction_version: '1'
+        extraction_status: PARTIAL
+        fiscal_year_focus: null
+        occurrences_json: '[]'
+        issues_json: '[{"reason_code":"INVALID_FISCAL_FIELD"}]'
