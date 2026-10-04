@@ -630,6 +630,231 @@ models:
                   FISCAL_REPORT_DATE_MISMATCH, FISCAL_PERIOD_FORM_MISMATCH,
                   UNSUPPORTED_DURATION, AMBIGUOUS_REPORTED_PERIOD]
 
+  - name: int_derived_quarterly_cash_flow
+    description: Standalone Q2/Q3 supplemental cash flow from one compatible cumulative pair; keeps both inputs and their independent accuracy evidence.
+    columns:
+      - name: cik
+        data_type: VARCHAR
+        data_tests:
+          - not_null
+      - name: accession_number
+        data_type: VARCHAR
+        data_tests:
+          - not_null
+      - name: metric_code
+        data_type: VARCHAR
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ["operating_cash_flow", "capital_expenditures"]
+      - name: form
+        data_type: VARCHAR
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ["10-Q", "10-Q/A"]
+      - name: filing_date
+        data_type: DATE
+        data_tests:
+          - not_null
+      - name: report_date
+        data_type: DATE
+        data_tests:
+          - not_null
+      - name: fiscal_year_focus
+        data_type: INTEGER
+        data_tests:
+          - not_null
+      - name: fiscal_period_focus
+        data_type: VARCHAR
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ["Q2", "Q3"]
+      - name: period_kind
+        data_type: VARCHAR
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ["duration"]
+      - name: period_start
+        data_type: DATE
+        data_tests:
+          - not_null
+      - name: period_end
+        data_type: DATE
+        data_tests:
+          - not_null
+      - name: period_instant
+        data_type: DATE
+      - name: period_label
+        data_type: VARCHAR
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ["derived_quarter"]
+      - name: value_origin
+        data_type: VARCHAR
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ["derived"]
+      - name: value_decimal
+        data_type: DECIMAL(38,18)
+        data_tests:
+          - not_null
+      - name: unit_expression
+        data_type: VARCHAR
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ["{http://www.xbrl.org/2003/iso4217}USD"]
+      - name: derivation_rule_version
+        data_type: VARCHAR
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ["1"]
+      - name: derivation_method
+        data_type: VARCHAR
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ["CURRENT_YTD_MINUS_PREVIOUS_CUMULATIVE"]
+      - name: current_source_occurrence_id
+        data_type: VARCHAR
+        data_tests:
+          - not_null
+      - name: current_source_document_name
+        data_type: VARCHAR
+        data_tests:
+          - not_null
+      - name: current_source_sha256
+        data_type: VARCHAR
+        data_tests:
+          - not_null
+      - name: current_value_decimal
+        data_type: DECIMAL(38,18)
+        data_tests:
+          - not_null
+      - name: current_supporting_occurrence_ids
+        data_type: VARCHAR[]
+        data_tests:
+          - not_null
+      - name: previous_accession_number
+        data_type: VARCHAR
+        data_tests:
+          - not_null
+      - name: previous_source_occurrence_id
+        data_type: VARCHAR
+        data_tests:
+          - not_null
+      - name: previous_source_document_name
+        data_type: VARCHAR
+        data_tests:
+          - not_null
+      - name: previous_source_sha256
+        data_type: VARCHAR
+        data_tests:
+          - not_null
+      - name: previous_value_decimal
+        data_type: DECIMAL(38,18)
+        data_tests:
+          - not_null
+      - name: previous_supporting_occurrence_ids
+        data_type: VARCHAR[]
+        data_tests:
+          - not_null
+      - name: cumulative_period_start
+        data_type: DATE
+        data_tests:
+          - not_null
+      - name: previous_period_end
+        data_type: DATE
+        data_tests:
+          - not_null
+      - name: current_decimals
+        data_type: VARCHAR
+        description: Retained input accuracy; no accuracy is assigned to the derived value.
+      - name: current_precision
+        data_type: VARCHAR
+        description: Retained input accuracy; no accuracy is assigned to the derived value.
+      - name: previous_decimals
+        data_type: VARCHAR
+        description: Retained input accuracy; no accuracy is assigned to the derived value.
+      - name: previous_precision
+        data_type: VARCHAR
+        description: Retained input accuracy; no accuracy is assigned to the derived value.
+
+  - name: int_quarterly_cash_flow_derivation_issues
+    description: One precedence-ordered supplemental warning per unsuccessful cumulative cash-flow target; counts all predecessor candidates before compatibility.
+    columns:
+      - name: cik
+        data_type: VARCHAR
+        data_tests:
+          - not_null
+      - name: accession_number
+        data_type: VARCHAR
+        data_tests:
+          - not_null
+      - name: metric_code
+        data_type: VARCHAR
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ["operating_cash_flow", "capital_expenditures"]
+      - name: fiscal_year_focus
+        data_type: INTEGER
+        data_tests:
+          - not_null
+      - name: fiscal_period_focus
+        data_type: VARCHAR
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ["Q2", "Q3"]
+      - name: report_date
+        data_type: DATE
+        data_tests:
+          - not_null
+      - name: issue_code
+        data_type: VARCHAR
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ["CURRENT_INPUT_INELIGIBLE", "MISSING_PREVIOUS_CUMULATIVE", "AMBIGUOUS_PREVIOUS_CUMULATIVE", "INCOMPATIBLE_CUMULATIVE_INPUTS", "UNSUPPORTED_DERIVED_DURATION", "DERIVED_VALUE_OUT_OF_RANGE"]
+      - name: severity
+        data_type: VARCHAR
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ["WARNING"]
+      - name: current_source_occurrence_id
+        data_type: VARCHAR
+        data_tests:
+          - not_null
+      - name: previous_source_occurrence_ids
+        data_type: VARCHAR[]
+        data_tests:
+          - not_null
+      - name: details
+        data_type: VARCHAR
+        data_tests:
+          - not_null
+
 seeds:
   - name: metric_concept_map
     description: Approved revenue, income, balance-sheet and cash-flow concept mappings; one row per metric, namespace prefix, concept and period kind. Priority is evidence for later selection.

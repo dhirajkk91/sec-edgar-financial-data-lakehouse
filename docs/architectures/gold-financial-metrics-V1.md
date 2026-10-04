@@ -186,6 +186,16 @@ This is a versioned classification policy, not proof of a company's fiscal calen
 
 Later filings also repeat comparative values from older periods. Those remain useful evidence in Silver. For a clean time series, Gold will normally use the current period selected from each filing rather than publishing the same historical period again from every later filing.
 
+### Quarterly cash flow from cumulative inputs
+
+Cash-flow filings often report cumulative values instead of standalone quarters. `gold.int_derived_quarterly_cash_flow` uses Q2 year-to-date minus the previous Q1 reported quarter, or Q3 year-to-date minus the previous Q2 year-to-date value, for operating cash flow and capital expenditures. Q1 stays reported. A classified reported quarter in the current filing prevents a duplicate calculation.
+
+The inputs must belong to the same company, metric and reported fiscal year, with the required fiscal roles and different accessions. Their cumulative starts must match exactly, and the predecessor must end earlier. Both must be valid dimensionless USD durations ending on their verified report dates. The derived period starts the day after the predecessor ends and must span 80–100 inclusive days. Document-scoped unit and context IDs need not match.
+
+We count all predecessor filings before checking pair compatibility. Original and amended filings remain separate candidates; more than one blocks calculation even if values agree or only one pair is compatible. Missing inputs and failed checks produce supplemental warnings in `gold.int_quarterly_cash_flow_derivation_issues`. Each attempted target has one derived row or one issue. Unclassified inputs retain their existing classification issues.
+
+The result is explicitly derived, with exact DECIMAL(38,18) subtraction and both input identities and ordered supporting-ID lists. Zero and negative results are retained, including the tagged capital-expenditure sign. Each input's decimals and precision remain independent; the calculation invents no derived accuracy attribute. Overflow produces an issue for that target without blocking other rows. These arithmetic and boundary checks do not independently prove identical accounting policies or resolve restatements. Annual and Q4 calculations remain separate work.
+
 ### The missing fourth quarter
 
 There is usually no separate 10-Q for the fourth quarter. A standalone Q4 income-statement value may need to be calculated as the 10-K annual value minus the nine-month year-to-date value from the third-quarter 10-Q.
