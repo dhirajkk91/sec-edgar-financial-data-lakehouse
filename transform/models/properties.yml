@@ -569,6 +569,67 @@ models:
       data_tests:
       - not_null
 
+  - name: int_reported_financial_periods
+    description: All selected metrics with their original 40-column evidence and V1 reported-period
+      classification; unusual or competing periods remain visible as unclassified.
+    columns:
+      - name: value_decimal
+        description: Unchanged selected DECIMAL(38,18), including diluted EPS.
+      - name: fiscal_year_focus
+        data_type: INTEGER
+        description: Reported DEI fiscal year; never inferred from a calendar date.
+      - name: fiscal_period_focus
+        data_type: VARCHAR
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: [FY, Q1, Q2, Q3]
+      - name: document_period_end_date
+        data_type: DATE
+      - name: fiscal_metadata_status
+        data_type: VARCHAR
+        description: Retained extraction status; PARTIAL can supply usable resolved fiscal fields.
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: [COMPLETE, PARTIAL]
+      - name: fiscal_extraction_version
+        data_type: VARCHAR
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: ['1']
+      - name: fiscal_metadata_run_id
+        data_type: VARCHAR
+      - name: fiscal_submissions_sha256
+        data_type: VARCHAR
+      - name: period_classification
+        data_type: VARCHAR
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: [annual, quarter, year_to_date, instant, unclassified]
+      - name: period_rule_version
+        data_type: VARCHAR
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['1']
+      - name: period_classification_reason
+        data_type: VARCHAR
+        data_tests: [not_null]
+      - name: period_issue_code
+        data_type: VARCHAR
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: [INVALID_REPORTED_PERIOD, MISSING_FISCAL_METADATA,
+                  FISCAL_METADATA_LINEAGE_MISMATCH, UNRESOLVED_FISCAL_METADATA,
+                  FISCAL_REPORT_DATE_MISMATCH, FISCAL_PERIOD_FORM_MISMATCH,
+                  UNSUPPORTED_DURATION, AMBIGUOUS_REPORTED_PERIOD]
+
 seeds:
   - name: metric_concept_map
     description: Approved revenue, income, balance-sheet and cash-flow concept mappings; one row per metric, namespace prefix, concept and period kind. Priority is evidence for later selection.

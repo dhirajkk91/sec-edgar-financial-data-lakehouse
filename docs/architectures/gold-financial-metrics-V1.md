@@ -165,6 +165,25 @@ For a 10-K, the annual value comes from the annual fact in that filing. We do no
 
 Balance-sheet values use an instant context that matches the verified report date.
 
+### Reported-period classification V1
+
+`gold.int_reported_financial_periods` combines the four reported-metric views without changing their selected values, dates, units or occurrence evidence. It attaches fiscal metadata by CIK, accession, source document and checksum. Available fiscal metadata must also agree with the selected form, report date, metadata run ID and submissions checksum.
+
+Duration classification requires resolved DEI fiscal year, fiscal focus and document end date. Both the reported period end and document end must match the verified report date. Start and end must form a valid duration, with no instant date. The rule uses inclusive days calculated from those boundaries, leaving the original `duration_days` unchanged. A PARTIAL extraction can still support classification when these fields resolved consistently; its status remains visible.
+
+| Verified form and fiscal focus | Inclusive days | Classification |
+| --- | --- | --- |
+| 10-K or 10-K/A, FY | 350–380 | annual |
+| 10-Q or 10-Q/A, Q1, Q2 or Q3 | 80–100 | quarter |
+| 10-Q or 10-Q/A, Q2 | 170–200 | year_to_date |
+| 10-Q or 10-Q/A, Q3 | 260–290 | year_to_date |
+
+These V1 ranges accommodate common calendar periods and 52-/53-week reporting. Q1 produces one quarter row, even though the same value also represents the first cumulative quarter. Quarter and year-to-date rows can coexist for Q2 and Q3. A valid instant matching the report date needs no resolved fiscal focus or fiscal record, but conflicting available fiscal lineage still prevents classification.
+
+Unusual periods and missing or inconsistent metadata remain as `unclassified`, with a stable issue code and explanation. When distinct otherwise eligible periods compete for the same classification within a company, accession and metric, every competing row remains unclassified with its boundaries and supporting IDs intact. No period is chosen by ranking.
+
+This is a versioned classification policy, not proof of a company's fiscal calendar or a universal SEC period definition. The fiscal year comes from reported DEI, not the calendar year of a date. The DEI context start is not treated as a fiscal-year boundary. Derived quarters and fiscal-calendar verification remain separate work.
+
 Later filings also repeat comparative values from older periods. Those remain useful evidence in Silver. For a clean time series, Gold will normally use the current period selected from each filing rather than publishing the same historical period again from every later filing.
 
 ### The missing fourth quarter

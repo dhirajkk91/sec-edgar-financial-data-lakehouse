@@ -1,0 +1,785 @@
+unit_tests:
+  - name: reported_period_common_calendar_and_week_periods
+    model: int_reported_financial_periods
+    description: "Calendar and 52-/53-week annual periods; Q1 stays one row, Q2/Q3 quarter and cumulative rows coexist, all four inputs survive, and usable PARTIAL metadata stays PARTIAL."
+    given:
+      - input: ref('int_reported_revenue')
+        rows:
+          - &reported_period
+            metric_code: "revenue"
+            concept_priority: 1
+            cik: "0000320193"
+            accession_number: "calendar"
+            source_occurrence_id: "calendar"
+            source_document_name: "filing.xml"
+            source_sha256: "document-checksum"
+            source_ordinal: 3
+            processing_run_id: "silver-run"
+            parser_version: "1"
+            schema_version: "1"
+            concept_namespace: "http://fasb.org/us-gaap/2025"
+            concept_local_name: "RevenueFromContractWithCustomerExcludingAssessedTax"
+            raw_value: "0100.000000000000000001"
+            value_decimal: "100.000000000000000001"
+            decimals: "-6"
+            precision: null
+            unit_ref: "USD"
+            unit_expression: "{http://www.xbrl.org/2003/iso4217}USD"
+            context_ref: "reported"
+            entity_scheme: "http://www.sec.gov/CIK"
+            entity_identifier: "320193"
+            period_kind: "duration"
+            period_start: "2025-01-01"
+            period_end: "2025-12-31"
+            period_instant: null
+            dimension_count: 0
+            has_dimensions: false
+            duration_days: 999
+            is_usd: true
+            form: "10-K"
+            filing_date: "2026-02-01"
+            report_date: "2025-12-31"
+            metadata_run_id: "metadata-run"
+            submissions_sha256: "submissions-checksum"
+            period_label: "reported_duration"
+            selection_rule_version: "1"
+            selection_reason: "AGREEING_ELIGIBLE_OCCURRENCES"
+            supporting_occurrence_count: 2
+            supporting_occurrence_ids: ["calendar", "calendar-support"]
+          - <<: *reported_period
+            accession_number: "annual-52"
+            source_occurrence_id: "annual-52"
+            period_start: "2024-09-29"
+            period_end: "2025-09-27"
+            report_date: "2025-09-27"
+            supporting_occurrence_ids: ["annual-52", "annual-52-support"]
+          - <<: *reported_period
+            accession_number: "annual-53"
+            source_occurrence_id: "annual-53"
+            period_start: "2024-09-29"
+            period_end: "2025-10-04"
+            form: "10-K/A"
+            report_date: "2025-10-04"
+            supporting_occurrence_ids: ["annual-53", "annual-53-support"]
+          - <<: *reported_period
+            accession_number: "q1"
+            source_occurrence_id: "q1"
+            period_start: "2025-10-01"
+            form: "10-Q/A"
+            supporting_occurrence_ids: ["q1", "q1-support"]
+          - <<: *reported_period
+            accession_number: "q2"
+            source_occurrence_id: "q2"
+            period_start: "2026-01-01"
+            period_end: "2026-03-31"
+            form: "10-Q"
+            report_date: "2026-03-31"
+            supporting_occurrence_ids: ["q2", "q2-support"]
+          - <<: *reported_period
+            accession_number: "q2"
+            source_occurrence_id: "q2-ytd"
+            period_start: "2025-10-01"
+            period_end: "2026-03-31"
+            form: "10-Q"
+            report_date: "2026-03-31"
+            supporting_occurrence_ids: ["q2-ytd", "q2-ytd-support"]
+          - <<: *reported_period
+            accession_number: "q3"
+            source_occurrence_id: "q3"
+            period_start: "2026-04-01"
+            period_end: "2026-06-30"
+            form: "10-Q"
+            report_date: "2026-06-30"
+            supporting_occurrence_ids: ["q3", "q3-support"]
+          - <<: *reported_period
+            accession_number: "q3"
+            source_occurrence_id: "q3-ytd"
+            period_start: "2025-10-01"
+            period_end: "2026-06-30"
+            form: "10-Q"
+            report_date: "2026-06-30"
+            supporting_occurrence_ids: ["q3-ytd", "q3-ytd-support"]
+      - input: ref('int_reported_income_metrics')
+        rows:
+          - <<: *reported_period
+            metric_code: "net_income"
+            accession_number: "partial-usable"
+            source_occurrence_id: "partial-usable"
+            period_start: "2025-10-01"
+            form: "10-Q"
+            supporting_occurrence_ids: ["partial-usable", "partial-usable-support"]
+      - input: ref('int_reported_balance_sheet_metrics')
+        rows:
+          - <<: *reported_period
+            metric_code: "total_assets"
+            accession_number: "instant-no-fiscal"
+            source_occurrence_id: "instant-no-fiscal"
+            period_kind: "instant"
+            period_start: null
+            period_end: null
+            period_instant: "2025-12-31"
+            duration_days: null
+            period_label: "reported_instant"
+            supporting_occurrence_ids: ["instant-no-fiscal", "instant-no-fiscal-support"]
+          - <<: *reported_period
+            metric_code: "cash_and_equivalents"
+            accession_number: "instant-unresolved"
+            source_occurrence_id: "instant-unresolved"
+            period_kind: "instant"
+            period_start: null
+            period_end: null
+            period_instant: "2025-12-31"
+            duration_days: null
+            period_label: "reported_instant"
+            supporting_occurrence_ids: ["instant-unresolved", "instant-unresolved-support"]
+      - input: ref('int_reported_cash_flow_metrics')
+        rows:
+          - <<: *reported_period
+            metric_code: "operating_cash_flow"
+            accession_number: "cash-ytd"
+            source_occurrence_id: "cash-ytd"
+            period_start: "2025-10-01"
+            period_end: "2026-03-31"
+            form: "10-Q"
+            report_date: "2026-03-31"
+            supporting_occurrence_ids: ["cash-ytd", "cash-ytd-support"]
+      - input: ref('stg_silver_filing_fiscal_metadata')
+        rows:
+          - &fiscal_period
+            cik: "0000320193"
+            accession_number: "calendar"
+            source_document_name: "filing.xml"
+            source_sha256: "document-checksum"
+            extraction_version: "1"
+            form: "10-K"
+            report_date: "2025-12-31"
+            metadata_run_id: "metadata-run"
+            submissions_sha256: "submissions-checksum"
+            extraction_status: "COMPLETE"
+            fiscal_year_focus: 2025
+            fiscal_period_focus: "FY"
+            document_period_end_date: "2025-12-31"
+            occurrences_json: "[]"
+            issues_json: "[]"
+          - <<: *fiscal_period
+            accession_number: "annual-52"
+            report_date: "2025-09-27"
+            document_period_end_date: "2025-09-27"
+          - <<: *fiscal_period
+            accession_number: "annual-53"
+            form: "10-K/A"
+            report_date: "2025-10-04"
+            document_period_end_date: "2025-10-04"
+          - <<: *fiscal_period
+            accession_number: "q1"
+            form: "10-Q/A"
+            fiscal_year_focus: 2026
+            fiscal_period_focus: "Q1"
+          - <<: *fiscal_period
+            accession_number: "q2"
+            form: "10-Q"
+            report_date: "2026-03-31"
+            fiscal_year_focus: 2026
+            fiscal_period_focus: "Q2"
+            document_period_end_date: "2026-03-31"
+          - <<: *fiscal_period
+            accession_number: "q3"
+            form: "10-Q"
+            report_date: "2026-06-30"
+            fiscal_year_focus: 2026
+            fiscal_period_focus: "Q3"
+            document_period_end_date: "2026-06-30"
+          - <<: *fiscal_period
+            accession_number: "instant-unresolved"
+            extraction_status: "PARTIAL"
+            fiscal_year_focus: null
+            fiscal_period_focus: null
+            document_period_end_date: null
+          - <<: *fiscal_period
+            accession_number: "partial-usable"
+            form: "10-Q"
+            extraction_status: "PARTIAL"
+            fiscal_year_focus: 2026
+            fiscal_period_focus: "Q1"
+            issues_json: "[{\"reason_code\":\"INVALID_FISCAL_FIELD\"}]"
+          - <<: *fiscal_period
+            accession_number: "cash-ytd"
+            form: "10-Q"
+            report_date: "2026-03-31"
+            fiscal_year_focus: 2026
+            fiscal_period_focus: "Q2"
+            document_period_end_date: "2026-03-31"
+    expect:
+      rows:
+        - {source_occurrence_id: "calendar", period_classification: "annual",
+           period_issue_code: null, period_rule_version: "1",
+           fiscal_year_focus: 2025, fiscal_metadata_status: "COMPLETE",
+           duration_days: 999}
+        - {source_occurrence_id: "annual-52", period_classification: "annual",
+           period_issue_code: null, period_rule_version: "1",
+           fiscal_year_focus: 2025, fiscal_metadata_status: "COMPLETE",
+           duration_days: 999}
+        - {source_occurrence_id: "annual-53", period_classification: "annual",
+           period_issue_code: null, period_rule_version: "1",
+           fiscal_year_focus: 2025, fiscal_metadata_status: "COMPLETE",
+           duration_days: 999}
+        - {source_occurrence_id: "q1", period_classification: "quarter",
+           period_issue_code: null, period_rule_version: "1",
+           fiscal_year_focus: 2026, fiscal_metadata_status: "COMPLETE",
+           duration_days: 999}
+        - {source_occurrence_id: "q2", period_classification: "quarter",
+           period_issue_code: null, period_rule_version: "1",
+           fiscal_year_focus: 2026, fiscal_metadata_status: "COMPLETE",
+           duration_days: 999}
+        - {source_occurrence_id: "q2-ytd", period_classification: "year_to_date",
+           period_issue_code: null, period_rule_version: "1",
+           fiscal_year_focus: 2026, fiscal_metadata_status: "COMPLETE",
+           duration_days: 999}
+        - {source_occurrence_id: "q3", period_classification: "quarter",
+           period_issue_code: null, period_rule_version: "1",
+           fiscal_year_focus: 2026, fiscal_metadata_status: "COMPLETE",
+           duration_days: 999}
+        - {source_occurrence_id: "q3-ytd", period_classification: "year_to_date",
+           period_issue_code: null, period_rule_version: "1",
+           fiscal_year_focus: 2026, fiscal_metadata_status: "COMPLETE",
+           duration_days: 999}
+        - {source_occurrence_id: "instant-no-fiscal", period_classification: "instant",
+           period_issue_code: null, period_rule_version: "1",
+           fiscal_year_focus: null, fiscal_metadata_status: null,
+           duration_days: null}
+        - {source_occurrence_id: "instant-unresolved", period_classification: "instant",
+           period_issue_code: null, period_rule_version: "1",
+           fiscal_year_focus: null, fiscal_metadata_status: "PARTIAL",
+           duration_days: null}
+        - {source_occurrence_id: "partial-usable", period_classification: "quarter",
+           period_issue_code: null, period_rule_version: "1",
+           fiscal_year_focus: 2026, fiscal_metadata_status: "PARTIAL",
+           duration_days: 999}
+        - {source_occurrence_id: "cash-ytd", period_classification: "year_to_date",
+           period_issue_code: null, period_rule_version: "1",
+           fiscal_year_focus: 2026, fiscal_metadata_status: "COMPLETE",
+           duration_days: 999}
+  - name: reported_period_issues_follow_evidence_precedence
+    model: int_reported_financial_periods
+    description: "Rows remain visible for invalid periods, absent exact source matches, each lineage conflict, unresolved fields, document-date and form/focus disagreements, and unsupported durations. Instants bypass only fiscal resolution checks."
+    given:
+      - input: ref('int_reported_revenue')
+        rows:
+          - <<: *reported_period
+            accession_number: "invalid-start"
+            source_occurrence_id: "invalid-start"
+            period_start: null
+            supporting_occurrence_ids: ["invalid-start", "invalid-start-support"]
+          - <<: *reported_period
+            accession_number: "invalid-end"
+            source_occurrence_id: "invalid-end"
+            period_end: null
+            supporting_occurrence_ids: ["invalid-end", "invalid-end-support"]
+          - <<: *reported_period
+            accession_number: "invalid-order"
+            source_occurrence_id: "invalid-order"
+            period_start: "2026-01-01"
+            supporting_occurrence_ids: ["invalid-order", "invalid-order-support"]
+          - <<: *reported_period
+            accession_number: "invalid-duration-instant"
+            source_occurrence_id: "invalid-duration-instant"
+            period_instant: "2025-12-31"
+            supporting_occurrence_ids: ["invalid-duration-instant", "invalid-duration-instant-support"]
+          - <<: *reported_period
+            accession_number: "invalid-report-boundary"
+            source_occurrence_id: "invalid-report-boundary"
+            period_end: "2025-12-30"
+            supporting_occurrence_ids: ["invalid-report-boundary", "invalid-report-boundary-support"]
+          - <<: *reported_period
+            accession_number: "invalid-kind"
+            source_occurrence_id: "invalid-kind"
+            period_kind: "other"
+            supporting_occurrence_ids: ["invalid-kind", "invalid-kind-support"]
+          - <<: *reported_period
+            accession_number: "invalid-report-null"
+            source_occurrence_id: "invalid-report-null"
+            report_date: null
+            supporting_occurrence_ids: ["invalid-report-null", "invalid-report-null-support"]
+          - <<: *reported_period
+            accession_number: "invalid-instant-date"
+            source_occurrence_id: "invalid-instant-date"
+            period_kind: "instant"
+            period_start: null
+            period_end: null
+            period_instant: "2025-12-30"
+            supporting_occurrence_ids: ["invalid-instant-date", "invalid-instant-date-support"]
+          - <<: *reported_period
+            accession_number: "invalid-instant-duration"
+            source_occurrence_id: "invalid-instant-duration"
+            period_kind: "instant"
+            period_instant: "2025-12-31"
+            supporting_occurrence_ids: ["invalid-instant-duration", "invalid-instant-duration-support"]
+          - <<: *reported_period
+            accession_number: "lineage-form"
+            source_occurrence_id: "lineage-form"
+            supporting_occurrence_ids: ["lineage-form", "lineage-form-support"]
+          - <<: *reported_period
+            accession_number: "lineage-report_date"
+            source_occurrence_id: "lineage-report_date"
+            supporting_occurrence_ids: ["lineage-report_date", "lineage-report_date-support"]
+          - <<: *reported_period
+            accession_number: "lineage-metadata_run_id"
+            source_occurrence_id: "lineage-metadata_run_id"
+            supporting_occurrence_ids: ["lineage-metadata_run_id", "lineage-metadata_run_id-support"]
+          - <<: *reported_period
+            accession_number: "lineage-submissions_sha256"
+            source_occurrence_id: "lineage-submissions_sha256"
+            supporting_occurrence_ids: ["lineage-submissions_sha256", "lineage-submissions_sha256-support"]
+          - <<: *reported_period
+            accession_number: "instant-lineage"
+            source_occurrence_id: "instant-lineage"
+            period_kind: "instant"
+            period_start: null
+            period_end: null
+            period_instant: "2025-12-31"
+            supporting_occurrence_ids: ["instant-lineage", "instant-lineage-support"]
+          - <<: *reported_period
+            accession_number: "missing"
+            source_occurrence_id: "missing"
+            supporting_occurrence_ids: ["missing", "missing-support"]
+          - <<: *reported_period
+            accession_number: "missing-exact-cik"
+            source_occurrence_id: "missing-exact-cik"
+            supporting_occurrence_ids: ["missing-exact-cik", "missing-exact-cik-support"]
+          - <<: *reported_period
+            accession_number: "missing-exact-accession_number"
+            source_occurrence_id: "missing-exact-accession_number"
+            supporting_occurrence_ids: ["missing-exact-accession_number", "missing-exact-accession_number-support"]
+          - <<: *reported_period
+            accession_number: "missing-exact-source_document_name"
+            source_occurrence_id: "missing-exact-source_document_name"
+            supporting_occurrence_ids: ["missing-exact-source_document_name", "missing-exact-source_document_name-support"]
+          - <<: *reported_period
+            accession_number: "missing-exact-source_sha256"
+            source_occurrence_id: "missing-exact-source_sha256"
+            supporting_occurrence_ids: ["missing-exact-source_sha256", "missing-exact-source_sha256-support"]
+          - <<: *reported_period
+            accession_number: "unresolved-fiscal_year_focus"
+            source_occurrence_id: "unresolved-fiscal_year_focus"
+            supporting_occurrence_ids: ["unresolved-fiscal_year_focus", "unresolved-fiscal_year_focus-support"]
+          - <<: *reported_period
+            accession_number: "unresolved-fiscal_period_focus"
+            source_occurrence_id: "unresolved-fiscal_period_focus"
+            supporting_occurrence_ids: ["unresolved-fiscal_period_focus", "unresolved-fiscal_period_focus-support"]
+          - <<: *reported_period
+            accession_number: "unresolved-document_period_end_date"
+            source_occurrence_id: "unresolved-document_period_end_date"
+            supporting_occurrence_ids: ["unresolved-document_period_end_date", "unresolved-document_period_end_date-support"]
+          - <<: *reported_period
+            accession_number: "document-date"
+            source_occurrence_id: "document-date"
+            supporting_occurrence_ids: ["document-date", "document-date-support"]
+          - <<: *reported_period
+            accession_number: "annual-wrong-focus"
+            source_occurrence_id: "annual-wrong-focus"
+            supporting_occurrence_ids: ["annual-wrong-focus", "annual-wrong-focus-support"]
+          - <<: *reported_period
+            accession_number: "quarter-wrong-focus"
+            source_occurrence_id: "quarter-wrong-focus"
+            form: "10-Q"
+            supporting_occurrence_ids: ["quarter-wrong-focus", "quarter-wrong-focus-support"]
+          - <<: *reported_period
+            accession_number: "unsupported"
+            source_occurrence_id: "unsupported"
+            period_start: "2025-09-22"
+            form: "10-Q"
+            supporting_occurrence_ids: ["unsupported", "unsupported-support"]
+          - <<: *reported_period
+            accession_number: "instant-document-date"
+            source_occurrence_id: "instant-document-date"
+            period_kind: "instant"
+            period_start: null
+            period_end: null
+            period_instant: "2025-12-31"
+            supporting_occurrence_ids: ["instant-document-date", "instant-document-date-support"]
+      - input: ref('int_reported_income_metrics')
+        rows: []
+      - input: ref('int_reported_balance_sheet_metrics')
+        rows: []
+      - input: ref('int_reported_cash_flow_metrics')
+        rows: []
+      - input: ref('stg_silver_filing_fiscal_metadata')
+        rows:
+          - <<: *fiscal_period
+            accession_number: "invalid-start"
+            metadata_run_id: "conflicting-run"
+          - <<: *fiscal_period
+            accession_number: "invalid-end"
+            metadata_run_id: "conflicting-run"
+          - <<: *fiscal_period
+            accession_number: "invalid-order"
+            metadata_run_id: "conflicting-run"
+          - <<: *fiscal_period
+            accession_number: "invalid-duration-instant"
+            metadata_run_id: "conflicting-run"
+          - <<: *fiscal_period
+            accession_number: "invalid-report-boundary"
+            metadata_run_id: "conflicting-run"
+          - <<: *fiscal_period
+            accession_number: "invalid-kind"
+            metadata_run_id: "conflicting-run"
+          - <<: *fiscal_period
+            accession_number: "invalid-report-null"
+            report_date: null
+            metadata_run_id: "conflicting-run"
+            document_period_end_date: null
+          - <<: *fiscal_period
+            accession_number: "invalid-instant-date"
+            metadata_run_id: "conflicting-run"
+          - <<: *fiscal_period
+            accession_number: "invalid-instant-duration"
+            metadata_run_id: "conflicting-run"
+          - <<: *fiscal_period
+            accession_number: "lineage-form"
+            form: "10-Q"
+            fiscal_year_focus: null
+            fiscal_period_focus: null
+          - <<: *fiscal_period
+            accession_number: "lineage-report_date"
+            report_date: "2025-12-30"
+            fiscal_year_focus: null
+            fiscal_period_focus: null
+          - <<: *fiscal_period
+            accession_number: "lineage-metadata_run_id"
+            metadata_run_id: "different-run"
+            fiscal_year_focus: null
+            fiscal_period_focus: null
+          - <<: *fiscal_period
+            accession_number: "lineage-submissions_sha256"
+            submissions_sha256: "different-checksum"
+            fiscal_year_focus: null
+            fiscal_period_focus: null
+          - <<: *fiscal_period
+            accession_number: "instant-lineage"
+            metadata_run_id: "different"
+          - <<: *fiscal_period
+            cik: "0000000002"
+            accession_number: "missing-exact-cik"
+          - <<: *fiscal_period
+            accession_number: "other-accession"
+          - <<: *fiscal_period
+            accession_number: "missing-exact-source_document_name"
+            source_document_name: "old.xml"
+          - <<: *fiscal_period
+            accession_number: "missing-exact-source_sha256"
+            source_sha256: "old-checksum"
+          - <<: *fiscal_period
+            accession_number: "unresolved-fiscal_year_focus"
+            extraction_status: "PARTIAL"
+            fiscal_year_focus: null
+            document_period_end_date: "2025-12-30"
+          - <<: *fiscal_period
+            accession_number: "unresolved-fiscal_period_focus"
+            extraction_status: "PARTIAL"
+            fiscal_period_focus: null
+            document_period_end_date: "2025-12-30"
+          - <<: *fiscal_period
+            accession_number: "unresolved-document_period_end_date"
+            extraction_status: "PARTIAL"
+            document_period_end_date: null
+          - <<: *fiscal_period
+            accession_number: "document-date"
+            fiscal_period_focus: "Q2"
+            document_period_end_date: "2025-12-30"
+          - <<: *fiscal_period
+            accession_number: "annual-wrong-focus"
+            fiscal_period_focus: "Q2"
+          - <<: *fiscal_period
+            accession_number: "quarter-wrong-focus"
+            form: "10-Q"
+          - <<: *fiscal_period
+            accession_number: "unsupported"
+            form: "10-Q"
+            fiscal_period_focus: "Q1"
+          - <<: *fiscal_period
+            accession_number: "instant-document-date"
+            fiscal_period_focus: "Q2"
+            document_period_end_date: "2025-12-30"
+    expect:
+      rows:
+        - {source_occurrence_id: "invalid-start", period_classification: "unclassified",
+           period_issue_code: "INVALID_REPORTED_PERIOD"}
+        - {source_occurrence_id: "invalid-end", period_classification: "unclassified",
+           period_issue_code: "INVALID_REPORTED_PERIOD"}
+        - {source_occurrence_id: "invalid-order", period_classification: "unclassified",
+           period_issue_code: "INVALID_REPORTED_PERIOD"}
+        - {source_occurrence_id: "invalid-duration-instant", period_classification: "unclassified",
+           period_issue_code: "INVALID_REPORTED_PERIOD"}
+        - {source_occurrence_id: "invalid-report-boundary", period_classification: "unclassified",
+           period_issue_code: "INVALID_REPORTED_PERIOD"}
+        - {source_occurrence_id: "invalid-kind", period_classification: "unclassified",
+           period_issue_code: "INVALID_REPORTED_PERIOD"}
+        - {source_occurrence_id: "invalid-report-null", period_classification: "unclassified",
+           period_issue_code: "INVALID_REPORTED_PERIOD"}
+        - {source_occurrence_id: "invalid-instant-date", period_classification: "unclassified",
+           period_issue_code: "INVALID_REPORTED_PERIOD"}
+        - {source_occurrence_id: "invalid-instant-duration", period_classification: "unclassified",
+           period_issue_code: "INVALID_REPORTED_PERIOD"}
+        - {source_occurrence_id: "lineage-form", period_classification: "unclassified",
+           period_issue_code: "FISCAL_METADATA_LINEAGE_MISMATCH"}
+        - {source_occurrence_id: "lineage-report_date", period_classification: "unclassified",
+           period_issue_code: "FISCAL_METADATA_LINEAGE_MISMATCH"}
+        - {source_occurrence_id: "lineage-metadata_run_id", period_classification: "unclassified",
+           period_issue_code: "FISCAL_METADATA_LINEAGE_MISMATCH"}
+        - {source_occurrence_id: "lineage-submissions_sha256", period_classification: "unclassified",
+           period_issue_code: "FISCAL_METADATA_LINEAGE_MISMATCH"}
+        - {source_occurrence_id: "instant-lineage", period_classification: "unclassified",
+           period_issue_code: "FISCAL_METADATA_LINEAGE_MISMATCH"}
+        - {source_occurrence_id: "missing", period_classification: "unclassified",
+           period_issue_code: "MISSING_FISCAL_METADATA"}
+        - {source_occurrence_id: "missing-exact-cik", period_classification: "unclassified",
+           period_issue_code: "MISSING_FISCAL_METADATA"}
+        - {source_occurrence_id: "missing-exact-accession_number", period_classification: "unclassified",
+           period_issue_code: "MISSING_FISCAL_METADATA"}
+        - {source_occurrence_id: "missing-exact-source_document_name", period_classification: "unclassified",
+           period_issue_code: "MISSING_FISCAL_METADATA"}
+        - {source_occurrence_id: "missing-exact-source_sha256", period_classification: "unclassified",
+           period_issue_code: "MISSING_FISCAL_METADATA"}
+        - {source_occurrence_id: "unresolved-fiscal_year_focus", period_classification: "unclassified",
+           period_issue_code: "UNRESOLVED_FISCAL_METADATA"}
+        - {source_occurrence_id: "unresolved-fiscal_period_focus", period_classification: "unclassified",
+           period_issue_code: "UNRESOLVED_FISCAL_METADATA"}
+        - {source_occurrence_id: "unresolved-document_period_end_date", period_classification: "unclassified",
+           period_issue_code: "UNRESOLVED_FISCAL_METADATA"}
+        - {source_occurrence_id: "document-date", period_classification: "unclassified",
+           period_issue_code: "FISCAL_REPORT_DATE_MISMATCH"}
+        - {source_occurrence_id: "annual-wrong-focus", period_classification: "unclassified",
+           period_issue_code: "FISCAL_PERIOD_FORM_MISMATCH"}
+        - {source_occurrence_id: "quarter-wrong-focus", period_classification: "unclassified",
+           period_issue_code: "FISCAL_PERIOD_FORM_MISMATCH"}
+        - {source_occurrence_id: "unsupported", period_classification: "unclassified",
+           period_issue_code: "UNSUPPORTED_DURATION"}
+        - {source_occurrence_id: "instant-document-date", period_classification: "instant",
+           period_issue_code: null}
+  - name: reported_period_inclusive_range_boundaries
+    model: int_reported_financial_periods
+    description: "Both inclusive endpoints of every supported range; quarter durations just outside the range stay unclassified. Supplied duration_days is preserved but cannot drive classification."
+    given:
+      - input: ref('int_reported_revenue')
+        rows:
+          - <<: *reported_period
+            accession_number: "annual-low"
+            source_occurrence_id: "annual-low"
+            period_start: "2025-01-16"
+            supporting_occurrence_ids: ["annual-low", "annual-low-support"]
+          - <<: *reported_period
+            accession_number: "annual-high"
+            source_occurrence_id: "annual-high"
+            period_start: "2024-12-17"
+            supporting_occurrence_ids: ["annual-high", "annual-high-support"]
+          - <<: *reported_period
+            accession_number: "quarter-low"
+            source_occurrence_id: "quarter-low"
+            period_start: "2025-10-13"
+            form: "10-Q"
+            supporting_occurrence_ids: ["quarter-low", "quarter-low-support"]
+          - <<: *reported_period
+            accession_number: "quarter-high"
+            source_occurrence_id: "quarter-high"
+            period_start: "2025-09-23"
+            form: "10-Q"
+            supporting_occurrence_ids: ["quarter-high", "quarter-high-support"]
+          - <<: *reported_period
+            accession_number: "q2-ytd-low"
+            source_occurrence_id: "q2-ytd-low"
+            period_start: "2025-07-15"
+            form: "10-Q"
+            supporting_occurrence_ids: ["q2-ytd-low", "q2-ytd-low-support"]
+          - <<: *reported_period
+            accession_number: "q2-ytd-high"
+            source_occurrence_id: "q2-ytd-high"
+            period_start: "2025-06-15"
+            form: "10-Q"
+            supporting_occurrence_ids: ["q2-ytd-high", "q2-ytd-high-support"]
+          - <<: *reported_period
+            accession_number: "q3-ytd-low"
+            source_occurrence_id: "q3-ytd-low"
+            period_start: "2025-04-16"
+            form: "10-Q"
+            supporting_occurrence_ids: ["q3-ytd-low", "q3-ytd-low-support"]
+          - <<: *reported_period
+            accession_number: "q3-ytd-high"
+            source_occurrence_id: "q3-ytd-high"
+            period_start: "2025-03-17"
+            form: "10-Q"
+            supporting_occurrence_ids: ["q3-ytd-high", "q3-ytd-high-support"]
+          - <<: *reported_period
+            accession_number: "quarter-below"
+            source_occurrence_id: "quarter-below"
+            period_start: "2025-10-14"
+            form: "10-Q"
+            supporting_occurrence_ids: ["quarter-below", "quarter-below-support"]
+          - <<: *reported_period
+            accession_number: "quarter-above"
+            source_occurrence_id: "quarter-above"
+            period_start: "2025-09-22"
+            form: "10-Q"
+            supporting_occurrence_ids: ["quarter-above", "quarter-above-support"]
+      - input: ref('int_reported_income_metrics')
+        rows: []
+      - input: ref('int_reported_balance_sheet_metrics')
+        rows: []
+      - input: ref('int_reported_cash_flow_metrics')
+        rows: []
+      - input: ref('stg_silver_filing_fiscal_metadata')
+        rows:
+          - <<: *fiscal_period
+            accession_number: "annual-low"
+          - <<: *fiscal_period
+            accession_number: "annual-high"
+          - <<: *fiscal_period
+            accession_number: "quarter-low"
+            form: "10-Q"
+            fiscal_period_focus: "Q1"
+          - <<: *fiscal_period
+            accession_number: "quarter-high"
+            form: "10-Q"
+            fiscal_period_focus: "Q1"
+          - <<: *fiscal_period
+            accession_number: "q2-ytd-low"
+            form: "10-Q"
+            fiscal_period_focus: "Q2"
+          - <<: *fiscal_period
+            accession_number: "q2-ytd-high"
+            form: "10-Q"
+            fiscal_period_focus: "Q2"
+          - <<: *fiscal_period
+            accession_number: "q3-ytd-low"
+            form: "10-Q"
+            fiscal_period_focus: "Q3"
+          - <<: *fiscal_period
+            accession_number: "q3-ytd-high"
+            form: "10-Q"
+            fiscal_period_focus: "Q3"
+          - <<: *fiscal_period
+            accession_number: "quarter-below"
+            form: "10-Q"
+            fiscal_period_focus: "Q1"
+          - <<: *fiscal_period
+            accession_number: "quarter-above"
+            form: "10-Q"
+            fiscal_period_focus: "Q1"
+    expect:
+      rows:
+        - {source_occurrence_id: "annual-low", period_classification: "annual",
+           period_issue_code: null, duration_days: 999}
+        - {source_occurrence_id: "annual-high", period_classification: "annual",
+           period_issue_code: null, duration_days: 999}
+        - {source_occurrence_id: "quarter-low", period_classification: "quarter",
+           period_issue_code: null, duration_days: 999}
+        - {source_occurrence_id: "quarter-high", period_classification: "quarter",
+           period_issue_code: null, duration_days: 999}
+        - {source_occurrence_id: "q2-ytd-low", period_classification: "year_to_date",
+           period_issue_code: null, duration_days: 999}
+        - {source_occurrence_id: "q2-ytd-high", period_classification: "year_to_date",
+           period_issue_code: null, duration_days: 999}
+        - {source_occurrence_id: "q3-ytd-low", period_classification: "year_to_date",
+           period_issue_code: null, duration_days: 999}
+        - {source_occurrence_id: "q3-ytd-high", period_classification: "year_to_date",
+           period_issue_code: null, duration_days: 999}
+        - {source_occurrence_id: "quarter-below", period_classification: "unclassified",
+           period_issue_code: "UNSUPPORTED_DURATION", duration_days: 999}
+        - {source_occurrence_id: "quarter-above", period_classification: "unclassified",
+           period_issue_code: "UNSUPPORTED_DURATION", duration_days: 999}
+  - name: reported_period_competition_keeps_every_row
+    model: int_reported_financial_periods
+    description: "Two eligible quarter boundaries both become ambiguous while year-to-date, invalid periods, other metrics, other accessions and another company remain independent. Supporting evidence is preserved."
+    given:
+      - input: ref('int_reported_revenue')
+        rows:
+          - <<: *reported_period
+            accession_number: "competing"
+            source_occurrence_id: "competing"
+            period_start: "2025-10-01"
+            form: "10-Q"
+            supporting_occurrence_ids: ["competing", "competing-support"]
+          - <<: *reported_period
+            accession_number: "competing"
+            source_occurrence_id: "competing-2"
+            period_start: "2025-10-03"
+            form: "10-Q"
+            supporting_occurrence_ids: ["competing-2", "support-2"]
+          - <<: *reported_period
+            accession_number: "competing"
+            source_occurrence_id: "coexisting-ytd"
+            period_start: "2025-07-01"
+            form: "10-Q"
+            supporting_occurrence_ids: ["coexisting-ytd", "support-ytd"]
+          - <<: *reported_period
+            accession_number: "competing"
+            source_occurrence_id: "ineligible-quarter"
+            period_start: "2025-09-21"
+            form: "10-Q"
+            supporting_occurrence_ids: ["ineligible-quarter", "support-invalid"]
+          - <<: *reported_period
+            accession_number: "other-accession"
+            source_occurrence_id: "other-accession"
+            period_start: "2025-10-01"
+            form: "10-Q"
+            supporting_occurrence_ids: ["other-accession", "other-accession-support"]
+          - <<: *reported_period
+            cik: "0000000002"
+            accession_number: "competing"
+            source_occurrence_id: "other-company"
+            period_start: "2025-10-01"
+            form: "10-Q"
+            supporting_occurrence_ids: ["other-company", "support-company"]
+      - input: ref('int_reported_income_metrics')
+        rows:
+          - <<: *reported_period
+            metric_code: "net_income"
+            accession_number: "competing"
+            source_occurrence_id: "other-metric"
+            period_start: "2025-10-01"
+            form: "10-Q"
+            supporting_occurrence_ids: ["other-metric", "support-income"]
+      - input: ref('int_reported_balance_sheet_metrics')
+        rows: []
+      - input: ref('int_reported_cash_flow_metrics')
+        rows: []
+      - input: ref('stg_silver_filing_fiscal_metadata')
+        rows:
+          - <<: *fiscal_period
+            accession_number: "competing"
+            form: "10-Q"
+            fiscal_year_focus: 2026
+            fiscal_period_focus: "Q2"
+          - <<: *fiscal_period
+            accession_number: "other-accession"
+            form: "10-Q"
+            fiscal_year_focus: 2026
+            fiscal_period_focus: "Q2"
+          - <<: *fiscal_period
+            cik: "0000000002"
+            accession_number: "competing"
+            form: "10-Q"
+            fiscal_year_focus: 2026
+            fiscal_period_focus: "Q2"
+    expect:
+      rows:
+        - {source_occurrence_id: "competing", period_classification: "unclassified",
+           period_issue_code: "AMBIGUOUS_REPORTED_PERIOD", supporting_occurrence_ids: ["competing", "competing-support"],
+           value_decimal: "100.000000000000000001"}
+        - {source_occurrence_id: "competing-2", period_classification: "unclassified",
+           period_issue_code: "AMBIGUOUS_REPORTED_PERIOD", supporting_occurrence_ids: ["competing-2", "support-2"],
+           value_decimal: "100.000000000000000001"}
+        - {source_occurrence_id: "coexisting-ytd", period_classification: "year_to_date",
+           period_issue_code: null, supporting_occurrence_ids: ["coexisting-ytd", "support-ytd"],
+           value_decimal: "100.000000000000000001"}
+        - {source_occurrence_id: "ineligible-quarter", period_classification: "unclassified",
+           period_issue_code: "UNSUPPORTED_DURATION", supporting_occurrence_ids: ["ineligible-quarter", "support-invalid"],
+           value_decimal: "100.000000000000000001"}
+        - {source_occurrence_id: "other-metric", period_classification: "quarter",
+           period_issue_code: null, supporting_occurrence_ids: ["other-metric", "support-income"],
+           value_decimal: "100.000000000000000001"}
+        - {source_occurrence_id: "other-accession", period_classification: "quarter",
+           period_issue_code: null, supporting_occurrence_ids: ["other-accession", "other-accession-support"],
+           value_decimal: "100.000000000000000001"}
+        - {source_occurrence_id: "other-company", period_classification: "quarter",
+           period_issue_code: null, supporting_occurrence_ids: ["other-company", "support-company"],
+           value_decimal: "100.000000000000000001"}
