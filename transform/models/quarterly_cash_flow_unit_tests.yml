@@ -1,0 +1,1225 @@
+unit_tests:
+  - name: cash_quarters_and_dual_input_evidence_issues
+    model: int_quarterly_cash_flow_derivation_issues
+    description: "Q2 subtraction and Q3 subtraction use cumulative roles; a coexisting Q2 reported quarter suppresses that target but cannot replace Q2 YTD as the Q3 predecessor. Fractional, negative and zero results preserve both input accuracy and supporting lists; PARTIAL usable input remains eligible."
+    given:
+      - &cash_inputs_0
+        input: ref('int_reported_financial_periods')
+        rows:
+          - &cash_period
+            metric_code: "operating_cash_flow"
+            concept_priority: 1
+            cik: "0000320193"
+            accession_number: "q1"
+            source_occurrence_id: "q1-operating_cash_flow"
+            source_document_name: "q1.xml"
+            source_sha256: "q1-checksum"
+            source_ordinal: 3
+            processing_run_id: "silver-q1"
+            parser_version: "1"
+            schema_version: "1"
+            concept_namespace: "http://fasb.org/us-gaap/2025"
+            concept_local_name: "NetCashProvidedByUsedInOperatingActivities"
+            raw_value: "100.000000000000000001"
+            value_decimal: "100.000000000000000001"
+            decimals: "-6"
+            precision: null
+            unit_ref: "old-unit"
+            unit_expression: "{http://www.xbrl.org/2003/iso4217}USD"
+            context_ref: "old-context"
+            entity_scheme: "http://www.sec.gov/CIK"
+            entity_identifier: "320193"
+            period_kind: "duration"
+            period_start: "2025-09-28"
+            period_end: "2025-12-27"
+            period_instant: null
+            dimension_count: 0
+            has_dimensions: false
+            duration_days: 91
+            is_usd: true
+            form: "10-Q"
+            filing_date: "2026-01-20"
+            report_date: "2025-12-27"
+            metadata_run_id: "metadata-q1"
+            submissions_sha256: "submissions-q1"
+            period_label: "reported_duration"
+            selection_rule_version: "1"
+            selection_reason: "AGREEING_ELIGIBLE_OCCURRENCES"
+            supporting_occurrence_count: 2
+            supporting_occurrence_ids: ["q1-operating_cash_flow", "q1-operating_cash_flow-support"]
+            fiscal_year_focus: 2026
+            fiscal_period_focus: "Q1"
+            document_period_end_date: "2025-12-27"
+            fiscal_metadata_status: "COMPLETE"
+            fiscal_extraction_version: "1"
+            fiscal_metadata_run_id: "metadata-q1"
+            fiscal_submissions_sha256: "submissions-q1"
+            period_classification: "quarter"
+            period_rule_version: "1"
+            period_classification_reason: "Reported quarter with usable fiscal focus."
+            period_issue_code: null
+          - <<: *cash_period
+            accession_number: "q2"
+            source_occurrence_id: "q2-operating_cash_flow"
+            source_document_name: "q2.xml"
+            source_sha256: "q2-checksum"
+            concept_namespace: "http://fasb.org/us-gaap/2026"
+            raw_value: "250.000000000000000003"
+            value_decimal: "250.000000000000000003"
+            decimals: null
+            precision: "18"
+            unit_ref: "new-unit"
+            context_ref: "new-context"
+            period_end: "2026-03-28"
+            duration_days: 182
+            report_date: "2026-03-28"
+            supporting_occurrence_ids: ["q2-operating_cash_flow", "q2-operating_cash_flow-support"]
+            fiscal_period_focus: "Q2"
+            document_period_end_date: "2026-03-28"
+            fiscal_metadata_status: "PARTIAL"
+            period_classification: "year_to_date"
+          - <<: *cash_period
+            accession_number: "q3"
+            source_occurrence_id: "q3-operating_cash_flow"
+            source_document_name: "q3.xml"
+            source_sha256: "q3-checksum"
+            raw_value: "400.000000000000000005"
+            value_decimal: "400.000000000000000005"
+            decimals: "2"
+            period_end: "2026-06-27"
+            duration_days: 273
+            form: "10-Q/A"
+            report_date: "2026-06-27"
+            supporting_occurrence_ids: ["q3-operating_cash_flow", "q3-operating_cash_flow-support"]
+            fiscal_period_focus: "Q3"
+            document_period_end_date: "2026-06-27"
+            period_classification: "year_to_date"
+          - <<: *cash_period
+            accession_number: "q2"
+            source_occurrence_id: "reported-q2-quarter"
+            source_document_name: "q2.xml"
+            source_sha256: "q2-checksum"
+            concept_namespace: "http://fasb.org/us-gaap/2026"
+            raw_value: "250.000000000000000003"
+            value_decimal: "150"
+            decimals: null
+            precision: "18"
+            unit_ref: "new-unit"
+            context_ref: "new-context"
+            period_start: "2025-12-28"
+            period_end: "2026-03-28"
+            duration_days: 182
+            report_date: "2026-03-28"
+            supporting_occurrence_ids: ["reported-q2-quarter", "reported-support"]
+            fiscal_period_focus: "Q2"
+            document_period_end_date: "2026-03-28"
+            fiscal_metadata_status: "PARTIAL"
+          - <<: *cash_period
+            metric_code: "capital_expenditures"
+            source_occurrence_id: "q1-capital_expenditures"
+            raw_value: "-3.250000000000000001"
+            value_decimal: "-3.250000000000000001"
+            supporting_occurrence_ids: ["q1-capital_expenditures", "q1-capital_expenditures-support"]
+          - <<: *cash_period
+            metric_code: "capital_expenditures"
+            accession_number: "q2"
+            source_occurrence_id: "q2-capital_expenditures"
+            source_document_name: "q2.xml"
+            source_sha256: "q2-checksum"
+            raw_value: "-8.500000000000000003"
+            value_decimal: "-8.500000000000000003"
+            decimals: null
+            precision: "18"
+            unit_ref: "other-unit"
+            context_ref: "other-context"
+            period_end: "2026-03-28"
+            duration_days: 182
+            report_date: "2026-03-28"
+            supporting_occurrence_ids: ["q2-capital_expenditures", "q2-capital_expenditures-support"]
+            fiscal_period_focus: "Q2"
+            document_period_end_date: "2026-03-28"
+            period_classification: "year_to_date"
+          - <<: *cash_period
+            metric_code: "capital_expenditures"
+            accession_number: "q3"
+            source_occurrence_id: "q3-capital_expenditures"
+            source_document_name: "q3.xml"
+            source_sha256: "q3-checksum"
+            raw_value: "-8.500000000000000003"
+            value_decimal: "-8.500000000000000003"
+            decimals: "2"
+            period_end: "2026-06-27"
+            duration_days: 273
+            report_date: "2026-06-27"
+            supporting_occurrence_ids: ["q3-capital_expenditures", "q3-capital_expenditures-support"]
+            fiscal_period_focus: "Q3"
+            document_period_end_date: "2026-06-27"
+            period_classification: "year_to_date"
+          - <<: *cash_period
+            accession_number: "annual"
+            source_occurrence_id: "annual-operating_cash_flow"
+            source_document_name: "annual.xml"
+            source_sha256: "annual-checksum"
+            raw_value: "100"
+            value_decimal: "100"
+            period_end: "2026-09-26"
+            duration_days: 364
+            report_date: "2026-09-26"
+            supporting_occurrence_ids: ["annual-operating_cash_flow", "annual-operating_cash_flow-support"]
+            fiscal_period_focus: "FY"
+            document_period_end_date: "2026-09-26"
+            period_classification: "annual"
+          - <<: *cash_period
+            accession_number: "unclassified"
+            source_occurrence_id: "unclassified-operating_cash_flow"
+            source_document_name: "unclassified.xml"
+            source_sha256: "unclassified-checksum"
+            raw_value: "100"
+            value_decimal: "100"
+            period_end: "2026-03-28"
+            duration_days: 182
+            report_date: "2026-03-28"
+            supporting_occurrence_ids: ["unclassified-operating_cash_flow", "unclassified-operating_cash_flow-support"]
+            fiscal_period_focus: "Q2"
+            document_period_end_date: "2026-03-28"
+            period_classification: "unclassified"
+            period_issue_code: "UNSUPPORTED_DURATION"
+          - <<: *cash_period
+            metric_code: "revenue"
+            accession_number: "other-metric"
+            source_occurrence_id: "other-metric-revenue"
+            source_document_name: "other-metric.xml"
+            source_sha256: "other-metric-checksum"
+            raw_value: "100"
+            value_decimal: "100"
+            period_end: "2026-03-28"
+            duration_days: 182
+            report_date: "2026-03-28"
+            supporting_occurrence_ids: ["other-metric-revenue", "other-metric-revenue-support"]
+            fiscal_period_focus: "Q2"
+            document_period_end_date: "2026-03-28"
+            period_classification: "year_to_date"
+    expect:
+      rows: &cash_issues_0 []
+  - name: cash_quarters_and_dual_input_evidence_derived
+    model: int_derived_quarterly_cash_flow
+    description: "Q2 subtraction and Q3 subtraction use cumulative roles; a coexisting Q2 reported quarter suppresses that target but cannot replace Q2 YTD as the Q3 predecessor. Fractional, negative and zero results preserve both input accuracy and supporting lists; PARTIAL usable input remains eligible."
+    given:
+      - *cash_inputs_0
+      - input: ref('int_quarterly_cash_flow_derivation_issues')
+        rows: *cash_issues_0
+    expect:
+      rows:
+        - {cik: "0000320193", accession_number: "q3",
+           metric_code: "operating_cash_flow", form: "10-Q/A",
+           filing_date: "2026-01-20", report_date: "2026-06-27",
+           fiscal_year_focus: 2026, fiscal_period_focus: "Q3",
+           period_kind: "duration", period_start: "2026-03-29",
+           period_end: "2026-06-27", period_instant: null,
+           period_label: "derived_quarter", value_origin: "derived",
+           value_decimal: "150.000000000000000002", unit_expression: "{http://www.xbrl.org/2003/iso4217}USD",
+           derivation_rule_version: "1", derivation_method: "CURRENT_YTD_MINUS_PREVIOUS_CUMULATIVE",
+           current_source_occurrence_id: "q3-operating_cash_flow", current_source_document_name: "q3.xml",
+           current_source_sha256: "q3-checksum", current_value_decimal: "400.000000000000000005",
+           current_supporting_occurrence_ids: ["q3-operating_cash_flow", "q3-operating_cash_flow-support"], previous_accession_number: "q2",
+           previous_source_occurrence_id: "q2-operating_cash_flow", previous_source_document_name: "q2.xml",
+           previous_source_sha256: "q2-checksum", previous_value_decimal: "250.000000000000000003",
+           previous_supporting_occurrence_ids: ["q2-operating_cash_flow", "q2-operating_cash_flow-support"], cumulative_period_start: "2025-09-28",
+           previous_period_end: "2026-03-28", current_decimals: "2",
+           current_precision: null, previous_decimals: null,
+           previous_precision: "18"}
+        - {cik: "0000320193", accession_number: "q2",
+           metric_code: "capital_expenditures", form: "10-Q",
+           filing_date: "2026-01-20", report_date: "2026-03-28",
+           fiscal_year_focus: 2026, fiscal_period_focus: "Q2",
+           period_kind: "duration", period_start: "2025-12-28",
+           period_end: "2026-03-28", period_instant: null,
+           period_label: "derived_quarter", value_origin: "derived",
+           value_decimal: "-5.250000000000000002", unit_expression: "{http://www.xbrl.org/2003/iso4217}USD",
+           derivation_rule_version: "1", derivation_method: "CURRENT_YTD_MINUS_PREVIOUS_CUMULATIVE",
+           current_source_occurrence_id: "q2-capital_expenditures", current_source_document_name: "q2.xml",
+           current_source_sha256: "q2-checksum", current_value_decimal: "-8.500000000000000003",
+           current_supporting_occurrence_ids: ["q2-capital_expenditures", "q2-capital_expenditures-support"], previous_accession_number: "q1",
+           previous_source_occurrence_id: "q1-capital_expenditures", previous_source_document_name: "q1.xml",
+           previous_source_sha256: "q1-checksum", previous_value_decimal: "-3.250000000000000001",
+           previous_supporting_occurrence_ids: ["q1-capital_expenditures", "q1-capital_expenditures-support"], cumulative_period_start: "2025-09-28",
+           previous_period_end: "2025-12-27", current_decimals: null,
+           current_precision: "18", previous_decimals: "-6",
+           previous_precision: null}
+        - {cik: "0000320193", accession_number: "q3",
+           metric_code: "capital_expenditures", form: "10-Q",
+           filing_date: "2026-01-20", report_date: "2026-06-27",
+           fiscal_year_focus: 2026, fiscal_period_focus: "Q3",
+           period_kind: "duration", period_start: "2026-03-29",
+           period_end: "2026-06-27", period_instant: null,
+           period_label: "derived_quarter", value_origin: "derived",
+           value_decimal: "0.000000000000000000", unit_expression: "{http://www.xbrl.org/2003/iso4217}USD",
+           derivation_rule_version: "1", derivation_method: "CURRENT_YTD_MINUS_PREVIOUS_CUMULATIVE",
+           current_source_occurrence_id: "q3-capital_expenditures", current_source_document_name: "q3.xml",
+           current_source_sha256: "q3-checksum", current_value_decimal: "-8.500000000000000003",
+           current_supporting_occurrence_ids: ["q3-capital_expenditures", "q3-capital_expenditures-support"], previous_accession_number: "q2",
+           previous_source_occurrence_id: "q2-capital_expenditures", previous_source_document_name: "q2.xml",
+           previous_source_sha256: "q2-checksum", previous_value_decimal: "-8.500000000000000003",
+           previous_supporting_occurrence_ids: ["q2-capital_expenditures", "q2-capital_expenditures-support"], cumulative_period_start: "2025-09-28",
+           previous_period_end: "2026-03-28", current_decimals: "2",
+           current_precision: null, previous_decimals: null,
+           previous_precision: "18"}
+  - name: cash_missing_fiscal_roles_and_separation_issues
+    model: int_quarterly_cash_flow_derivation_issues
+    description: "Missing Q1, another company, another fiscal year and another metric do not supply a predecessor. Q3 cannot jump over missing Q2 cumulative data or use the previous Q2 reported quarter. Unclassified predecessors are excluded."
+    given:
+      - &cash_inputs_1
+        input: ref('int_reported_financial_periods')
+        rows:
+          - <<: *cash_period
+            cik: "0000000002"
+            accession_number: "missing-q1"
+            source_occurrence_id: "missing-q1-operating_cash_flow"
+            source_document_name: "missing-q1.xml"
+            source_sha256: "missing-q1-checksum"
+            raw_value: "250"
+            value_decimal: "250"
+            period_end: "2026-03-28"
+            duration_days: 182
+            report_date: "2026-03-28"
+            supporting_occurrence_ids: ["missing-q1-operating_cash_flow", "missing-q1-operating_cash_flow-support"]
+            fiscal_period_focus: "Q2"
+            document_period_end_date: "2026-03-28"
+            period_classification: "year_to_date"
+          - <<: *cash_period
+            cik: "0000000099"
+            accession_number: "wrong-company"
+            source_occurrence_id: "wrong-company-operating_cash_flow"
+            source_document_name: "wrong-company.xml"
+            source_sha256: "wrong-company-checksum"
+            raw_value: "100"
+            value_decimal: "100"
+            supporting_occurrence_ids: ["wrong-company-operating_cash_flow", "wrong-company-operating_cash_flow-support"]
+          - <<: *cash_period
+            cik: "0000000002"
+            accession_number: "unclassified-q1"
+            source_occurrence_id: "unclassified-q1-operating_cash_flow"
+            source_document_name: "unclassified-q1.xml"
+            source_sha256: "unclassified-q1-checksum"
+            raw_value: "100"
+            value_decimal: "100"
+            supporting_occurrence_ids: ["unclassified-q1-operating_cash_flow", "unclassified-q1-operating_cash_flow-support"]
+            period_classification: "unclassified"
+            period_issue_code: "UNSUPPORTED_DURATION"
+          - <<: *cash_period
+            cik: "0000000003"
+            accession_number: "other-year"
+            source_occurrence_id: "other-year-operating_cash_flow"
+            source_document_name: "other-year.xml"
+            source_sha256: "other-year-checksum"
+            raw_value: "250"
+            value_decimal: "250"
+            period_end: "2026-03-28"
+            duration_days: 182
+            report_date: "2026-03-28"
+            supporting_occurrence_ids: ["other-year-operating_cash_flow", "other-year-operating_cash_flow-support"]
+            fiscal_year_focus: 2027
+            fiscal_period_focus: "Q2"
+            document_period_end_date: "2026-03-28"
+            period_classification: "year_to_date"
+          - <<: *cash_period
+            cik: "0000000003"
+            accession_number: "wrong-year"
+            source_occurrence_id: "wrong-year-operating_cash_flow"
+            source_document_name: "wrong-year.xml"
+            source_sha256: "wrong-year-checksum"
+            raw_value: "100"
+            value_decimal: "100"
+            supporting_occurrence_ids: ["wrong-year-operating_cash_flow", "wrong-year-operating_cash_flow-support"]
+          - <<: *cash_period
+            metric_code: "capital_expenditures"
+            cik: "0000000004"
+            accession_number: "other-metric"
+            source_occurrence_id: "other-metric-capital_expenditures"
+            source_document_name: "other-metric.xml"
+            source_sha256: "other-metric-checksum"
+            raw_value: "250"
+            value_decimal: "250"
+            period_end: "2026-03-28"
+            duration_days: 182
+            report_date: "2026-03-28"
+            supporting_occurrence_ids: ["other-metric-capital_expenditures", "other-metric-capital_expenditures-support"]
+            fiscal_period_focus: "Q2"
+            document_period_end_date: "2026-03-28"
+            period_classification: "year_to_date"
+          - <<: *cash_period
+            cik: "0000000004"
+            accession_number: "wrong-metric"
+            source_occurrence_id: "wrong-metric-operating_cash_flow"
+            source_document_name: "wrong-metric.xml"
+            source_sha256: "wrong-metric-checksum"
+            raw_value: "100"
+            value_decimal: "100"
+            supporting_occurrence_ids: ["wrong-metric-operating_cash_flow", "wrong-metric-operating_cash_flow-support"]
+          - <<: *cash_period
+            cik: "0000000005"
+            accession_number: "missing-q2-ytd"
+            source_occurrence_id: "missing-q2-ytd-operating_cash_flow"
+            source_document_name: "missing-q2-ytd.xml"
+            source_sha256: "missing-q2-ytd-checksum"
+            raw_value: "250"
+            value_decimal: "250"
+            period_end: "2026-06-27"
+            duration_days: 273
+            report_date: "2026-06-27"
+            supporting_occurrence_ids: ["missing-q2-ytd-operating_cash_flow", "missing-q2-ytd-operating_cash_flow-support"]
+            fiscal_period_focus: "Q3"
+            document_period_end_date: "2026-06-27"
+            period_classification: "year_to_date"
+          - <<: *cash_period
+            cik: "0000000005"
+            accession_number: "only-q1"
+            source_occurrence_id: "only-q1-operating_cash_flow"
+            source_document_name: "only-q1.xml"
+            source_sha256: "only-q1-checksum"
+            raw_value: "100"
+            value_decimal: "100"
+            supporting_occurrence_ids: ["only-q1-operating_cash_flow", "only-q1-operating_cash_flow-support"]
+          - <<: *cash_period
+            cik: "0000000005"
+            accession_number: "only-q2-quarter"
+            source_occurrence_id: "only-q2-quarter-operating_cash_flow"
+            source_document_name: "only-q2-quarter.xml"
+            source_sha256: "only-q2-quarter-checksum"
+            raw_value: "100"
+            value_decimal: "100"
+            period_start: "2025-12-28"
+            period_end: "2026-03-28"
+            duration_days: 182
+            report_date: "2026-03-28"
+            supporting_occurrence_ids: ["only-q2-quarter-operating_cash_flow", "only-q2-quarter-operating_cash_flow-support"]
+            fiscal_period_focus: "Q2"
+            document_period_end_date: "2026-03-28"
+    expect:
+      rows: &cash_issues_1
+        - {cik: "0000000002", accession_number: "missing-q1",
+           metric_code: "operating_cash_flow", fiscal_year_focus: 2026,
+           fiscal_period_focus: "Q2", report_date: "2026-03-28",
+           issue_code: "MISSING_PREVIOUS_CUMULATIVE", severity: "WARNING",
+           current_source_occurrence_id: "missing-q1-operating_cash_flow", previous_source_occurrence_ids: []}
+        - {cik: "0000000003", accession_number: "other-year",
+           metric_code: "operating_cash_flow", fiscal_year_focus: 2027,
+           fiscal_period_focus: "Q2", report_date: "2026-03-28",
+           issue_code: "MISSING_PREVIOUS_CUMULATIVE", severity: "WARNING",
+           current_source_occurrence_id: "other-year-operating_cash_flow", previous_source_occurrence_ids: []}
+        - {cik: "0000000004", accession_number: "other-metric",
+           metric_code: "capital_expenditures", fiscal_year_focus: 2026,
+           fiscal_period_focus: "Q2", report_date: "2026-03-28",
+           issue_code: "MISSING_PREVIOUS_CUMULATIVE", severity: "WARNING",
+           current_source_occurrence_id: "other-metric-capital_expenditures", previous_source_occurrence_ids: []}
+        - {cik: "0000000005", accession_number: "missing-q2-ytd",
+           metric_code: "operating_cash_flow", fiscal_year_focus: 2026,
+           fiscal_period_focus: "Q3", report_date: "2026-06-27",
+           issue_code: "MISSING_PREVIOUS_CUMULATIVE", severity: "WARNING",
+           current_source_occurrence_id: "missing-q2-ytd-operating_cash_flow", previous_source_occurrence_ids: []}
+  - name: cash_missing_fiscal_roles_and_separation_derived
+    model: int_derived_quarterly_cash_flow
+    description: "Missing Q1, another company, another fiscal year and another metric do not supply a predecessor. Q3 cannot jump over missing Q2 cumulative data or use the previous Q2 reported quarter. Unclassified predecessors are excluded."
+    given:
+      - *cash_inputs_1
+      - input: ref('int_quarterly_cash_flow_derivation_issues')
+        rows: *cash_issues_1
+    expect:
+      rows: []
+  - name: cash_candidates_counted_before_compatibility_issues
+    model: int_quarterly_cash_flow_derivation_issues
+    description: "Original/amended equal-valued predecessors remain ambiguous; one compatible candidate among two still blocks. Current ineligibility takes precedence over ambiguity, and candidate IDs are deterministic despite reversed fixture order."
+    given:
+      - &cash_inputs_2
+        input: ref('int_reported_financial_periods')
+        rows:
+          - <<: *cash_period
+            cik: "0000000010"
+            accession_number: "equal-z"
+            source_occurrence_id: "equal-z-operating_cash_flow"
+            source_document_name: "equal-z.xml"
+            source_sha256: "equal-z-checksum"
+            raw_value: "100"
+            value_decimal: "100"
+            form: "10-Q/A"
+            supporting_occurrence_ids: ["equal-z-operating_cash_flow", "equal-z-operating_cash_flow-support"]
+          - <<: *cash_period
+            cik: "0000000010"
+            accession_number: "equal"
+            source_occurrence_id: "equal-operating_cash_flow"
+            source_document_name: "equal.xml"
+            source_sha256: "equal-checksum"
+            raw_value: "100"
+            value_decimal: "100"
+            period_end: "2026-03-28"
+            duration_days: 182
+            report_date: "2026-03-28"
+            supporting_occurrence_ids: ["equal-operating_cash_flow", "equal-operating_cash_flow-support"]
+            fiscal_period_focus: "Q2"
+            document_period_end_date: "2026-03-28"
+            period_classification: "year_to_date"
+          - <<: *cash_period
+            cik: "0000000010"
+            accession_number: "equal-a"
+            source_occurrence_id: "equal-a-operating_cash_flow"
+            source_document_name: "equal-a.xml"
+            source_sha256: "equal-a-checksum"
+            raw_value: "100"
+            value_decimal: "100"
+            supporting_occurrence_ids: ["equal-a-operating_cash_flow", "equal-a-operating_cash_flow-support"]
+          - <<: *cash_period
+            cik: "0000000011"
+            accession_number: "one-compatible-z"
+            source_occurrence_id: "one-compatible-z-operating_cash_flow"
+            source_document_name: "one-compatible-z.xml"
+            source_sha256: "one-compatible-z-checksum"
+            raw_value: "100"
+            value_decimal: "100"
+            unit_expression: "EUR"
+            period_start: "2025-09-29"
+            form: "10-Q/A"
+            supporting_occurrence_ids: ["one-compatible-z-operating_cash_flow", "one-compatible-z-operating_cash_flow-support"]
+          - <<: *cash_period
+            cik: "0000000011"
+            accession_number: "one-compatible"
+            source_occurrence_id: "one-compatible-operating_cash_flow"
+            source_document_name: "one-compatible.xml"
+            source_sha256: "one-compatible-checksum"
+            raw_value: "100"
+            value_decimal: "100"
+            period_end: "2026-03-28"
+            duration_days: 182
+            report_date: "2026-03-28"
+            supporting_occurrence_ids: ["one-compatible-operating_cash_flow", "one-compatible-operating_cash_flow-support"]
+            fiscal_period_focus: "Q2"
+            document_period_end_date: "2026-03-28"
+            period_classification: "year_to_date"
+          - <<: *cash_period
+            cik: "0000000011"
+            accession_number: "one-compatible-a"
+            source_occurrence_id: "one-compatible-a-operating_cash_flow"
+            source_document_name: "one-compatible-a.xml"
+            source_sha256: "one-compatible-a-checksum"
+            raw_value: "100"
+            value_decimal: "100"
+            supporting_occurrence_ids: ["one-compatible-a-operating_cash_flow", "one-compatible-a-operating_cash_flow-support"]
+          - <<: *cash_period
+            cik: "0000000012"
+            accession_number: "current-invalid-z"
+            source_occurrence_id: "current-invalid-z-operating_cash_flow"
+            source_document_name: "current-invalid-z.xml"
+            source_sha256: "current-invalid-z-checksum"
+            raw_value: "100"
+            value_decimal: "100"
+            form: "10-Q/A"
+            supporting_occurrence_ids: ["current-invalid-z-operating_cash_flow", "current-invalid-z-operating_cash_flow-support"]
+          - <<: *cash_period
+            cik: "0000000012"
+            accession_number: "current-invalid"
+            source_occurrence_id: "current-invalid-operating_cash_flow"
+            source_document_name: "current-invalid.xml"
+            source_sha256: "current-invalid-checksum"
+            raw_value: "100"
+            value_decimal: "100"
+            unit_expression: "EUR"
+            period_end: "2026-03-28"
+            duration_days: 182
+            report_date: "2026-03-28"
+            supporting_occurrence_ids: ["current-invalid-operating_cash_flow", "current-invalid-operating_cash_flow-support"]
+            fiscal_period_focus: "Q2"
+            document_period_end_date: "2026-03-28"
+            period_classification: "year_to_date"
+          - <<: *cash_period
+            cik: "0000000012"
+            accession_number: "current-invalid-a"
+            source_occurrence_id: "current-invalid-a-operating_cash_flow"
+            source_document_name: "current-invalid-a.xml"
+            source_sha256: "current-invalid-a-checksum"
+            raw_value: "100"
+            value_decimal: "100"
+            supporting_occurrence_ids: ["current-invalid-a-operating_cash_flow", "current-invalid-a-operating_cash_flow-support"]
+    expect:
+      rows: &cash_issues_2
+        - {cik: "0000000010", accession_number: "equal",
+           metric_code: "operating_cash_flow", fiscal_year_focus: 2026,
+           fiscal_period_focus: "Q2", report_date: "2026-03-28",
+           issue_code: "AMBIGUOUS_PREVIOUS_CUMULATIVE", severity: "WARNING",
+           current_source_occurrence_id: "equal-operating_cash_flow", previous_source_occurrence_ids: ["equal-a-operating_cash_flow", "equal-z-operating_cash_flow"]}
+        - {cik: "0000000011", accession_number: "one-compatible",
+           metric_code: "operating_cash_flow", fiscal_year_focus: 2026,
+           fiscal_period_focus: "Q2", report_date: "2026-03-28",
+           issue_code: "AMBIGUOUS_PREVIOUS_CUMULATIVE", severity: "WARNING",
+           current_source_occurrence_id: "one-compatible-operating_cash_flow", previous_source_occurrence_ids: ["one-compatible-a-operating_cash_flow", "one-compatible-z-operating_cash_flow"]}
+        - {cik: "0000000012", accession_number: "current-invalid",
+           metric_code: "operating_cash_flow", fiscal_year_focus: 2026,
+           fiscal_period_focus: "Q2", report_date: "2026-03-28",
+           issue_code: "CURRENT_INPUT_INELIGIBLE", severity: "WARNING",
+           current_source_occurrence_id: "current-invalid-operating_cash_flow", previous_source_occurrence_ids: ["current-invalid-a-operating_cash_flow", "current-invalid-z-operating_cash_flow"]}
+  - name: cash_candidates_counted_before_compatibility_derived
+    model: int_derived_quarterly_cash_flow
+    description: "Original/amended equal-valued predecessors remain ambiguous; one compatible candidate among two still blocks. Current ineligibility takes precedence over ambiguity, and candidate IDs are deterministic despite reversed fixture order."
+    given:
+      - *cash_inputs_2
+      - input: ref('int_quarterly_cash_flow_derivation_issues')
+        rows: *cash_issues_2
+    expect:
+      rows: []
+  - name: cash_pair_checks_and_issue_precedence_issues
+    model: int_quarterly_cash_flow_derivation_issues
+    description: "Unique-pair incompatibility, derived duration limits, and current input eligibility have distinct outcomes. Missing numeric values, wrong units, dimensions and duration structure cannot be subtracted."
+    given:
+      - &cash_inputs_3
+        input: ref('int_reported_financial_periods')
+        rows:
+          - <<: *cash_period
+            cik: "0000000020"
+            accession_number: "different-start"
+            source_occurrence_id: "different-start-operating_cash_flow"
+            source_document_name: "different-start.xml"
+            source_sha256: "different-start-checksum"
+            raw_value: "250"
+            value_decimal: "250"
+            period_end: "2026-03-28"
+            duration_days: 182
+            report_date: "2026-03-28"
+            supporting_occurrence_ids: ["different-start-operating_cash_flow", "different-start-operating_cash_flow-support"]
+            fiscal_period_focus: "Q2"
+            document_period_end_date: "2026-03-28"
+            period_classification: "year_to_date"
+          - <<: *cash_period
+            cik: "0000000020"
+            accession_number: "different-start-previous"
+            source_occurrence_id: "different-start-previous-operating_cash_flow"
+            source_document_name: "different-start-previous.xml"
+            source_sha256: "different-start-previous-checksum"
+            raw_value: "100"
+            value_decimal: "100"
+            period_start: "2025-09-29"
+            supporting_occurrence_ids: ["different-start-previous-operating_cash_flow", "different-start-previous-operating_cash_flow-support"]
+          - <<: *cash_period
+            cik: "0000000021"
+            accession_number: "different-unit"
+            source_occurrence_id: "different-unit-operating_cash_flow"
+            source_document_name: "different-unit.xml"
+            source_sha256: "different-unit-checksum"
+            raw_value: "250"
+            value_decimal: "250"
+            period_end: "2026-03-28"
+            duration_days: 182
+            report_date: "2026-03-28"
+            supporting_occurrence_ids: ["different-unit-operating_cash_flow", "different-unit-operating_cash_flow-support"]
+            fiscal_period_focus: "Q2"
+            document_period_end_date: "2026-03-28"
+            period_classification: "year_to_date"
+          - <<: *cash_period
+            cik: "0000000021"
+            accession_number: "different-unit-previous"
+            source_occurrence_id: "different-unit-previous-operating_cash_flow"
+            source_document_name: "different-unit-previous.xml"
+            source_sha256: "different-unit-previous-checksum"
+            raw_value: "100"
+            value_decimal: "100"
+            unit_expression: "EUR"
+            supporting_occurrence_ids: ["different-unit-previous-operating_cash_flow", "different-unit-previous-operating_cash_flow-support"]
+          - <<: *cash_period
+            cik: "0000000022"
+            accession_number: "reversed-end"
+            source_occurrence_id: "reversed-end-operating_cash_flow"
+            source_document_name: "reversed-end.xml"
+            source_sha256: "reversed-end-checksum"
+            raw_value: "250"
+            value_decimal: "250"
+            period_end: "2026-03-28"
+            duration_days: 182
+            report_date: "2026-03-28"
+            supporting_occurrence_ids: ["reversed-end-operating_cash_flow", "reversed-end-operating_cash_flow-support"]
+            fiscal_period_focus: "Q2"
+            document_period_end_date: "2026-03-28"
+            period_classification: "year_to_date"
+          - <<: *cash_period
+            cik: "0000000022"
+            accession_number: "reversed-end-previous"
+            source_occurrence_id: "reversed-end-previous-operating_cash_flow"
+            source_document_name: "reversed-end-previous.xml"
+            source_sha256: "reversed-end-previous-checksum"
+            raw_value: "100"
+            value_decimal: "100"
+            period_end: "2026-04-01"
+            report_date: "2026-04-01"
+            supporting_occurrence_ids: ["reversed-end-previous-operating_cash_flow", "reversed-end-previous-operating_cash_flow-support"]
+          - <<: *cash_period
+            cik: "0000000023"
+            accession_number: "previous-dimensions"
+            source_occurrence_id: "previous-dimensions-operating_cash_flow"
+            source_document_name: "previous-dimensions.xml"
+            source_sha256: "previous-dimensions-checksum"
+            raw_value: "250"
+            value_decimal: "250"
+            period_end: "2026-03-28"
+            duration_days: 182
+            report_date: "2026-03-28"
+            supporting_occurrence_ids: ["previous-dimensions-operating_cash_flow", "previous-dimensions-operating_cash_flow-support"]
+            fiscal_period_focus: "Q2"
+            document_period_end_date: "2026-03-28"
+            period_classification: "year_to_date"
+          - <<: *cash_period
+            cik: "0000000023"
+            accession_number: "previous-dimensions-previous"
+            source_occurrence_id: "previous-dimensions-previous-operating_cash_flow"
+            source_document_name: "previous-dimensions-previous.xml"
+            source_sha256: "previous-dimensions-previous-checksum"
+            raw_value: "100"
+            value_decimal: "100"
+            dimension_count: 1
+            has_dimensions: true
+            supporting_occurrence_ids: ["previous-dimensions-previous-operating_cash_flow", "previous-dimensions-previous-operating_cash_flow-support"]
+          - <<: *cash_period
+            cik: "0000000024"
+            accession_number: "previous-null-value"
+            source_occurrence_id: "previous-null-value-operating_cash_flow"
+            source_document_name: "previous-null-value.xml"
+            source_sha256: "previous-null-value-checksum"
+            raw_value: "250"
+            value_decimal: "250"
+            period_end: "2026-03-28"
+            duration_days: 182
+            report_date: "2026-03-28"
+            supporting_occurrence_ids: ["previous-null-value-operating_cash_flow", "previous-null-value-operating_cash_flow-support"]
+            fiscal_period_focus: "Q2"
+            document_period_end_date: "2026-03-28"
+            period_classification: "year_to_date"
+          - <<: *cash_period
+            cik: "0000000024"
+            accession_number: "previous-null-value-previous"
+            source_occurrence_id: "previous-null-value-previous-operating_cash_flow"
+            source_document_name: "previous-null-value-previous.xml"
+            source_sha256: "previous-null-value-previous-checksum"
+            raw_value: "100"
+            value_decimal: null
+            supporting_occurrence_ids: ["previous-null-value-previous-operating_cash_flow", "previous-null-value-previous-operating_cash_flow-support"]
+          - <<: *cash_period
+            cik: "0000000025"
+            accession_number: "previous-report-date"
+            source_occurrence_id: "previous-report-date-operating_cash_flow"
+            source_document_name: "previous-report-date.xml"
+            source_sha256: "previous-report-date-checksum"
+            raw_value: "250"
+            value_decimal: "250"
+            period_end: "2026-03-28"
+            duration_days: 182
+            report_date: "2026-03-28"
+            supporting_occurrence_ids: ["previous-report-date-operating_cash_flow", "previous-report-date-operating_cash_flow-support"]
+            fiscal_period_focus: "Q2"
+            document_period_end_date: "2026-03-28"
+            period_classification: "year_to_date"
+          - <<: *cash_period
+            cik: "0000000025"
+            accession_number: "previous-report-date-previous"
+            source_occurrence_id: "previous-report-date-previous-operating_cash_flow"
+            source_document_name: "previous-report-date-previous.xml"
+            source_sha256: "previous-report-date-previous-checksum"
+            raw_value: "100"
+            value_decimal: "100"
+            report_date: "2025-12-26"
+            supporting_occurrence_ids: ["previous-report-date-previous-operating_cash_flow", "previous-report-date-previous-operating_cash_flow-support"]
+          - <<: *cash_period
+            cik: "0000000026"
+            accession_number: "previous-form"
+            source_occurrence_id: "previous-form-operating_cash_flow"
+            source_document_name: "previous-form.xml"
+            source_sha256: "previous-form-checksum"
+            raw_value: "250"
+            value_decimal: "250"
+            period_end: "2026-03-28"
+            duration_days: 182
+            report_date: "2026-03-28"
+            supporting_occurrence_ids: ["previous-form-operating_cash_flow", "previous-form-operating_cash_flow-support"]
+            fiscal_period_focus: "Q2"
+            document_period_end_date: "2026-03-28"
+            period_classification: "year_to_date"
+          - <<: *cash_period
+            cik: "0000000026"
+            accession_number: "previous-form-previous"
+            source_occurrence_id: "previous-form-previous-operating_cash_flow"
+            source_document_name: "previous-form-previous.xml"
+            source_sha256: "previous-form-previous-checksum"
+            raw_value: "100"
+            value_decimal: "100"
+            form: "10-K"
+            supporting_occurrence_ids: ["previous-form-previous-operating_cash_flow", "previous-form-previous-operating_cash_flow-support"]
+          - <<: *cash_period
+            cik: "0000000027"
+            accession_number: "previous-structure"
+            source_occurrence_id: "previous-structure-operating_cash_flow"
+            source_document_name: "previous-structure.xml"
+            source_sha256: "previous-structure-checksum"
+            raw_value: "250"
+            value_decimal: "250"
+            period_end: "2026-03-28"
+            duration_days: 182
+            report_date: "2026-03-28"
+            supporting_occurrence_ids: ["previous-structure-operating_cash_flow", "previous-structure-operating_cash_flow-support"]
+            fiscal_period_focus: "Q2"
+            document_period_end_date: "2026-03-28"
+            period_classification: "year_to_date"
+          - <<: *cash_period
+            cik: "0000000027"
+            accession_number: "previous-structure-previous"
+            source_occurrence_id: "previous-structure-previous-operating_cash_flow"
+            source_document_name: "previous-structure-previous.xml"
+            source_sha256: "previous-structure-previous-checksum"
+            raw_value: "100"
+            value_decimal: "100"
+            period_instant: "2025-12-27"
+            supporting_occurrence_ids: ["previous-structure-previous-operating_cash_flow", "previous-structure-previous-operating_cash_flow-support"]
+          - <<: *cash_period
+            cik: "0000000028"
+            accession_number: "duration-79"
+            source_occurrence_id: "duration-79-operating_cash_flow"
+            source_document_name: "duration-79.xml"
+            source_sha256: "duration-79-checksum"
+            raw_value: "250"
+            value_decimal: "250"
+            period_end: "2026-03-16"
+            duration_days: 182
+            report_date: "2026-03-16"
+            supporting_occurrence_ids: ["duration-79-operating_cash_flow", "duration-79-operating_cash_flow-support"]
+            fiscal_period_focus: "Q2"
+            document_period_end_date: "2026-03-16"
+            period_classification: "year_to_date"
+          - <<: *cash_period
+            cik: "0000000028"
+            accession_number: "duration-79-previous"
+            source_occurrence_id: "duration-79-previous-operating_cash_flow"
+            source_document_name: "duration-79-previous.xml"
+            source_sha256: "duration-79-previous-checksum"
+            raw_value: "100"
+            value_decimal: "100"
+            supporting_occurrence_ids: ["duration-79-previous-operating_cash_flow", "duration-79-previous-operating_cash_flow-support"]
+          - <<: *cash_period
+            cik: "0000000029"
+            accession_number: "duration-101"
+            source_occurrence_id: "duration-101-operating_cash_flow"
+            source_document_name: "duration-101.xml"
+            source_sha256: "duration-101-checksum"
+            raw_value: "250"
+            value_decimal: "250"
+            period_end: "2026-04-07"
+            duration_days: 182
+            report_date: "2026-04-07"
+            supporting_occurrence_ids: ["duration-101-operating_cash_flow", "duration-101-operating_cash_flow-support"]
+            fiscal_period_focus: "Q2"
+            document_period_end_date: "2026-04-07"
+            period_classification: "year_to_date"
+          - <<: *cash_period
+            cik: "0000000029"
+            accession_number: "duration-101-previous"
+            source_occurrence_id: "duration-101-previous-operating_cash_flow"
+            source_document_name: "duration-101-previous.xml"
+            source_sha256: "duration-101-previous-checksum"
+            raw_value: "100"
+            value_decimal: "100"
+            supporting_occurrence_ids: ["duration-101-previous-operating_cash_flow", "duration-101-previous-operating_cash_flow-support"]
+          - <<: *cash_period
+            cik: "0000000040"
+            accession_number: "current-null"
+            source_occurrence_id: "current-null-operating_cash_flow"
+            source_document_name: "current-null.xml"
+            source_sha256: "current-null-checksum"
+            raw_value: "100"
+            value_decimal: null
+            period_end: "2026-03-28"
+            duration_days: 182
+            report_date: "2026-03-28"
+            supporting_occurrence_ids: ["current-null-operating_cash_flow", "current-null-operating_cash_flow-support"]
+            fiscal_period_focus: "Q2"
+            document_period_end_date: "2026-03-28"
+            period_classification: "year_to_date"
+          - <<: *cash_period
+            cik: "0000000041"
+            accession_number: "current-unit"
+            source_occurrence_id: "current-unit-operating_cash_flow"
+            source_document_name: "current-unit.xml"
+            source_sha256: "current-unit-checksum"
+            raw_value: "100"
+            value_decimal: "100"
+            unit_expression: "EUR"
+            period_end: "2026-03-28"
+            duration_days: 182
+            report_date: "2026-03-28"
+            supporting_occurrence_ids: ["current-unit-operating_cash_flow", "current-unit-operating_cash_flow-support"]
+            fiscal_period_focus: "Q2"
+            document_period_end_date: "2026-03-28"
+            period_classification: "year_to_date"
+          - <<: *cash_period
+            cik: "0000000041"
+            accession_number: "current-unit-previous"
+            source_occurrence_id: "current-unit-previous-operating_cash_flow"
+            source_document_name: "current-unit-previous.xml"
+            source_sha256: "current-unit-previous-checksum"
+            raw_value: "100"
+            value_decimal: "100"
+            supporting_occurrence_ids: ["current-unit-previous-operating_cash_flow", "current-unit-previous-operating_cash_flow-support"]
+          - <<: *cash_period
+            cik: "0000000042"
+            accession_number: "current-dimensions"
+            source_occurrence_id: "current-dimensions-operating_cash_flow"
+            source_document_name: "current-dimensions.xml"
+            source_sha256: "current-dimensions-checksum"
+            raw_value: "100"
+            value_decimal: "100"
+            period_end: "2026-03-28"
+            dimension_count: 1
+            duration_days: 182
+            report_date: "2026-03-28"
+            supporting_occurrence_ids: ["current-dimensions-operating_cash_flow", "current-dimensions-operating_cash_flow-support"]
+            fiscal_period_focus: "Q2"
+            document_period_end_date: "2026-03-28"
+            period_classification: "year_to_date"
+          - <<: *cash_period
+            cik: "0000000042"
+            accession_number: "current-dimensions-previous"
+            source_occurrence_id: "current-dimensions-previous-operating_cash_flow"
+            source_document_name: "current-dimensions-previous.xml"
+            source_sha256: "current-dimensions-previous-checksum"
+            raw_value: "100"
+            value_decimal: "100"
+            supporting_occurrence_ids: ["current-dimensions-previous-operating_cash_flow", "current-dimensions-previous-operating_cash_flow-support"]
+          - <<: *cash_period
+            cik: "0000000043"
+            accession_number: "current-structure"
+            source_occurrence_id: "current-structure-operating_cash_flow"
+            source_document_name: "current-structure.xml"
+            source_sha256: "current-structure-checksum"
+            raw_value: "100"
+            value_decimal: "100"
+            period_start: null
+            period_end: "2026-03-28"
+            duration_days: 182
+            report_date: "2026-03-28"
+            supporting_occurrence_ids: ["current-structure-operating_cash_flow", "current-structure-operating_cash_flow-support"]
+            fiscal_period_focus: "Q2"
+            document_period_end_date: "2026-03-28"
+            period_classification: "year_to_date"
+          - <<: *cash_period
+            cik: "0000000043"
+            accession_number: "current-structure-previous"
+            source_occurrence_id: "current-structure-previous-operating_cash_flow"
+            source_document_name: "current-structure-previous.xml"
+            source_sha256: "current-structure-previous-checksum"
+            raw_value: "100"
+            value_decimal: "100"
+            supporting_occurrence_ids: ["current-structure-previous-operating_cash_flow", "current-structure-previous-operating_cash_flow-support"]
+          - <<: *cash_period
+            cik: "0000000044"
+            accession_number: "current-instant"
+            source_occurrence_id: "current-instant-operating_cash_flow"
+            source_document_name: "current-instant.xml"
+            source_sha256: "current-instant-checksum"
+            raw_value: "100"
+            value_decimal: "100"
+            period_end: "2026-03-28"
+            period_instant: "2026-03-28"
+            duration_days: 182
+            report_date: "2026-03-28"
+            supporting_occurrence_ids: ["current-instant-operating_cash_flow", "current-instant-operating_cash_flow-support"]
+            fiscal_period_focus: "Q2"
+            document_period_end_date: "2026-03-28"
+            period_classification: "year_to_date"
+          - <<: *cash_period
+            cik: "0000000044"
+            accession_number: "current-instant-previous"
+            source_occurrence_id: "current-instant-previous-operating_cash_flow"
+            source_document_name: "current-instant-previous.xml"
+            source_sha256: "current-instant-previous-checksum"
+            raw_value: "100"
+            value_decimal: "100"
+            supporting_occurrence_ids: ["current-instant-previous-operating_cash_flow", "current-instant-previous-operating_cash_flow-support"]
+    expect:
+      rows: &cash_issues_3
+        - {cik: "0000000020", accession_number: "different-start",
+           metric_code: "operating_cash_flow", fiscal_year_focus: 2026,
+           fiscal_period_focus: "Q2", report_date: "2026-03-28",
+           issue_code: "INCOMPATIBLE_CUMULATIVE_INPUTS", severity: "WARNING",
+           current_source_occurrence_id: "different-start-operating_cash_flow", previous_source_occurrence_ids: ["different-start-previous-operating_cash_flow"]}
+        - {cik: "0000000021", accession_number: "different-unit",
+           metric_code: "operating_cash_flow", fiscal_year_focus: 2026,
+           fiscal_period_focus: "Q2", report_date: "2026-03-28",
+           issue_code: "INCOMPATIBLE_CUMULATIVE_INPUTS", severity: "WARNING",
+           current_source_occurrence_id: "different-unit-operating_cash_flow", previous_source_occurrence_ids: ["different-unit-previous-operating_cash_flow"]}
+        - {cik: "0000000022", accession_number: "reversed-end",
+           metric_code: "operating_cash_flow", fiscal_year_focus: 2026,
+           fiscal_period_focus: "Q2", report_date: "2026-03-28",
+           issue_code: "INCOMPATIBLE_CUMULATIVE_INPUTS", severity: "WARNING",
+           current_source_occurrence_id: "reversed-end-operating_cash_flow", previous_source_occurrence_ids: ["reversed-end-previous-operating_cash_flow"]}
+        - {cik: "0000000023", accession_number: "previous-dimensions",
+           metric_code: "operating_cash_flow", fiscal_year_focus: 2026,
+           fiscal_period_focus: "Q2", report_date: "2026-03-28",
+           issue_code: "INCOMPATIBLE_CUMULATIVE_INPUTS", severity: "WARNING",
+           current_source_occurrence_id: "previous-dimensions-operating_cash_flow", previous_source_occurrence_ids: ["previous-dimensions-previous-operating_cash_flow"]}
+        - {cik: "0000000024", accession_number: "previous-null-value",
+           metric_code: "operating_cash_flow", fiscal_year_focus: 2026,
+           fiscal_period_focus: "Q2", report_date: "2026-03-28",
+           issue_code: "INCOMPATIBLE_CUMULATIVE_INPUTS", severity: "WARNING",
+           current_source_occurrence_id: "previous-null-value-operating_cash_flow", previous_source_occurrence_ids: ["previous-null-value-previous-operating_cash_flow"]}
+        - {cik: "0000000025", accession_number: "previous-report-date",
+           metric_code: "operating_cash_flow", fiscal_year_focus: 2026,
+           fiscal_period_focus: "Q2", report_date: "2026-03-28",
+           issue_code: "INCOMPATIBLE_CUMULATIVE_INPUTS", severity: "WARNING",
+           current_source_occurrence_id: "previous-report-date-operating_cash_flow", previous_source_occurrence_ids: ["previous-report-date-previous-operating_cash_flow"]}
+        - {cik: "0000000026", accession_number: "previous-form",
+           metric_code: "operating_cash_flow", fiscal_year_focus: 2026,
+           fiscal_period_focus: "Q2", report_date: "2026-03-28",
+           issue_code: "INCOMPATIBLE_CUMULATIVE_INPUTS", severity: "WARNING",
+           current_source_occurrence_id: "previous-form-operating_cash_flow", previous_source_occurrence_ids: ["previous-form-previous-operating_cash_flow"]}
+        - {cik: "0000000027", accession_number: "previous-structure",
+           metric_code: "operating_cash_flow", fiscal_year_focus: 2026,
+           fiscal_period_focus: "Q2", report_date: "2026-03-28",
+           issue_code: "INCOMPATIBLE_CUMULATIVE_INPUTS", severity: "WARNING",
+           current_source_occurrence_id: "previous-structure-operating_cash_flow", previous_source_occurrence_ids: ["previous-structure-previous-operating_cash_flow"]}
+        - {cik: "0000000028", accession_number: "duration-79",
+           metric_code: "operating_cash_flow", fiscal_year_focus: 2026,
+           fiscal_period_focus: "Q2", report_date: "2026-03-16",
+           issue_code: "UNSUPPORTED_DERIVED_DURATION", severity: "WARNING",
+           current_source_occurrence_id: "duration-79-operating_cash_flow", previous_source_occurrence_ids: ["duration-79-previous-operating_cash_flow"]}
+        - {cik: "0000000029", accession_number: "duration-101",
+           metric_code: "operating_cash_flow", fiscal_year_focus: 2026,
+           fiscal_period_focus: "Q2", report_date: "2026-04-07",
+           issue_code: "UNSUPPORTED_DERIVED_DURATION", severity: "WARNING",
+           current_source_occurrence_id: "duration-101-operating_cash_flow", previous_source_occurrence_ids: ["duration-101-previous-operating_cash_flow"]}
+        - {cik: "0000000040", accession_number: "current-null",
+           metric_code: "operating_cash_flow", fiscal_year_focus: 2026,
+           fiscal_period_focus: "Q2", report_date: "2026-03-28",
+           issue_code: "CURRENT_INPUT_INELIGIBLE", severity: "WARNING",
+           current_source_occurrence_id: "current-null-operating_cash_flow", previous_source_occurrence_ids: []}
+        - {cik: "0000000041", accession_number: "current-unit",
+           metric_code: "operating_cash_flow", fiscal_year_focus: 2026,
+           fiscal_period_focus: "Q2", report_date: "2026-03-28",
+           issue_code: "CURRENT_INPUT_INELIGIBLE", severity: "WARNING",
+           current_source_occurrence_id: "current-unit-operating_cash_flow", previous_source_occurrence_ids: ["current-unit-previous-operating_cash_flow"]}
+        - {cik: "0000000042", accession_number: "current-dimensions",
+           metric_code: "operating_cash_flow", fiscal_year_focus: 2026,
+           fiscal_period_focus: "Q2", report_date: "2026-03-28",
+           issue_code: "CURRENT_INPUT_INELIGIBLE", severity: "WARNING",
+           current_source_occurrence_id: "current-dimensions-operating_cash_flow", previous_source_occurrence_ids: ["current-dimensions-previous-operating_cash_flow"]}
+        - {cik: "0000000043", accession_number: "current-structure",
+           metric_code: "operating_cash_flow", fiscal_year_focus: 2026,
+           fiscal_period_focus: "Q2", report_date: "2026-03-28",
+           issue_code: "CURRENT_INPUT_INELIGIBLE", severity: "WARNING",
+           current_source_occurrence_id: "current-structure-operating_cash_flow", previous_source_occurrence_ids: ["current-structure-previous-operating_cash_flow"]}
+        - {cik: "0000000044", accession_number: "current-instant",
+           metric_code: "operating_cash_flow", fiscal_year_focus: 2026,
+           fiscal_period_focus: "Q2", report_date: "2026-03-28",
+           issue_code: "CURRENT_INPUT_INELIGIBLE", severity: "WARNING",
+           current_source_occurrence_id: "current-instant-operating_cash_flow", previous_source_occurrence_ids: ["current-instant-previous-operating_cash_flow"]}
+  - name: cash_pair_checks_and_issue_precedence_derived
+    model: int_derived_quarterly_cash_flow
+    description: "Unique-pair incompatibility, derived duration limits, and current input eligibility have distinct outcomes. Missing numeric values, wrong units, dimensions and duration structure cannot be subtracted."
+    given:
+      - *cash_inputs_3
+      - input: ref('int_quarterly_cash_flow_derivation_issues')
+        rows: *cash_issues_3
+    expect:
+      rows: []
+  - name: cash_safe_decimal_overflow_and_boundaries_issues
+    model: int_quarterly_cash_flow_derivation_issues
+    description: "Positive and negative subtraction overflow are row-safe beside a valid exact 18-place fractional calculation. The 80- and 100-day endpoints both derive successfully."
+    given:
+      - &cash_inputs_4
+        input: ref('int_reported_financial_periods')
+        rows:
+          - <<: *cash_period
+            cik: "0000000050"
+            accession_number: "overflow-positive"
+            source_occurrence_id: "overflow-positive-operating_cash_flow"
+            source_document_name: "overflow-positive.xml"
+            source_sha256: "overflow-positive-checksum"
+            raw_value: "99999999999999999999.999999999999999999"
+            value_decimal: "99999999999999999999.999999999999999999"
+            period_end: "2026-03-28"
+            duration_days: 182
+            report_date: "2026-03-28"
+            supporting_occurrence_ids: ["overflow-positive-operating_cash_flow", "overflow-positive-operating_cash_flow-support"]
+            fiscal_period_focus: "Q2"
+            document_period_end_date: "2026-03-28"
+            period_classification: "year_to_date"
+          - <<: *cash_period
+            cik: "0000000050"
+            accession_number: "overflow-positive-previous"
+            source_occurrence_id: "overflow-positive-previous-operating_cash_flow"
+            source_document_name: "overflow-positive-previous.xml"
+            source_sha256: "overflow-positive-previous-checksum"
+            raw_value: "-99999999999999999999.999999999999999999"
+            value_decimal: "-99999999999999999999.999999999999999999"
+            supporting_occurrence_ids: ["overflow-positive-previous-operating_cash_flow", "overflow-positive-previous-operating_cash_flow-support"]
+          - <<: *cash_period
+            cik: "0000000051"
+            accession_number: "overflow-negative"
+            source_occurrence_id: "overflow-negative-operating_cash_flow"
+            source_document_name: "overflow-negative.xml"
+            source_sha256: "overflow-negative-checksum"
+            raw_value: "-99999999999999999999.999999999999999999"
+            value_decimal: "-99999999999999999999.999999999999999999"
+            period_end: "2026-03-28"
+            duration_days: 182
+            report_date: "2026-03-28"
+            supporting_occurrence_ids: ["overflow-negative-operating_cash_flow", "overflow-negative-operating_cash_flow-support"]
+            fiscal_period_focus: "Q2"
+            document_period_end_date: "2026-03-28"
+            period_classification: "year_to_date"
+          - <<: *cash_period
+            cik: "0000000051"
+            accession_number: "overflow-negative-previous"
+            source_occurrence_id: "overflow-negative-previous-operating_cash_flow"
+            source_document_name: "overflow-negative-previous.xml"
+            source_sha256: "overflow-negative-previous-checksum"
+            raw_value: "99999999999999999999.999999999999999999"
+            value_decimal: "99999999999999999999.999999999999999999"
+            supporting_occurrence_ids: ["overflow-negative-previous-operating_cash_flow", "overflow-negative-previous-operating_cash_flow-support"]
+          - <<: *cash_period
+            cik: "0000000052"
+            accession_number: "fraction"
+            source_occurrence_id: "fraction-operating_cash_flow"
+            source_document_name: "fraction.xml"
+            source_sha256: "fraction-checksum"
+            raw_value: "1.000000000000000002"
+            value_decimal: "1.000000000000000002"
+            period_end: "2026-03-28"
+            duration_days: 182
+            report_date: "2026-03-28"
+            supporting_occurrence_ids: ["fraction-operating_cash_flow", "fraction-operating_cash_flow-support"]
+            fiscal_period_focus: "Q2"
+            document_period_end_date: "2026-03-28"
+            period_classification: "year_to_date"
+          - <<: *cash_period
+            cik: "0000000052"
+            accession_number: "fraction-previous"
+            source_occurrence_id: "fraction-previous-operating_cash_flow"
+            source_document_name: "fraction-previous.xml"
+            source_sha256: "fraction-previous-checksum"
+            raw_value: "1.000000000000000001"
+            value_decimal: "1.000000000000000001"
+            supporting_occurrence_ids: ["fraction-previous-operating_cash_flow", "fraction-previous-operating_cash_flow-support"]
+          - <<: *cash_period
+            cik: "0000000053"
+            accession_number: "boundary-80"
+            source_occurrence_id: "boundary-80-operating_cash_flow"
+            source_document_name: "boundary-80.xml"
+            source_sha256: "boundary-80-checksum"
+            raw_value: "150"
+            value_decimal: "150"
+            period_end: "2026-03-17"
+            duration_days: 182
+            report_date: "2026-03-17"
+            supporting_occurrence_ids: ["boundary-80-operating_cash_flow", "boundary-80-operating_cash_flow-support"]
+            fiscal_period_focus: "Q2"
+            document_period_end_date: "2026-03-17"
+            period_classification: "year_to_date"
+          - <<: *cash_period
+            cik: "0000000053"
+            accession_number: "boundary-80-previous"
+            source_occurrence_id: "boundary-80-previous-operating_cash_flow"
+            source_document_name: "boundary-80-previous.xml"
+            source_sha256: "boundary-80-previous-checksum"
+            raw_value: "100"
+            value_decimal: "100"
+            supporting_occurrence_ids: ["boundary-80-previous-operating_cash_flow", "boundary-80-previous-operating_cash_flow-support"]
+          - <<: *cash_period
+            cik: "0000000054"
+            accession_number: "boundary-100"
+            source_occurrence_id: "boundary-100-operating_cash_flow"
+            source_document_name: "boundary-100.xml"
+            source_sha256: "boundary-100-checksum"
+            raw_value: "150"
+            value_decimal: "150"
+            period_end: "2026-04-06"
+            duration_days: 182
+            report_date: "2026-04-06"
+            supporting_occurrence_ids: ["boundary-100-operating_cash_flow", "boundary-100-operating_cash_flow-support"]
+            fiscal_period_focus: "Q2"
+            document_period_end_date: "2026-04-06"
+            period_classification: "year_to_date"
+          - <<: *cash_period
+            cik: "0000000054"
+            accession_number: "boundary-100-previous"
+            source_occurrence_id: "boundary-100-previous-operating_cash_flow"
+            source_document_name: "boundary-100-previous.xml"
+            source_sha256: "boundary-100-previous-checksum"
+            raw_value: "100"
+            value_decimal: "100"
+            supporting_occurrence_ids: ["boundary-100-previous-operating_cash_flow", "boundary-100-previous-operating_cash_flow-support"]
+    expect:
+      rows: &cash_issues_4
+        - {cik: "0000000050", accession_number: "overflow-positive",
+           metric_code: "operating_cash_flow", fiscal_year_focus: 2026,
+           fiscal_period_focus: "Q2", report_date: "2026-03-28",
+           issue_code: "DERIVED_VALUE_OUT_OF_RANGE", severity: "WARNING",
+           current_source_occurrence_id: "overflow-positive-operating_cash_flow", previous_source_occurrence_ids: ["overflow-positive-previous-operating_cash_flow"]}
+        - {cik: "0000000051", accession_number: "overflow-negative",
+           metric_code: "operating_cash_flow", fiscal_year_focus: 2026,
+           fiscal_period_focus: "Q2", report_date: "2026-03-28",
+           issue_code: "DERIVED_VALUE_OUT_OF_RANGE", severity: "WARNING",
+           current_source_occurrence_id: "overflow-negative-operating_cash_flow", previous_source_occurrence_ids: ["overflow-negative-previous-operating_cash_flow"]}
+  - name: cash_safe_decimal_overflow_and_boundaries_derived
+    model: int_derived_quarterly_cash_flow
+    description: "Positive and negative subtraction overflow are row-safe beside a valid exact 18-place fractional calculation. The 80- and 100-day endpoints both derive successfully."
+    given:
+      - *cash_inputs_4
+      - input: ref('int_quarterly_cash_flow_derivation_issues')
+        rows: *cash_issues_4
+    expect:
+      rows:
+        - {cik: "0000000052", accession_number: "fraction",
+           metric_code: "operating_cash_flow", form: "10-Q",
+           filing_date: "2026-01-20", report_date: "2026-03-28",
+           fiscal_year_focus: 2026, fiscal_period_focus: "Q2",
+           period_kind: "duration", period_start: "2025-12-28",
+           period_end: "2026-03-28", period_instant: null,
+           period_label: "derived_quarter", value_origin: "derived",
+           value_decimal: "0.000000000000000001", unit_expression: "{http://www.xbrl.org/2003/iso4217}USD",
+           derivation_rule_version: "1", derivation_method: "CURRENT_YTD_MINUS_PREVIOUS_CUMULATIVE",
+           current_source_occurrence_id: "fraction-operating_cash_flow", current_source_document_name: "fraction.xml",
+           current_source_sha256: "fraction-checksum", current_value_decimal: "1.000000000000000002",
+           current_supporting_occurrence_ids: ["fraction-operating_cash_flow", "fraction-operating_cash_flow-support"], previous_accession_number: "fraction-previous",
+           previous_source_occurrence_id: "fraction-previous-operating_cash_flow", previous_source_document_name: "fraction-previous.xml",
+           previous_source_sha256: "fraction-previous-checksum", previous_value_decimal: "1.000000000000000001",
+           previous_supporting_occurrence_ids: ["fraction-previous-operating_cash_flow", "fraction-previous-operating_cash_flow-support"], cumulative_period_start: "2025-09-28",
+           previous_period_end: "2025-12-27", current_decimals: "-6",
+           current_precision: null, previous_decimals: "-6",
+           previous_precision: null}
+        - {cik: "0000000053", accession_number: "boundary-80",
+           metric_code: "operating_cash_flow", form: "10-Q",
+           filing_date: "2026-01-20", report_date: "2026-03-17",
+           fiscal_year_focus: 2026, fiscal_period_focus: "Q2",
+           period_kind: "duration", period_start: "2025-12-28",
+           period_end: "2026-03-17", period_instant: null,
+           period_label: "derived_quarter", value_origin: "derived",
+           value_decimal: "50.000000000000000000", unit_expression: "{http://www.xbrl.org/2003/iso4217}USD",
+           derivation_rule_version: "1", derivation_method: "CURRENT_YTD_MINUS_PREVIOUS_CUMULATIVE",
+           current_source_occurrence_id: "boundary-80-operating_cash_flow", current_source_document_name: "boundary-80.xml",
+           current_source_sha256: "boundary-80-checksum", current_value_decimal: "150",
+           current_supporting_occurrence_ids: ["boundary-80-operating_cash_flow", "boundary-80-operating_cash_flow-support"], previous_accession_number: "boundary-80-previous",
+           previous_source_occurrence_id: "boundary-80-previous-operating_cash_flow", previous_source_document_name: "boundary-80-previous.xml",
+           previous_source_sha256: "boundary-80-previous-checksum", previous_value_decimal: "100",
+           previous_supporting_occurrence_ids: ["boundary-80-previous-operating_cash_flow", "boundary-80-previous-operating_cash_flow-support"], cumulative_period_start: "2025-09-28",
+           previous_period_end: "2025-12-27", current_decimals: "-6",
+           current_precision: null, previous_decimals: "-6",
+           previous_precision: null}
+        - {cik: "0000000054", accession_number: "boundary-100",
+           metric_code: "operating_cash_flow", form: "10-Q",
+           filing_date: "2026-01-20", report_date: "2026-04-06",
+           fiscal_year_focus: 2026, fiscal_period_focus: "Q2",
+           period_kind: "duration", period_start: "2025-12-28",
+           period_end: "2026-04-06", period_instant: null,
+           period_label: "derived_quarter", value_origin: "derived",
+           value_decimal: "50.000000000000000000", unit_expression: "{http://www.xbrl.org/2003/iso4217}USD",
+           derivation_rule_version: "1", derivation_method: "CURRENT_YTD_MINUS_PREVIOUS_CUMULATIVE",
+           current_source_occurrence_id: "boundary-100-operating_cash_flow", current_source_document_name: "boundary-100.xml",
+           current_source_sha256: "boundary-100-checksum", current_value_decimal: "150",
+           current_supporting_occurrence_ids: ["boundary-100-operating_cash_flow", "boundary-100-operating_cash_flow-support"], previous_accession_number: "boundary-100-previous",
+           previous_source_occurrence_id: "boundary-100-previous-operating_cash_flow", previous_source_document_name: "boundary-100-previous.xml",
+           previous_source_sha256: "boundary-100-previous-checksum", previous_value_decimal: "100",
+           previous_supporting_occurrence_ids: ["boundary-100-previous-operating_cash_flow", "boundary-100-previous-operating_cash_flow-support"], cumulative_period_start: "2025-09-28",
+           previous_period_end: "2025-12-27", current_decimals: "-6",
+           current_precision: null, previous_decimals: "-6",
+           previous_precision: null}
