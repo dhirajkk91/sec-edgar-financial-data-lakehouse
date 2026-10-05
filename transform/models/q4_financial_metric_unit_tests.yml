@@ -1,0 +1,2066 @@
+unit_tests:
+  - name: q4_four_metrics_and_dual_input_evidence_issues
+    model: int_q4_financial_metric_derivation_issues
+    description: "All four metrics derive Q4 on the annual accession while FY remains on its source. Independent accuracy fields, ordered supporting lists, taxonomy and document-scoped IDs survive. PARTIAL classified metadata is usable; Q3 quarters cannot replace YTD. EPS, ratios, balances, unclassified inputs and annual targets with reported quarters produce no outcomes."
+    given:
+      - &q4_inputs_0
+        input: ref('int_reported_financial_periods')
+        rows:
+          - &q4_period
+            metric_code: "revenue"
+            concept_priority: 1
+            cik: "0000320193"
+            accession_number: "annual"
+            source_occurrence_id: "annual-revenue"
+            source_document_name: "annual.xml"
+            source_sha256: "annual-checksum"
+            source_ordinal: 3
+            processing_run_id: "silver-fixture"
+            parser_version: "1"
+            schema_version: "1"
+            concept_namespace: "http://fasb.org/us-gaap/2026"
+            concept_local_name: "RevenueFromContractWithCustomerExcludingAssessedTax"
+            raw_value: "100.000000000000000002"
+            value_decimal: "100.000000000000000002"
+            decimals: null
+            precision: "18"
+            unit_ref: "annual-unit"
+            unit_expression: "{http://www.xbrl.org/2003/iso4217}USD"
+            context_ref: "annual-context"
+            entity_scheme: "http://www.sec.gov/CIK"
+            entity_identifier: "320193"
+            period_kind: "duration"
+            period_start: "2024-09-29"
+            period_end: "2025-09-27"
+            period_instant: null
+            dimension_count: 0
+            has_dimensions: false
+            duration_days: 364
+            is_usd: true
+            form: "10-K"
+            filing_date: "2025-10-31"
+            report_date: "2025-09-27"
+            metadata_run_id: "metadata-fixture"
+            submissions_sha256: "submissions-fixture"
+            period_label: "reported_duration"
+            selection_rule_version: "1"
+            selection_reason: "AGREEING_ELIGIBLE_OCCURRENCES"
+            supporting_occurrence_count: 2
+            supporting_occurrence_ids: ["annual-revenue", "annual-revenue-support"]
+            fiscal_year_focus: 2025
+            fiscal_period_focus: "FY"
+            document_period_end_date: "2025-09-27"
+            fiscal_metadata_status: "PARTIAL"
+            fiscal_extraction_version: "1"
+            fiscal_metadata_run_id: "metadata-fixture"
+            fiscal_submissions_sha256: "submissions-fixture"
+            period_classification: "annual"
+            period_rule_version: "1"
+            period_classification_reason: "Synthetic classified financial period."
+            period_issue_code: null
+          - <<: *q4_period
+            accession_number: "nine-month"
+            source_occurrence_id: "nine-month-revenue"
+            source_document_name: "nine-month.xml"
+            source_sha256: "nine-month-checksum"
+            concept_namespace: "http://fasb.org/us-gaap/2025"
+            raw_value: "100.000000000000000001"
+            value_decimal: "100.000000000000000001"
+            decimals: "-6"
+            precision: null
+            unit_ref: "old-unit"
+            context_ref: "old-context"
+            period_end: "2025-06-28"
+            duration_days: 273
+            form: "10-Q"
+            filing_date: "2025-07-31"
+            report_date: "2025-06-28"
+            supporting_occurrence_ids: ["nine-month-revenue", "nine-month-revenue-support"]
+            fiscal_period_focus: "Q3"
+            document_period_end_date: "2025-06-28"
+            fiscal_metadata_status: "COMPLETE"
+            period_classification: "year_to_date"
+          - <<: *q4_period
+            metric_code: "net_income"
+            source_occurrence_id: "annual-net_income"
+            concept_local_name: "NetIncomeLoss"
+            raw_value: "10"
+            value_decimal: "10"
+            form: "10-K/A"
+            supporting_occurrence_ids: ["annual-net_income", "annual-net_income-support"]
+          - <<: *q4_period
+            metric_code: "net_income"
+            accession_number: "nine-month"
+            source_occurrence_id: "nine-month-net_income"
+            source_document_name: "nine-month.xml"
+            source_sha256: "nine-month-checksum"
+            concept_namespace: "http://fasb.org/us-gaap/2025"
+            concept_local_name: "NetIncomeLoss"
+            raw_value: "12"
+            value_decimal: "12"
+            decimals: "-6"
+            precision: null
+            unit_ref: "old-unit"
+            context_ref: "old-context"
+            period_end: "2025-06-28"
+            duration_days: 273
+            form: "10-Q"
+            filing_date: "2025-07-31"
+            report_date: "2025-06-28"
+            supporting_occurrence_ids: ["nine-month-net_income", "nine-month-net_income-support"]
+            fiscal_period_focus: "Q3"
+            document_period_end_date: "2025-06-28"
+            fiscal_metadata_status: "COMPLETE"
+            period_classification: "year_to_date"
+          - <<: *q4_period
+            metric_code: "operating_cash_flow"
+            source_occurrence_id: "annual-operating_cash_flow"
+            concept_local_name: "NetCashProvidedByUsedInOperatingActivities"
+            raw_value: "100"
+            value_decimal: "100"
+            supporting_occurrence_ids: ["annual-operating_cash_flow", "annual-operating_cash_flow-support"]
+          - <<: *q4_period
+            metric_code: "operating_cash_flow"
+            accession_number: "nine-month"
+            source_occurrence_id: "nine-month-operating_cash_flow"
+            source_document_name: "nine-month.xml"
+            source_sha256: "nine-month-checksum"
+            concept_namespace: "http://fasb.org/us-gaap/2025"
+            concept_local_name: "NetCashProvidedByUsedInOperatingActivities"
+            raw_value: "100"
+            value_decimal: "100"
+            decimals: "-6"
+            precision: null
+            unit_ref: "old-unit"
+            context_ref: "old-context"
+            period_end: "2025-06-28"
+            duration_days: 273
+            form: "10-Q"
+            filing_date: "2025-07-31"
+            report_date: "2025-06-28"
+            supporting_occurrence_ids: ["nine-month-operating_cash_flow", "nine-month-operating_cash_flow-support"]
+            fiscal_period_focus: "Q3"
+            document_period_end_date: "2025-06-28"
+            fiscal_metadata_status: "COMPLETE"
+            period_classification: "year_to_date"
+          - <<: *q4_period
+            metric_code: "capital_expenditures"
+            source_occurrence_id: "annual-capital_expenditures"
+            concept_local_name: "PaymentsToAcquirePropertyPlantAndEquipment"
+            raw_value: "-8.500000000000000003"
+            value_decimal: "-8.500000000000000003"
+            supporting_occurrence_ids: ["annual-capital_expenditures", "annual-capital_expenditures-support"]
+          - <<: *q4_period
+            metric_code: "capital_expenditures"
+            accession_number: "nine-month"
+            source_occurrence_id: "nine-month-capital_expenditures"
+            source_document_name: "nine-month.xml"
+            source_sha256: "nine-month-checksum"
+            concept_namespace: "http://fasb.org/us-gaap/2025"
+            concept_local_name: "PaymentsToAcquirePropertyPlantAndEquipment"
+            raw_value: "-3.250000000000000001"
+            value_decimal: "-3.250000000000000001"
+            decimals: "-6"
+            precision: null
+            unit_ref: "old-unit"
+            context_ref: "old-context"
+            period_end: "2025-06-28"
+            duration_days: 273
+            form: "10-Q/A"
+            filing_date: "2025-07-31"
+            report_date: "2025-06-28"
+            supporting_occurrence_ids: ["nine-month-capital_expenditures", "nine-month-capital_expenditures-support"]
+            fiscal_period_focus: "Q3"
+            document_period_end_date: "2025-06-28"
+            fiscal_metadata_status: "COMPLETE"
+            period_classification: "year_to_date"
+          - <<: *q4_period
+            accession_number: "nine-month"
+            source_occurrence_id: "q3-quarter-revenue"
+            source_document_name: "nine-month.xml"
+            source_sha256: "nine-month-checksum"
+            concept_namespace: "http://fasb.org/us-gaap/2025"
+            raw_value: "20"
+            value_decimal: "20"
+            decimals: "-6"
+            precision: null
+            unit_ref: "old-unit"
+            context_ref: "old-context"
+            period_start: "2025-03-30"
+            period_end: "2025-06-28"
+            duration_days: 91
+            form: "10-Q"
+            filing_date: "2025-07-31"
+            report_date: "2025-06-28"
+            supporting_occurrence_ids: ["q3-quarter-revenue"]
+            fiscal_period_focus: "Q3"
+            document_period_end_date: "2025-06-28"
+            fiscal_metadata_status: "COMPLETE"
+            period_classification: "quarter"
+          - <<: *q4_period
+            metric_code: "diluted_eps"
+            accession_number: "unsupported-annual"
+            source_occurrence_id: "unsupported-annual-diluted_eps"
+            source_document_name: "unsupported-annual.xml"
+            source_sha256: "unsupported-annual-checksum"
+            concept_namespace: "http://fasb.org/us-gaap/2025"
+            concept_local_name: "EarningsPerShareDiluted"
+            raw_value: "20"
+            value_decimal: "20"
+            decimals: "-6"
+            precision: null
+            unit_ref: "old-unit"
+            context_ref: "old-context"
+            supporting_occurrence_ids: ["unsupported-annual-diluted_eps", "unsupported-annual-diluted_eps-support"]
+            fiscal_metadata_status: "COMPLETE"
+          - <<: *q4_period
+            metric_code: "diluted_eps"
+            accession_number: "unsupported-q3"
+            source_occurrence_id: "unsupported-q3-diluted_eps"
+            source_document_name: "unsupported-q3.xml"
+            source_sha256: "unsupported-q3-checksum"
+            concept_namespace: "http://fasb.org/us-gaap/2025"
+            concept_local_name: "EarningsPerShareDiluted"
+            raw_value: "10"
+            value_decimal: "10"
+            decimals: "-6"
+            precision: null
+            unit_ref: "old-unit"
+            context_ref: "old-context"
+            period_end: "2025-06-28"
+            duration_days: 273
+            form: "10-Q"
+            filing_date: "2025-07-31"
+            report_date: "2025-06-28"
+            supporting_occurrence_ids: ["unsupported-q3-diluted_eps", "unsupported-q3-diluted_eps-support"]
+            fiscal_period_focus: "Q3"
+            document_period_end_date: "2025-06-28"
+            fiscal_metadata_status: "COMPLETE"
+            period_classification: "year_to_date"
+          - <<: *q4_period
+            metric_code: "ratio"
+            accession_number: "unsupported-annual"
+            source_occurrence_id: "unsupported-annual-ratio"
+            source_document_name: "unsupported-annual.xml"
+            source_sha256: "unsupported-annual-checksum"
+            concept_namespace: "http://fasb.org/us-gaap/2025"
+            concept_local_name: "UnsupportedRatio"
+            raw_value: "20"
+            value_decimal: "20"
+            decimals: "-6"
+            precision: null
+            unit_ref: "old-unit"
+            context_ref: "old-context"
+            supporting_occurrence_ids: ["unsupported-annual-ratio", "unsupported-annual-ratio-support"]
+            fiscal_metadata_status: "COMPLETE"
+          - <<: *q4_period
+            metric_code: "ratio"
+            accession_number: "unsupported-q3"
+            source_occurrence_id: "unsupported-q3-ratio"
+            source_document_name: "unsupported-q3.xml"
+            source_sha256: "unsupported-q3-checksum"
+            concept_namespace: "http://fasb.org/us-gaap/2025"
+            concept_local_name: "UnsupportedRatio"
+            raw_value: "10"
+            value_decimal: "10"
+            decimals: "-6"
+            precision: null
+            unit_ref: "old-unit"
+            context_ref: "old-context"
+            period_end: "2025-06-28"
+            duration_days: 273
+            form: "10-Q"
+            filing_date: "2025-07-31"
+            report_date: "2025-06-28"
+            supporting_occurrence_ids: ["unsupported-q3-ratio", "unsupported-q3-ratio-support"]
+            fiscal_period_focus: "Q3"
+            document_period_end_date: "2025-06-28"
+            fiscal_metadata_status: "COMPLETE"
+            period_classification: "year_to_date"
+          - <<: *q4_period
+            metric_code: "total_assets"
+            accession_number: "unsupported-annual"
+            source_occurrence_id: "unsupported-annual-total_assets"
+            source_document_name: "unsupported-annual.xml"
+            source_sha256: "unsupported-annual-checksum"
+            concept_namespace: "http://fasb.org/us-gaap/2025"
+            concept_local_name: "Assets"
+            raw_value: "20"
+            value_decimal: "20"
+            decimals: "-6"
+            precision: null
+            unit_ref: "old-unit"
+            context_ref: "old-context"
+            supporting_occurrence_ids: ["unsupported-annual-total_assets", "unsupported-annual-total_assets-support"]
+            fiscal_metadata_status: "COMPLETE"
+          - <<: *q4_period
+            metric_code: "total_assets"
+            accession_number: "unsupported-q3"
+            source_occurrence_id: "unsupported-q3-total_assets"
+            source_document_name: "unsupported-q3.xml"
+            source_sha256: "unsupported-q3-checksum"
+            concept_namespace: "http://fasb.org/us-gaap/2025"
+            concept_local_name: "Assets"
+            raw_value: "10"
+            value_decimal: "10"
+            decimals: "-6"
+            precision: null
+            unit_ref: "old-unit"
+            context_ref: "old-context"
+            period_end: "2025-06-28"
+            duration_days: 273
+            form: "10-Q"
+            filing_date: "2025-07-31"
+            report_date: "2025-06-28"
+            supporting_occurrence_ids: ["unsupported-q3-total_assets", "unsupported-q3-total_assets-support"]
+            fiscal_period_focus: "Q3"
+            document_period_end_date: "2025-06-28"
+            fiscal_metadata_status: "COMPLETE"
+            period_classification: "year_to_date"
+          - <<: *q4_period
+            metric_code: "operating_cash_flow"
+            accession_number: "unclassified"
+            source_occurrence_id: "unclassified-operating_cash_flow"
+            source_document_name: "unclassified.xml"
+            source_sha256: "unclassified-checksum"
+            concept_namespace: "http://fasb.org/us-gaap/2025"
+            concept_local_name: "NetCashProvidedByUsedInOperatingActivities"
+            raw_value: "100"
+            value_decimal: "100"
+            decimals: "-6"
+            precision: null
+            unit_ref: "old-unit"
+            context_ref: "old-context"
+            supporting_occurrence_ids: ["unclassified-operating_cash_flow", "unclassified-operating_cash_flow-support"]
+            fiscal_metadata_status: "COMPLETE"
+            period_classification: "unclassified"
+            period_issue_code: "UNSUPPORTED_DURATION"
+          - <<: *q4_period
+            metric_code: "operating_cash_flow"
+            cik: "0000000099"
+            accession_number: "reported-quarter"
+            source_occurrence_id: "reported-quarter-operating_cash_flow"
+            source_document_name: "reported-quarter.xml"
+            source_sha256: "reported-quarter-checksum"
+            concept_namespace: "http://fasb.org/us-gaap/2025"
+            concept_local_name: "NetCashProvidedByUsedInOperatingActivities"
+            raw_value: "100"
+            value_decimal: "100"
+            decimals: "-6"
+            precision: null
+            unit_ref: "old-unit"
+            context_ref: "old-context"
+            supporting_occurrence_ids: ["reported-quarter-operating_cash_flow", "reported-quarter-operating_cash_flow-support"]
+            fiscal_metadata_status: "COMPLETE"
+          - <<: *q4_period
+            metric_code: "operating_cash_flow"
+            cik: "0000000099"
+            accession_number: "reported-quarter"
+            source_occurrence_id: "already-reported-quarter"
+            source_document_name: "reported-quarter.xml"
+            source_sha256: "reported-quarter-checksum"
+            concept_namespace: "http://fasb.org/us-gaap/2025"
+            concept_local_name: "NetCashProvidedByUsedInOperatingActivities"
+            raw_value: "100"
+            value_decimal: "100"
+            decimals: "-6"
+            precision: null
+            unit_ref: "old-unit"
+            context_ref: "old-context"
+            period_start: "2025-06-29"
+            supporting_occurrence_ids: ["reported-quarter-operating_cash_flow", "reported-quarter-operating_cash_flow-support"]
+            fiscal_metadata_status: "COMPLETE"
+            period_classification: "quarter"
+          - <<: *q4_period
+            metric_code: "operating_cash_flow"
+            cik: "0000000098"
+            accession_number: "wrong-annual-form"
+            source_occurrence_id: "wrong-annual-form-operating_cash_flow"
+            source_document_name: "wrong-annual-form.xml"
+            source_sha256: "wrong-annual-form-checksum"
+            concept_namespace: "http://fasb.org/us-gaap/2025"
+            concept_local_name: "NetCashProvidedByUsedInOperatingActivities"
+            raw_value: "100"
+            value_decimal: "100"
+            decimals: "-6"
+            precision: null
+            unit_ref: "old-unit"
+            context_ref: "old-context"
+            form: "10-Q"
+            supporting_occurrence_ids: ["wrong-annual-form-operating_cash_flow", "wrong-annual-form-operating_cash_flow-support"]
+            fiscal_metadata_status: "COMPLETE"
+          - <<: *q4_period
+            metric_code: "operating_cash_flow"
+            cik: "0000000097"
+            accession_number: "wrong-annual-focus"
+            source_occurrence_id: "wrong-annual-focus-operating_cash_flow"
+            source_document_name: "wrong-annual-focus.xml"
+            source_sha256: "wrong-annual-focus-checksum"
+            concept_namespace: "http://fasb.org/us-gaap/2025"
+            concept_local_name: "NetCashProvidedByUsedInOperatingActivities"
+            raw_value: "100"
+            value_decimal: "100"
+            decimals: "-6"
+            precision: null
+            unit_ref: "old-unit"
+            context_ref: "old-context"
+            supporting_occurrence_ids: ["wrong-annual-focus-operating_cash_flow", "wrong-annual-focus-operating_cash_flow-support"]
+            fiscal_period_focus: "Q3"
+            fiscal_metadata_status: "COMPLETE"
+    expect:
+      rows: &q4_issues_0 []
+  - name: q4_four_metrics_and_dual_input_evidence_derived
+    model: int_derived_q4_financial_metrics
+    description: "All four metrics derive Q4 on the annual accession while FY remains on its source. Independent accuracy fields, ordered supporting lists, taxonomy and document-scoped IDs survive. PARTIAL classified metadata is usable; Q3 quarters cannot replace YTD. EPS, ratios, balances, unclassified inputs and annual targets with reported quarters produce no outcomes."
+    given:
+      - *q4_inputs_0
+      - input: ref('int_q4_financial_metric_derivation_issues')
+        rows: *q4_issues_0
+    expect:
+      rows:
+        - {cik: "0000320193", accession_number: "annual",
+           metric_code: "revenue", form: "10-K",
+           filing_date: "2025-10-31", report_date: "2025-09-27",
+           fiscal_year_focus: 2025, fiscal_period_focus: "Q4",
+           period_kind: "duration", period_start: "2025-06-29",
+           period_end: "2025-09-27", period_instant: null,
+           period_label: "derived_quarter", value_origin: "derived",
+           value_decimal: "0.000000000000000001", unit_expression: "{http://www.xbrl.org/2003/iso4217}USD",
+           derivation_rule_version: "1", derivation_method: "ANNUAL_MINUS_Q3_YTD",
+           current_source_occurrence_id: "annual-revenue", current_source_document_name: "annual.xml",
+           current_source_sha256: "annual-checksum", current_value_decimal: "100.000000000000000002",
+           current_supporting_occurrence_ids: ["annual-revenue", "annual-revenue-support"], previous_accession_number: "nine-month",
+           previous_source_occurrence_id: "nine-month-revenue", previous_source_document_name: "nine-month.xml",
+           previous_source_sha256: "nine-month-checksum", previous_value_decimal: "100.000000000000000001",
+           previous_supporting_occurrence_ids: ["nine-month-revenue", "nine-month-revenue-support"], cumulative_period_start: "2024-09-29",
+           previous_period_end: "2025-06-28", current_decimals: null,
+           current_precision: "18", previous_decimals: "-6",
+           previous_precision: null}
+        - {cik: "0000320193", accession_number: "annual",
+           metric_code: "net_income", form: "10-K/A",
+           filing_date: "2025-10-31", report_date: "2025-09-27",
+           fiscal_year_focus: 2025, fiscal_period_focus: "Q4",
+           period_kind: "duration", period_start: "2025-06-29",
+           period_end: "2025-09-27", period_instant: null,
+           period_label: "derived_quarter", value_origin: "derived",
+           value_decimal: "-2.000000000000000000", unit_expression: "{http://www.xbrl.org/2003/iso4217}USD",
+           derivation_rule_version: "1", derivation_method: "ANNUAL_MINUS_Q3_YTD",
+           current_source_occurrence_id: "annual-net_income", current_source_document_name: "annual.xml",
+           current_source_sha256: "annual-checksum", current_value_decimal: "10",
+           current_supporting_occurrence_ids: ["annual-net_income", "annual-net_income-support"], previous_accession_number: "nine-month",
+           previous_source_occurrence_id: "nine-month-net_income", previous_source_document_name: "nine-month.xml",
+           previous_source_sha256: "nine-month-checksum", previous_value_decimal: "12",
+           previous_supporting_occurrence_ids: ["nine-month-net_income", "nine-month-net_income-support"], cumulative_period_start: "2024-09-29",
+           previous_period_end: "2025-06-28", current_decimals: null,
+           current_precision: "18", previous_decimals: "-6",
+           previous_precision: null}
+        - {cik: "0000320193", accession_number: "annual",
+           metric_code: "operating_cash_flow", form: "10-K",
+           filing_date: "2025-10-31", report_date: "2025-09-27",
+           fiscal_year_focus: 2025, fiscal_period_focus: "Q4",
+           period_kind: "duration", period_start: "2025-06-29",
+           period_end: "2025-09-27", period_instant: null,
+           period_label: "derived_quarter", value_origin: "derived",
+           value_decimal: "0.000000000000000000", unit_expression: "{http://www.xbrl.org/2003/iso4217}USD",
+           derivation_rule_version: "1", derivation_method: "ANNUAL_MINUS_Q3_YTD",
+           current_source_occurrence_id: "annual-operating_cash_flow", current_source_document_name: "annual.xml",
+           current_source_sha256: "annual-checksum", current_value_decimal: "100",
+           current_supporting_occurrence_ids: ["annual-operating_cash_flow", "annual-operating_cash_flow-support"], previous_accession_number: "nine-month",
+           previous_source_occurrence_id: "nine-month-operating_cash_flow", previous_source_document_name: "nine-month.xml",
+           previous_source_sha256: "nine-month-checksum", previous_value_decimal: "100",
+           previous_supporting_occurrence_ids: ["nine-month-operating_cash_flow", "nine-month-operating_cash_flow-support"], cumulative_period_start: "2024-09-29",
+           previous_period_end: "2025-06-28", current_decimals: null,
+           current_precision: "18", previous_decimals: "-6",
+           previous_precision: null}
+        - {cik: "0000320193", accession_number: "annual",
+           metric_code: "capital_expenditures", form: "10-K",
+           filing_date: "2025-10-31", report_date: "2025-09-27",
+           fiscal_year_focus: 2025, fiscal_period_focus: "Q4",
+           period_kind: "duration", period_start: "2025-06-29",
+           period_end: "2025-09-27", period_instant: null,
+           period_label: "derived_quarter", value_origin: "derived",
+           value_decimal: "-5.250000000000000002", unit_expression: "{http://www.xbrl.org/2003/iso4217}USD",
+           derivation_rule_version: "1", derivation_method: "ANNUAL_MINUS_Q3_YTD",
+           current_source_occurrence_id: "annual-capital_expenditures", current_source_document_name: "annual.xml",
+           current_source_sha256: "annual-checksum", current_value_decimal: "-8.500000000000000003",
+           current_supporting_occurrence_ids: ["annual-capital_expenditures", "annual-capital_expenditures-support"], previous_accession_number: "nine-month",
+           previous_source_occurrence_id: "nine-month-capital_expenditures", previous_source_document_name: "nine-month.xml",
+           previous_source_sha256: "nine-month-checksum", previous_value_decimal: "-3.250000000000000001",
+           previous_supporting_occurrence_ids: ["nine-month-capital_expenditures", "nine-month-capital_expenditures-support"], cumulative_period_start: "2024-09-29",
+           previous_period_end: "2025-06-28", current_decimals: null,
+           current_precision: "18", previous_decimals: "-6",
+           previous_precision: null}
+  - name: q4_missing_fiscal_roles_and_separation_issues
+    model: int_q4_financial_metric_derivation_issues
+    description: "Another company, reported fiscal year or metric cannot provide Q3 YTD. Q3 reported quarters, unclassified rows and the same accession are excluded; missing inputs are warnings with empty evidence."
+    given:
+      - &q4_inputs_1
+        input: ref('int_reported_financial_periods')
+        rows:
+          - <<: *q4_period
+            metric_code: "operating_cash_flow"
+            cik: "0000000002"
+            accession_number: "missing"
+            source_occurrence_id: "missing-operating_cash_flow"
+            source_document_name: "missing.xml"
+            source_sha256: "missing-checksum"
+            concept_namespace: "http://fasb.org/us-gaap/2025"
+            concept_local_name: "NetCashProvidedByUsedInOperatingActivities"
+            raw_value: "250"
+            value_decimal: "250"
+            decimals: "-6"
+            precision: null
+            unit_ref: "old-unit"
+            context_ref: "old-context"
+            supporting_occurrence_ids: ["missing-operating_cash_flow", "missing-operating_cash_flow-support"]
+            fiscal_metadata_status: "COMPLETE"
+          - <<: *q4_period
+            metric_code: "operating_cash_flow"
+            cik: "0000000003"
+            accession_number: "wrong-company"
+            source_occurrence_id: "wrong-company-operating_cash_flow"
+            source_document_name: "wrong-company.xml"
+            source_sha256: "wrong-company-checksum"
+            concept_namespace: "http://fasb.org/us-gaap/2025"
+            concept_local_name: "NetCashProvidedByUsedInOperatingActivities"
+            raw_value: "250"
+            value_decimal: "250"
+            decimals: "-6"
+            precision: null
+            unit_ref: "old-unit"
+            context_ref: "old-context"
+            supporting_occurrence_ids: ["wrong-company-operating_cash_flow", "wrong-company-operating_cash_flow-support"]
+            fiscal_metadata_status: "COMPLETE"
+          - <<: *q4_period
+            metric_code: "operating_cash_flow"
+            cik: "0000000096"
+            accession_number: "wrong-company-previous"
+            source_occurrence_id: "wrong-company-previous-operating_cash_flow"
+            source_document_name: "wrong-company-previous.xml"
+            source_sha256: "wrong-company-previous-checksum"
+            concept_namespace: "http://fasb.org/us-gaap/2025"
+            concept_local_name: "NetCashProvidedByUsedInOperatingActivities"
+            raw_value: "100"
+            value_decimal: "100"
+            decimals: "-6"
+            precision: null
+            unit_ref: "old-unit"
+            context_ref: "old-context"
+            period_end: "2025-06-28"
+            duration_days: 273
+            form: "10-Q"
+            filing_date: "2025-07-31"
+            report_date: "2025-06-28"
+            supporting_occurrence_ids: ["wrong-company-previous-operating_cash_flow", "wrong-company-previous-operating_cash_flow-support"]
+            fiscal_period_focus: "Q3"
+            document_period_end_date: "2025-06-28"
+            fiscal_metadata_status: "COMPLETE"
+            period_classification: "year_to_date"
+          - <<: *q4_period
+            metric_code: "operating_cash_flow"
+            cik: "0000000004"
+            accession_number: "wrong-year"
+            source_occurrence_id: "wrong-year-operating_cash_flow"
+            source_document_name: "wrong-year.xml"
+            source_sha256: "wrong-year-checksum"
+            concept_namespace: "http://fasb.org/us-gaap/2025"
+            concept_local_name: "NetCashProvidedByUsedInOperatingActivities"
+            raw_value: "250"
+            value_decimal: "250"
+            decimals: "-6"
+            precision: null
+            unit_ref: "old-unit"
+            context_ref: "old-context"
+            supporting_occurrence_ids: ["wrong-year-operating_cash_flow", "wrong-year-operating_cash_flow-support"]
+            fiscal_metadata_status: "COMPLETE"
+          - <<: *q4_period
+            metric_code: "operating_cash_flow"
+            cik: "0000000004"
+            accession_number: "wrong-year-previous"
+            source_occurrence_id: "wrong-year-previous-operating_cash_flow"
+            source_document_name: "wrong-year-previous.xml"
+            source_sha256: "wrong-year-previous-checksum"
+            concept_namespace: "http://fasb.org/us-gaap/2025"
+            concept_local_name: "NetCashProvidedByUsedInOperatingActivities"
+            raw_value: "100"
+            value_decimal: "100"
+            decimals: "-6"
+            precision: null
+            unit_ref: "old-unit"
+            context_ref: "old-context"
+            period_end: "2025-06-28"
+            duration_days: 273
+            form: "10-Q"
+            filing_date: "2025-07-31"
+            report_date: "2025-06-28"
+            supporting_occurrence_ids: ["wrong-year-previous-operating_cash_flow", "wrong-year-previous-operating_cash_flow-support"]
+            fiscal_year_focus: 2024
+            fiscal_period_focus: "Q3"
+            document_period_end_date: "2025-06-28"
+            fiscal_metadata_status: "COMPLETE"
+            period_classification: "year_to_date"
+          - <<: *q4_period
+            metric_code: "operating_cash_flow"
+            cik: "0000000005"
+            accession_number: "wrong-metric"
+            source_occurrence_id: "wrong-metric-operating_cash_flow"
+            source_document_name: "wrong-metric.xml"
+            source_sha256: "wrong-metric-checksum"
+            concept_namespace: "http://fasb.org/us-gaap/2025"
+            concept_local_name: "NetCashProvidedByUsedInOperatingActivities"
+            raw_value: "250"
+            value_decimal: "250"
+            decimals: "-6"
+            precision: null
+            unit_ref: "old-unit"
+            context_ref: "old-context"
+            supporting_occurrence_ids: ["wrong-metric-operating_cash_flow", "wrong-metric-operating_cash_flow-support"]
+            fiscal_metadata_status: "COMPLETE"
+          - <<: *q4_period
+            metric_code: "capital_expenditures"
+            cik: "0000000005"
+            accession_number: "wrong-metric-previous"
+            source_occurrence_id: "wrong-metric-previous-capital_expenditures"
+            source_document_name: "wrong-metric-previous.xml"
+            source_sha256: "wrong-metric-previous-checksum"
+            concept_namespace: "http://fasb.org/us-gaap/2025"
+            concept_local_name: "PaymentsToAcquirePropertyPlantAndEquipment"
+            raw_value: "100"
+            value_decimal: "100"
+            decimals: "-6"
+            precision: null
+            unit_ref: "old-unit"
+            context_ref: "old-context"
+            period_end: "2025-06-28"
+            duration_days: 273
+            form: "10-Q"
+            filing_date: "2025-07-31"
+            report_date: "2025-06-28"
+            supporting_occurrence_ids: ["wrong-metric-previous-capital_expenditures", "wrong-metric-previous-capital_expenditures-support"]
+            fiscal_period_focus: "Q3"
+            document_period_end_date: "2025-06-28"
+            fiscal_metadata_status: "COMPLETE"
+            period_classification: "year_to_date"
+          - <<: *q4_period
+            metric_code: "operating_cash_flow"
+            cik: "0000000006"
+            accession_number: "only-quarter"
+            source_occurrence_id: "only-quarter-operating_cash_flow"
+            source_document_name: "only-quarter.xml"
+            source_sha256: "only-quarter-checksum"
+            concept_namespace: "http://fasb.org/us-gaap/2025"
+            concept_local_name: "NetCashProvidedByUsedInOperatingActivities"
+            raw_value: "250"
+            value_decimal: "250"
+            decimals: "-6"
+            precision: null
+            unit_ref: "old-unit"
+            context_ref: "old-context"
+            supporting_occurrence_ids: ["only-quarter-operating_cash_flow", "only-quarter-operating_cash_flow-support"]
+            fiscal_metadata_status: "COMPLETE"
+          - <<: *q4_period
+            metric_code: "operating_cash_flow"
+            cik: "0000000006"
+            accession_number: "only-quarter-previous"
+            source_occurrence_id: "only-quarter-previous-operating_cash_flow"
+            source_document_name: "only-quarter-previous.xml"
+            source_sha256: "only-quarter-previous-checksum"
+            concept_namespace: "http://fasb.org/us-gaap/2025"
+            concept_local_name: "NetCashProvidedByUsedInOperatingActivities"
+            raw_value: "100"
+            value_decimal: "100"
+            decimals: "-6"
+            precision: null
+            unit_ref: "old-unit"
+            context_ref: "old-context"
+            period_start: "2025-03-30"
+            period_end: "2025-06-28"
+            duration_days: 91
+            form: "10-Q"
+            filing_date: "2025-07-31"
+            report_date: "2025-06-28"
+            supporting_occurrence_ids: ["only-quarter-previous-operating_cash_flow", "only-quarter-previous-operating_cash_flow-support"]
+            fiscal_period_focus: "Q3"
+            document_period_end_date: "2025-06-28"
+            fiscal_metadata_status: "COMPLETE"
+            period_classification: "quarter"
+          - <<: *q4_period
+            metric_code: "operating_cash_flow"
+            cik: "0000000007"
+            accession_number: "unclassified"
+            source_occurrence_id: "unclassified-operating_cash_flow"
+            source_document_name: "unclassified.xml"
+            source_sha256: "unclassified-checksum"
+            concept_namespace: "http://fasb.org/us-gaap/2025"
+            concept_local_name: "NetCashProvidedByUsedInOperatingActivities"
+            raw_value: "250"
+            value_decimal: "250"
+            decimals: "-6"
+            precision: null
+            unit_ref: "old-unit"
+            context_ref: "old-context"
+            supporting_occurrence_ids: ["unclassified-operating_cash_flow", "unclassified-operating_cash_flow-support"]
+            fiscal_metadata_status: "COMPLETE"
+          - <<: *q4_period
+            metric_code: "operating_cash_flow"
+            cik: "0000000007"
+            accession_number: "unclassified-previous"
+            source_occurrence_id: "unclassified-previous-operating_cash_flow"
+            source_document_name: "unclassified-previous.xml"
+            source_sha256: "unclassified-previous-checksum"
+            concept_namespace: "http://fasb.org/us-gaap/2025"
+            concept_local_name: "NetCashProvidedByUsedInOperatingActivities"
+            raw_value: "100"
+            value_decimal: "100"
+            decimals: "-6"
+            precision: null
+            unit_ref: "old-unit"
+            context_ref: "old-context"
+            period_end: "2025-06-28"
+            duration_days: 273
+            form: "10-Q"
+            filing_date: "2025-07-31"
+            report_date: "2025-06-28"
+            supporting_occurrence_ids: ["unclassified-previous-operating_cash_flow", "unclassified-previous-operating_cash_flow-support"]
+            fiscal_period_focus: "Q3"
+            document_period_end_date: "2025-06-28"
+            fiscal_metadata_status: "COMPLETE"
+            period_classification: "unclassified"
+            period_issue_code: "UNSUPPORTED_DURATION"
+          - <<: *q4_period
+            metric_code: "operating_cash_flow"
+            cik: "0000000008"
+            accession_number: "same-accession"
+            source_occurrence_id: "same-accession-operating_cash_flow"
+            source_document_name: "same-accession.xml"
+            source_sha256: "same-accession-checksum"
+            concept_namespace: "http://fasb.org/us-gaap/2025"
+            concept_local_name: "NetCashProvidedByUsedInOperatingActivities"
+            raw_value: "250"
+            value_decimal: "250"
+            decimals: "-6"
+            precision: null
+            unit_ref: "old-unit"
+            context_ref: "old-context"
+            supporting_occurrence_ids: ["same-accession-operating_cash_flow", "same-accession-operating_cash_flow-support"]
+            fiscal_metadata_status: "COMPLETE"
+          - <<: *q4_period
+            metric_code: "operating_cash_flow"
+            cik: "0000000008"
+            accession_number: "same-accession"
+            source_occurrence_id: "same-accession-operating_cash_flow"
+            source_document_name: "same-accession.xml"
+            source_sha256: "same-accession-checksum"
+            concept_namespace: "http://fasb.org/us-gaap/2025"
+            concept_local_name: "NetCashProvidedByUsedInOperatingActivities"
+            raw_value: "100"
+            value_decimal: "100"
+            decimals: "-6"
+            precision: null
+            unit_ref: "old-unit"
+            context_ref: "old-context"
+            period_end: "2025-06-28"
+            duration_days: 273
+            form: "10-Q"
+            filing_date: "2025-07-31"
+            report_date: "2025-06-28"
+            supporting_occurrence_ids: ["same-accession-operating_cash_flow", "same-accession-operating_cash_flow-support"]
+            fiscal_period_focus: "Q3"
+            document_period_end_date: "2025-06-28"
+            fiscal_metadata_status: "COMPLETE"
+            period_classification: "year_to_date"
+    expect:
+      rows: &q4_issues_1
+        - {cik: "0000000002", accession_number: "missing",
+           metric_code: "operating_cash_flow", fiscal_year_focus: 2025,
+           fiscal_period_focus: "Q4", report_date: "2025-09-27",
+           issue_code: "MISSING_PREVIOUS_CUMULATIVE", severity: "WARNING",
+           current_source_occurrence_id: "missing-operating_cash_flow", previous_source_occurrence_ids: []}
+        - {cik: "0000000003", accession_number: "wrong-company",
+           metric_code: "operating_cash_flow", fiscal_year_focus: 2025,
+           fiscal_period_focus: "Q4", report_date: "2025-09-27",
+           issue_code: "MISSING_PREVIOUS_CUMULATIVE", severity: "WARNING",
+           current_source_occurrence_id: "wrong-company-operating_cash_flow", previous_source_occurrence_ids: []}
+        - {cik: "0000000004", accession_number: "wrong-year",
+           metric_code: "operating_cash_flow", fiscal_year_focus: 2025,
+           fiscal_period_focus: "Q4", report_date: "2025-09-27",
+           issue_code: "MISSING_PREVIOUS_CUMULATIVE", severity: "WARNING",
+           current_source_occurrence_id: "wrong-year-operating_cash_flow", previous_source_occurrence_ids: []}
+        - {cik: "0000000005", accession_number: "wrong-metric",
+           metric_code: "operating_cash_flow", fiscal_year_focus: 2025,
+           fiscal_period_focus: "Q4", report_date: "2025-09-27",
+           issue_code: "MISSING_PREVIOUS_CUMULATIVE", severity: "WARNING",
+           current_source_occurrence_id: "wrong-metric-operating_cash_flow", previous_source_occurrence_ids: []}
+        - {cik: "0000000006", accession_number: "only-quarter",
+           metric_code: "operating_cash_flow", fiscal_year_focus: 2025,
+           fiscal_period_focus: "Q4", report_date: "2025-09-27",
+           issue_code: "MISSING_PREVIOUS_CUMULATIVE", severity: "WARNING",
+           current_source_occurrence_id: "only-quarter-operating_cash_flow", previous_source_occurrence_ids: []}
+        - {cik: "0000000007", accession_number: "unclassified",
+           metric_code: "operating_cash_flow", fiscal_year_focus: 2025,
+           fiscal_period_focus: "Q4", report_date: "2025-09-27",
+           issue_code: "MISSING_PREVIOUS_CUMULATIVE", severity: "WARNING",
+           current_source_occurrence_id: "unclassified-operating_cash_flow", previous_source_occurrence_ids: []}
+        - {cik: "0000000008", accession_number: "same-accession",
+           metric_code: "operating_cash_flow", fiscal_year_focus: 2025,
+           fiscal_period_focus: "Q4", report_date: "2025-09-27",
+           issue_code: "MISSING_PREVIOUS_CUMULATIVE", severity: "WARNING",
+           current_source_occurrence_id: "same-accession-operating_cash_flow", previous_source_occurrence_ids: []}
+  - name: q4_missing_fiscal_roles_and_separation_derived
+    model: int_derived_q4_financial_metrics
+    description: "Another company, reported fiscal year or metric cannot provide Q3 YTD. Q3 reported quarters, unclassified rows and the same accession are excluded; missing inputs are warnings with empty evidence."
+    given:
+      - *q4_inputs_1
+      - input: ref('int_q4_financial_metric_derivation_issues')
+        rows: *q4_issues_1
+    expect:
+      rows: []
+  - name: q4_candidates_counted_before_compatibility_issues
+    model: int_q4_financial_metric_derivation_issues
+    description: "Original/amended equal-valued Q3 predecessors remain ambiguous; one compatible candidate among two still blocks. Current ineligibility takes precedence over ambiguity, and candidate IDs are deterministic despite reversed fixture order."
+    given:
+      - &q4_inputs_2
+        input: ref('int_reported_financial_periods')
+        rows:
+          - <<: *q4_period
+            metric_code: "operating_cash_flow"
+            cik: "0000000010"
+            accession_number: "equal-z"
+            source_occurrence_id: "equal-z-operating_cash_flow"
+            source_document_name: "equal-z.xml"
+            source_sha256: "equal-z-checksum"
+            concept_namespace: "http://fasb.org/us-gaap/2025"
+            concept_local_name: "NetCashProvidedByUsedInOperatingActivities"
+            raw_value: "100"
+            value_decimal: "100"
+            decimals: "-6"
+            precision: null
+            unit_ref: "old-unit"
+            context_ref: "old-context"
+            period_end: "2025-06-28"
+            duration_days: 273
+            form: "10-Q/A"
+            filing_date: "2025-07-31"
+            report_date: "2025-06-28"
+            supporting_occurrence_ids: ["equal-z-operating_cash_flow", "equal-z-operating_cash_flow-support"]
+            fiscal_period_focus: "Q3"
+            document_period_end_date: "2025-06-28"
+            fiscal_metadata_status: "COMPLETE"
+            period_classification: "year_to_date"
+          - <<: *q4_period
+            metric_code: "operating_cash_flow"
+            cik: "0000000010"
+            accession_number: "equal"
+            source_occurrence_id: "equal-operating_cash_flow"
+            source_document_name: "equal.xml"
+            source_sha256: "equal-checksum"
+            concept_namespace: "http://fasb.org/us-gaap/2025"
+            concept_local_name: "NetCashProvidedByUsedInOperatingActivities"
+            raw_value: "100"
+            value_decimal: "100"
+            decimals: "-6"
+            precision: null
+            unit_ref: "old-unit"
+            context_ref: "old-context"
+            supporting_occurrence_ids: ["equal-operating_cash_flow", "equal-operating_cash_flow-support"]
+            fiscal_metadata_status: "COMPLETE"
+          - <<: *q4_period
+            metric_code: "operating_cash_flow"
+            cik: "0000000010"
+            accession_number: "equal-a"
+            source_occurrence_id: "equal-a-operating_cash_flow"
+            source_document_name: "equal-a.xml"
+            source_sha256: "equal-a-checksum"
+            concept_namespace: "http://fasb.org/us-gaap/2025"
+            concept_local_name: "NetCashProvidedByUsedInOperatingActivities"
+            raw_value: "100"
+            value_decimal: "100"
+            decimals: "-6"
+            precision: null
+            unit_ref: "old-unit"
+            context_ref: "old-context"
+            period_end: "2025-06-28"
+            duration_days: 273
+            form: "10-Q"
+            filing_date: "2025-07-31"
+            report_date: "2025-06-28"
+            supporting_occurrence_ids: ["equal-a-operating_cash_flow", "equal-a-operating_cash_flow-support"]
+            fiscal_period_focus: "Q3"
+            document_period_end_date: "2025-06-28"
+            fiscal_metadata_status: "COMPLETE"
+            period_classification: "year_to_date"
+          - <<: *q4_period
+            metric_code: "operating_cash_flow"
+            cik: "0000000011"
+            accession_number: "one-compatible-z"
+            source_occurrence_id: "one-compatible-z-operating_cash_flow"
+            source_document_name: "one-compatible-z.xml"
+            source_sha256: "one-compatible-z-checksum"
+            concept_namespace: "http://fasb.org/us-gaap/2025"
+            concept_local_name: "NetCashProvidedByUsedInOperatingActivities"
+            raw_value: "100"
+            value_decimal: "100"
+            decimals: "-6"
+            precision: null
+            unit_ref: "old-unit"
+            unit_expression: "EUR"
+            context_ref: "old-context"
+            period_start: "2025-09-29"
+            period_end: "2025-06-28"
+            duration_days: 273
+            form: "10-Q/A"
+            filing_date: "2025-07-31"
+            report_date: "2025-06-28"
+            supporting_occurrence_ids: ["one-compatible-z-operating_cash_flow", "one-compatible-z-operating_cash_flow-support"]
+            fiscal_period_focus: "Q3"
+            document_period_end_date: "2025-06-28"
+            fiscal_metadata_status: "COMPLETE"
+            period_classification: "year_to_date"
+          - <<: *q4_period
+            metric_code: "operating_cash_flow"
+            cik: "0000000011"
+            accession_number: "one-compatible"
+            source_occurrence_id: "one-compatible-operating_cash_flow"
+            source_document_name: "one-compatible.xml"
+            source_sha256: "one-compatible-checksum"
+            concept_namespace: "http://fasb.org/us-gaap/2025"
+            concept_local_name: "NetCashProvidedByUsedInOperatingActivities"
+            raw_value: "100"
+            value_decimal: "100"
+            decimals: "-6"
+            precision: null
+            unit_ref: "old-unit"
+            context_ref: "old-context"
+            supporting_occurrence_ids: ["one-compatible-operating_cash_flow", "one-compatible-operating_cash_flow-support"]
+            fiscal_metadata_status: "COMPLETE"
+          - <<: *q4_period
+            metric_code: "operating_cash_flow"
+            cik: "0000000011"
+            accession_number: "one-compatible-a"
+            source_occurrence_id: "one-compatible-a-operating_cash_flow"
+            source_document_name: "one-compatible-a.xml"
+            source_sha256: "one-compatible-a-checksum"
+            concept_namespace: "http://fasb.org/us-gaap/2025"
+            concept_local_name: "NetCashProvidedByUsedInOperatingActivities"
+            raw_value: "100"
+            value_decimal: "100"
+            decimals: "-6"
+            precision: null
+            unit_ref: "old-unit"
+            context_ref: "old-context"
+            period_end: "2025-06-28"
+            duration_days: 273
+            form: "10-Q"
+            filing_date: "2025-07-31"
+            report_date: "2025-06-28"
+            supporting_occurrence_ids: ["one-compatible-a-operating_cash_flow", "one-compatible-a-operating_cash_flow-support"]
+            fiscal_period_focus: "Q3"
+            document_period_end_date: "2025-06-28"
+            fiscal_metadata_status: "COMPLETE"
+            period_classification: "year_to_date"
+          - <<: *q4_period
+            metric_code: "operating_cash_flow"
+            cik: "0000000012"
+            accession_number: "current-invalid-z"
+            source_occurrence_id: "current-invalid-z-operating_cash_flow"
+            source_document_name: "current-invalid-z.xml"
+            source_sha256: "current-invalid-z-checksum"
+            concept_namespace: "http://fasb.org/us-gaap/2025"
+            concept_local_name: "NetCashProvidedByUsedInOperatingActivities"
+            raw_value: "100"
+            value_decimal: "100"
+            decimals: "-6"
+            precision: null
+            unit_ref: "old-unit"
+            context_ref: "old-context"
+            period_end: "2025-06-28"
+            duration_days: 273
+            form: "10-Q/A"
+            filing_date: "2025-07-31"
+            report_date: "2025-06-28"
+            supporting_occurrence_ids: ["current-invalid-z-operating_cash_flow", "current-invalid-z-operating_cash_flow-support"]
+            fiscal_period_focus: "Q3"
+            document_period_end_date: "2025-06-28"
+            fiscal_metadata_status: "COMPLETE"
+            period_classification: "year_to_date"
+          - <<: *q4_period
+            metric_code: "operating_cash_flow"
+            cik: "0000000012"
+            accession_number: "current-invalid"
+            source_occurrence_id: "current-invalid-operating_cash_flow"
+            source_document_name: "current-invalid.xml"
+            source_sha256: "current-invalid-checksum"
+            concept_namespace: "http://fasb.org/us-gaap/2025"
+            concept_local_name: "NetCashProvidedByUsedInOperatingActivities"
+            raw_value: "100"
+            value_decimal: "100"
+            decimals: "-6"
+            precision: null
+            unit_ref: "old-unit"
+            unit_expression: "EUR"
+            context_ref: "old-context"
+            supporting_occurrence_ids: ["current-invalid-operating_cash_flow", "current-invalid-operating_cash_flow-support"]
+            fiscal_metadata_status: "COMPLETE"
+          - <<: *q4_period
+            metric_code: "operating_cash_flow"
+            cik: "0000000012"
+            accession_number: "current-invalid-a"
+            source_occurrence_id: "current-invalid-a-operating_cash_flow"
+            source_document_name: "current-invalid-a.xml"
+            source_sha256: "current-invalid-a-checksum"
+            concept_namespace: "http://fasb.org/us-gaap/2025"
+            concept_local_name: "NetCashProvidedByUsedInOperatingActivities"
+            raw_value: "100"
+            value_decimal: "100"
+            decimals: "-6"
+            precision: null
+            unit_ref: "old-unit"
+            context_ref: "old-context"
+            period_end: "2025-06-28"
+            duration_days: 273
+            form: "10-Q"
+            filing_date: "2025-07-31"
+            report_date: "2025-06-28"
+            supporting_occurrence_ids: ["current-invalid-a-operating_cash_flow", "current-invalid-a-operating_cash_flow-support"]
+            fiscal_period_focus: "Q3"
+            document_period_end_date: "2025-06-28"
+            fiscal_metadata_status: "COMPLETE"
+            period_classification: "year_to_date"
+    expect:
+      rows: &q4_issues_2
+        - {cik: "0000000010", accession_number: "equal",
+           metric_code: "operating_cash_flow", fiscal_year_focus: 2025,
+           fiscal_period_focus: "Q4", report_date: "2025-09-27",
+           issue_code: "AMBIGUOUS_PREVIOUS_CUMULATIVE", severity: "WARNING",
+           current_source_occurrence_id: "equal-operating_cash_flow", previous_source_occurrence_ids: ["equal-a-operating_cash_flow", "equal-z-operating_cash_flow"]}
+        - {cik: "0000000011", accession_number: "one-compatible",
+           metric_code: "operating_cash_flow", fiscal_year_focus: 2025,
+           fiscal_period_focus: "Q4", report_date: "2025-09-27",
+           issue_code: "AMBIGUOUS_PREVIOUS_CUMULATIVE", severity: "WARNING",
+           current_source_occurrence_id: "one-compatible-operating_cash_flow", previous_source_occurrence_ids: ["one-compatible-a-operating_cash_flow", "one-compatible-z-operating_cash_flow"]}
+        - {cik: "0000000012", accession_number: "current-invalid",
+           metric_code: "operating_cash_flow", fiscal_year_focus: 2025,
+           fiscal_period_focus: "Q4", report_date: "2025-09-27",
+           issue_code: "CURRENT_INPUT_INELIGIBLE", severity: "WARNING",
+           current_source_occurrence_id: "current-invalid-operating_cash_flow", previous_source_occurrence_ids: ["current-invalid-a-operating_cash_flow", "current-invalid-z-operating_cash_flow"]}
+  - name: q4_candidates_counted_before_compatibility_derived
+    model: int_derived_q4_financial_metrics
+    description: "Original/amended equal-valued Q3 predecessors remain ambiguous; one compatible candidate among two still blocks. Current ineligibility takes precedence over ambiguity, and candidate IDs are deterministic despite reversed fixture order."
+    given:
+      - *q4_inputs_2
+      - input: ref('int_q4_financial_metric_derivation_issues')
+        rows: *q4_issues_2
+    expect:
+      rows: []
+  - name: q4_pair_checks_and_issue_precedence_issues
+    model: int_q4_financial_metric_derivation_issues
+    description: "Annual/Q3 pair incompatibility, derived duration limits, and current input eligibility have distinct outcomes. Missing numeric values, wrong units, dimensions and duration structure cannot be subtracted."
+    given:
+      - &q4_inputs_3
+        input: ref('int_reported_financial_periods')
+        rows:
+          - <<: *q4_period
+            metric_code: "operating_cash_flow"
+            cik: "0000000020"
+            accession_number: "different-start"
+            source_occurrence_id: "different-start-operating_cash_flow"
+            source_document_name: "different-start.xml"
+            source_sha256: "different-start-checksum"
+            concept_namespace: "http://fasb.org/us-gaap/2025"
+            concept_local_name: "NetCashProvidedByUsedInOperatingActivities"
+            raw_value: "250"
+            value_decimal: "250"
+            decimals: "-6"
+            precision: null
+            unit_ref: "old-unit"
+            context_ref: "old-context"
+            supporting_occurrence_ids: ["different-start-operating_cash_flow", "different-start-operating_cash_flow-support"]
+            fiscal_metadata_status: "COMPLETE"
+          - <<: *q4_period
+            metric_code: "operating_cash_flow"
+            cik: "0000000020"
+            accession_number: "different-start-previous"
+            source_occurrence_id: "different-start-previous-operating_cash_flow"
+            source_document_name: "different-start-previous.xml"
+            source_sha256: "different-start-previous-checksum"
+            concept_namespace: "http://fasb.org/us-gaap/2025"
+            concept_local_name: "NetCashProvidedByUsedInOperatingActivities"
+            raw_value: "100"
+            value_decimal: "100"
+            decimals: "-6"
+            precision: null
+            unit_ref: "old-unit"
+            context_ref: "old-context"
+            period_start: "2025-09-29"
+            period_end: "2025-06-28"
+            duration_days: -92
+            form: "10-Q"
+            filing_date: "2025-07-31"
+            report_date: "2025-06-28"
+            supporting_occurrence_ids: ["different-start-previous-operating_cash_flow", "different-start-previous-operating_cash_flow-support"]
+            fiscal_period_focus: "Q3"
+            document_period_end_date: "2025-06-28"
+            fiscal_metadata_status: "COMPLETE"
+            period_classification: "year_to_date"
+          - <<: *q4_period
+            metric_code: "operating_cash_flow"
+            cik: "0000000021"
+            accession_number: "different-unit"
+            source_occurrence_id: "different-unit-operating_cash_flow"
+            source_document_name: "different-unit.xml"
+            source_sha256: "different-unit-checksum"
+            concept_namespace: "http://fasb.org/us-gaap/2025"
+            concept_local_name: "NetCashProvidedByUsedInOperatingActivities"
+            raw_value: "250"
+            value_decimal: "250"
+            decimals: "-6"
+            precision: null
+            unit_ref: "old-unit"
+            context_ref: "old-context"
+            supporting_occurrence_ids: ["different-unit-operating_cash_flow", "different-unit-operating_cash_flow-support"]
+            fiscal_metadata_status: "COMPLETE"
+          - <<: *q4_period
+            metric_code: "operating_cash_flow"
+            cik: "0000000021"
+            accession_number: "different-unit-previous"
+            source_occurrence_id: "different-unit-previous-operating_cash_flow"
+            source_document_name: "different-unit-previous.xml"
+            source_sha256: "different-unit-previous-checksum"
+            concept_namespace: "http://fasb.org/us-gaap/2025"
+            concept_local_name: "NetCashProvidedByUsedInOperatingActivities"
+            raw_value: "100"
+            value_decimal: "100"
+            decimals: "-6"
+            precision: null
+            unit_ref: "old-unit"
+            unit_expression: "EUR"
+            context_ref: "old-context"
+            period_end: "2025-06-28"
+            duration_days: 273
+            form: "10-Q"
+            filing_date: "2025-07-31"
+            report_date: "2025-06-28"
+            supporting_occurrence_ids: ["different-unit-previous-operating_cash_flow", "different-unit-previous-operating_cash_flow-support"]
+            fiscal_period_focus: "Q3"
+            document_period_end_date: "2025-06-28"
+            fiscal_metadata_status: "COMPLETE"
+            period_classification: "year_to_date"
+          - <<: *q4_period
+            metric_code: "operating_cash_flow"
+            cik: "0000000022"
+            accession_number: "reversed-end"
+            source_occurrence_id: "reversed-end-operating_cash_flow"
+            source_document_name: "reversed-end.xml"
+            source_sha256: "reversed-end-checksum"
+            concept_namespace: "http://fasb.org/us-gaap/2025"
+            concept_local_name: "NetCashProvidedByUsedInOperatingActivities"
+            raw_value: "250"
+            value_decimal: "250"
+            decimals: "-6"
+            precision: null
+            unit_ref: "old-unit"
+            context_ref: "old-context"
+            supporting_occurrence_ids: ["reversed-end-operating_cash_flow", "reversed-end-operating_cash_flow-support"]
+            fiscal_metadata_status: "COMPLETE"
+          - <<: *q4_period
+            metric_code: "operating_cash_flow"
+            cik: "0000000022"
+            accession_number: "reversed-end-previous"
+            source_occurrence_id: "reversed-end-previous-operating_cash_flow"
+            source_document_name: "reversed-end-previous.xml"
+            source_sha256: "reversed-end-previous-checksum"
+            concept_namespace: "http://fasb.org/us-gaap/2025"
+            concept_local_name: "NetCashProvidedByUsedInOperatingActivities"
+            raw_value: "100"
+            value_decimal: "100"
+            decimals: "-6"
+            precision: null
+            unit_ref: "old-unit"
+            context_ref: "old-context"
+            period_end: "2025-09-28"
+            duration_days: 365
+            form: "10-Q"
+            filing_date: "2025-07-31"
+            report_date: "2025-09-28"
+            supporting_occurrence_ids: ["reversed-end-previous-operating_cash_flow", "reversed-end-previous-operating_cash_flow-support"]
+            fiscal_period_focus: "Q3"
+            document_period_end_date: "2025-06-28"
+            fiscal_metadata_status: "COMPLETE"
+            period_classification: "year_to_date"
+          - <<: *q4_period
+            metric_code: "operating_cash_flow"
+            cik: "0000000023"
+            accession_number: "previous-dimensions"
+            source_occurrence_id: "previous-dimensions-operating_cash_flow"
+            source_document_name: "previous-dimensions.xml"
+            source_sha256: "previous-dimensions-checksum"
+            concept_namespace: "http://fasb.org/us-gaap/2025"
+            concept_local_name: "NetCashProvidedByUsedInOperatingActivities"
+            raw_value: "250"
+            value_decimal: "250"
+            decimals: "-6"
+            precision: null
+            unit_ref: "old-unit"
+            context_ref: "old-context"
+            supporting_occurrence_ids: ["previous-dimensions-operating_cash_flow", "previous-dimensions-operating_cash_flow-support"]
+            fiscal_metadata_status: "COMPLETE"
+          - <<: *q4_period
+            metric_code: "operating_cash_flow"
+            cik: "0000000023"
+            accession_number: "previous-dimensions-previous"
+            source_occurrence_id: "previous-dimensions-previous-operating_cash_flow"
+            source_document_name: "previous-dimensions-previous.xml"
+            source_sha256: "previous-dimensions-previous-checksum"
+            concept_namespace: "http://fasb.org/us-gaap/2025"
+            concept_local_name: "NetCashProvidedByUsedInOperatingActivities"
+            raw_value: "100"
+            value_decimal: "100"
+            decimals: "-6"
+            precision: null
+            unit_ref: "old-unit"
+            context_ref: "old-context"
+            period_end: "2025-06-28"
+            dimension_count: 1
+            has_dimensions: true
+            duration_days: 273
+            form: "10-Q"
+            filing_date: "2025-07-31"
+            report_date: "2025-06-28"
+            supporting_occurrence_ids: ["previous-dimensions-previous-operating_cash_flow", "previous-dimensions-previous-operating_cash_flow-support"]
+            fiscal_period_focus: "Q3"
+            document_period_end_date: "2025-06-28"
+            fiscal_metadata_status: "COMPLETE"
+            period_classification: "year_to_date"
+          - <<: *q4_period
+            metric_code: "operating_cash_flow"
+            cik: "0000000024"
+            accession_number: "previous-null-value"
+            source_occurrence_id: "previous-null-value-operating_cash_flow"
+            source_document_name: "previous-null-value.xml"
+            source_sha256: "previous-null-value-checksum"
+            concept_namespace: "http://fasb.org/us-gaap/2025"
+            concept_local_name: "NetCashProvidedByUsedInOperatingActivities"
+            raw_value: "250"
+            value_decimal: "250"
+            decimals: "-6"
+            precision: null
+            unit_ref: "old-unit"
+            context_ref: "old-context"
+            supporting_occurrence_ids: ["previous-null-value-operating_cash_flow", "previous-null-value-operating_cash_flow-support"]
+            fiscal_metadata_status: "COMPLETE"
+          - <<: *q4_period
+            metric_code: "operating_cash_flow"
+            cik: "0000000024"
+            accession_number: "previous-null-value-previous"
+            source_occurrence_id: "previous-null-value-previous-operating_cash_flow"
+            source_document_name: "previous-null-value-previous.xml"
+            source_sha256: "previous-null-value-previous-checksum"
+            concept_namespace: "http://fasb.org/us-gaap/2025"
+            concept_local_name: "NetCashProvidedByUsedInOperatingActivities"
+            raw_value: "100"
+            value_decimal: null
+            decimals: "-6"
+            precision: null
+            unit_ref: "old-unit"
+            context_ref: "old-context"
+            period_end: "2025-06-28"
+            duration_days: 273
+            form: "10-Q"
+            filing_date: "2025-07-31"
+            report_date: "2025-06-28"
+            supporting_occurrence_ids: ["previous-null-value-previous-operating_cash_flow", "previous-null-value-previous-operating_cash_flow-support"]
+            fiscal_period_focus: "Q3"
+            document_period_end_date: "2025-06-28"
+            fiscal_metadata_status: "COMPLETE"
+            period_classification: "year_to_date"
+          - <<: *q4_period
+            metric_code: "operating_cash_flow"
+            cik: "0000000025"
+            accession_number: "previous-report-date"
+            source_occurrence_id: "previous-report-date-operating_cash_flow"
+            source_document_name: "previous-report-date.xml"
+            source_sha256: "previous-report-date-checksum"
+            concept_namespace: "http://fasb.org/us-gaap/2025"
+            concept_local_name: "NetCashProvidedByUsedInOperatingActivities"
+            raw_value: "250"
+            value_decimal: "250"
+            decimals: "-6"
+            precision: null
+            unit_ref: "old-unit"
+            context_ref: "old-context"
+            supporting_occurrence_ids: ["previous-report-date-operating_cash_flow", "previous-report-date-operating_cash_flow-support"]
+            fiscal_metadata_status: "COMPLETE"
+          - <<: *q4_period
+            metric_code: "operating_cash_flow"
+            cik: "0000000025"
+            accession_number: "previous-report-date-previous"
+            source_occurrence_id: "previous-report-date-previous-operating_cash_flow"
+            source_document_name: "previous-report-date-previous.xml"
+            source_sha256: "previous-report-date-previous-checksum"
+            concept_namespace: "http://fasb.org/us-gaap/2025"
+            concept_local_name: "NetCashProvidedByUsedInOperatingActivities"
+            raw_value: "100"
+            value_decimal: "100"
+            decimals: "-6"
+            precision: null
+            unit_ref: "old-unit"
+            context_ref: "old-context"
+            period_end: "2025-06-28"
+            duration_days: 273
+            form: "10-Q"
+            filing_date: "2025-07-31"
+            report_date: "2025-06-27"
+            supporting_occurrence_ids: ["previous-report-date-previous-operating_cash_flow", "previous-report-date-previous-operating_cash_flow-support"]
+            fiscal_period_focus: "Q3"
+            document_period_end_date: "2025-06-28"
+            fiscal_metadata_status: "COMPLETE"
+            period_classification: "year_to_date"
+          - <<: *q4_period
+            metric_code: "operating_cash_flow"
+            cik: "0000000026"
+            accession_number: "previous-form"
+            source_occurrence_id: "previous-form-operating_cash_flow"
+            source_document_name: "previous-form.xml"
+            source_sha256: "previous-form-checksum"
+            concept_namespace: "http://fasb.org/us-gaap/2025"
+            concept_local_name: "NetCashProvidedByUsedInOperatingActivities"
+            raw_value: "250"
+            value_decimal: "250"
+            decimals: "-6"
+            precision: null
+            unit_ref: "old-unit"
+            context_ref: "old-context"
+            supporting_occurrence_ids: ["previous-form-operating_cash_flow", "previous-form-operating_cash_flow-support"]
+            fiscal_metadata_status: "COMPLETE"
+          - <<: *q4_period
+            metric_code: "operating_cash_flow"
+            cik: "0000000026"
+            accession_number: "previous-form-previous"
+            source_occurrence_id: "previous-form-previous-operating_cash_flow"
+            source_document_name: "previous-form-previous.xml"
+            source_sha256: "previous-form-previous-checksum"
+            concept_namespace: "http://fasb.org/us-gaap/2025"
+            concept_local_name: "NetCashProvidedByUsedInOperatingActivities"
+            raw_value: "100"
+            value_decimal: "100"
+            decimals: "-6"
+            precision: null
+            unit_ref: "old-unit"
+            context_ref: "old-context"
+            period_end: "2025-06-28"
+            duration_days: 273
+            filing_date: "2025-07-31"
+            report_date: "2025-06-28"
+            supporting_occurrence_ids: ["previous-form-previous-operating_cash_flow", "previous-form-previous-operating_cash_flow-support"]
+            fiscal_period_focus: "Q3"
+            document_period_end_date: "2025-06-28"
+            fiscal_metadata_status: "COMPLETE"
+            period_classification: "year_to_date"
+          - <<: *q4_period
+            metric_code: "operating_cash_flow"
+            cik: "0000000027"
+            accession_number: "previous-structure"
+            source_occurrence_id: "previous-structure-operating_cash_flow"
+            source_document_name: "previous-structure.xml"
+            source_sha256: "previous-structure-checksum"
+            concept_namespace: "http://fasb.org/us-gaap/2025"
+            concept_local_name: "NetCashProvidedByUsedInOperatingActivities"
+            raw_value: "250"
+            value_decimal: "250"
+            decimals: "-6"
+            precision: null
+            unit_ref: "old-unit"
+            context_ref: "old-context"
+            supporting_occurrence_ids: ["previous-structure-operating_cash_flow", "previous-structure-operating_cash_flow-support"]
+            fiscal_metadata_status: "COMPLETE"
+          - <<: *q4_period
+            metric_code: "operating_cash_flow"
+            cik: "0000000027"
+            accession_number: "previous-structure-previous"
+            source_occurrence_id: "previous-structure-previous-operating_cash_flow"
+            source_document_name: "previous-structure-previous.xml"
+            source_sha256: "previous-structure-previous-checksum"
+            concept_namespace: "http://fasb.org/us-gaap/2025"
+            concept_local_name: "NetCashProvidedByUsedInOperatingActivities"
+            raw_value: "100"
+            value_decimal: "100"
+            decimals: "-6"
+            precision: null
+            unit_ref: "old-unit"
+            context_ref: "old-context"
+            period_end: "2025-06-28"
+            period_instant: "2025-06-28"
+            duration_days: 273
+            form: "10-Q"
+            filing_date: "2025-07-31"
+            report_date: "2025-06-28"
+            supporting_occurrence_ids: ["previous-structure-previous-operating_cash_flow", "previous-structure-previous-operating_cash_flow-support"]
+            fiscal_period_focus: "Q3"
+            document_period_end_date: "2025-06-28"
+            fiscal_metadata_status: "COMPLETE"
+            period_classification: "year_to_date"
+          - <<: *q4_period
+            metric_code: "operating_cash_flow"
+            cik: "0000000028"
+            accession_number: "duration-79"
+            source_occurrence_id: "duration-79-operating_cash_flow"
+            source_document_name: "duration-79.xml"
+            source_sha256: "duration-79-checksum"
+            concept_namespace: "http://fasb.org/us-gaap/2025"
+            concept_local_name: "NetCashProvidedByUsedInOperatingActivities"
+            raw_value: "250"
+            value_decimal: "250"
+            decimals: "-6"
+            precision: null
+            unit_ref: "old-unit"
+            context_ref: "old-context"
+            period_end: "2025-09-15"
+            report_date: "2025-09-15"
+            supporting_occurrence_ids: ["duration-79-operating_cash_flow", "duration-79-operating_cash_flow-support"]
+            document_period_end_date: "2025-09-15"
+            fiscal_metadata_status: "COMPLETE"
+          - <<: *q4_period
+            metric_code: "operating_cash_flow"
+            cik: "0000000028"
+            accession_number: "duration-79-previous"
+            source_occurrence_id: "duration-79-previous-operating_cash_flow"
+            source_document_name: "duration-79-previous.xml"
+            source_sha256: "duration-79-previous-checksum"
+            concept_namespace: "http://fasb.org/us-gaap/2025"
+            concept_local_name: "NetCashProvidedByUsedInOperatingActivities"
+            raw_value: "100"
+            value_decimal: "100"
+            decimals: "-6"
+            precision: null
+            unit_ref: "old-unit"
+            context_ref: "old-context"
+            period_end: "2025-06-28"
+            duration_days: 273
+            form: "10-Q"
+            filing_date: "2025-07-31"
+            report_date: "2025-06-28"
+            supporting_occurrence_ids: ["duration-79-previous-operating_cash_flow", "duration-79-previous-operating_cash_flow-support"]
+            fiscal_period_focus: "Q3"
+            document_period_end_date: "2025-06-28"
+            fiscal_metadata_status: "COMPLETE"
+            period_classification: "year_to_date"
+          - <<: *q4_period
+            metric_code: "operating_cash_flow"
+            cik: "0000000029"
+            accession_number: "duration-101"
+            source_occurrence_id: "duration-101-operating_cash_flow"
+            source_document_name: "duration-101.xml"
+            source_sha256: "duration-101-checksum"
+            concept_namespace: "http://fasb.org/us-gaap/2025"
+            concept_local_name: "NetCashProvidedByUsedInOperatingActivities"
+            raw_value: "250"
+            value_decimal: "250"
+            decimals: "-6"
+            precision: null
+            unit_ref: "old-unit"
+            context_ref: "old-context"
+            period_end: "2025-10-07"
+            report_date: "2025-10-07"
+            supporting_occurrence_ids: ["duration-101-operating_cash_flow", "duration-101-operating_cash_flow-support"]
+            document_period_end_date: "2025-10-07"
+            fiscal_metadata_status: "COMPLETE"
+          - <<: *q4_period
+            metric_code: "operating_cash_flow"
+            cik: "0000000029"
+            accession_number: "duration-101-previous"
+            source_occurrence_id: "duration-101-previous-operating_cash_flow"
+            source_document_name: "duration-101-previous.xml"
+            source_sha256: "duration-101-previous-checksum"
+            concept_namespace: "http://fasb.org/us-gaap/2025"
+            concept_local_name: "NetCashProvidedByUsedInOperatingActivities"
+            raw_value: "100"
+            value_decimal: "100"
+            decimals: "-6"
+            precision: null
+            unit_ref: "old-unit"
+            context_ref: "old-context"
+            period_end: "2025-06-28"
+            duration_days: 273
+            form: "10-Q"
+            filing_date: "2025-07-31"
+            report_date: "2025-06-28"
+            supporting_occurrence_ids: ["duration-101-previous-operating_cash_flow", "duration-101-previous-operating_cash_flow-support"]
+            fiscal_period_focus: "Q3"
+            document_period_end_date: "2025-06-28"
+            fiscal_metadata_status: "COMPLETE"
+            period_classification: "year_to_date"
+          - <<: *q4_period
+            metric_code: "operating_cash_flow"
+            cik: "0000000040"
+            accession_number: "current-null"
+            source_occurrence_id: "current-null-operating_cash_flow"
+            source_document_name: "current-null.xml"
+            source_sha256: "current-null-checksum"
+            concept_namespace: "http://fasb.org/us-gaap/2025"
+            concept_local_name: "NetCashProvidedByUsedInOperatingActivities"
+            raw_value: "100"
+            value_decimal: null
+            decimals: "-6"
+            precision: null
+            unit_ref: "old-unit"
+            context_ref: "old-context"
+            supporting_occurrence_ids: ["current-null-operating_cash_flow", "current-null-operating_cash_flow-support"]
+            fiscal_metadata_status: "COMPLETE"
+          - <<: *q4_period
+            metric_code: "operating_cash_flow"
+            cik: "0000000041"
+            accession_number: "current-unit"
+            source_occurrence_id: "current-unit-operating_cash_flow"
+            source_document_name: "current-unit.xml"
+            source_sha256: "current-unit-checksum"
+            concept_namespace: "http://fasb.org/us-gaap/2025"
+            concept_local_name: "NetCashProvidedByUsedInOperatingActivities"
+            raw_value: "100"
+            value_decimal: "100"
+            decimals: "-6"
+            precision: null
+            unit_ref: "old-unit"
+            unit_expression: "EUR"
+            context_ref: "old-context"
+            supporting_occurrence_ids: ["current-unit-operating_cash_flow", "current-unit-operating_cash_flow-support"]
+            fiscal_metadata_status: "COMPLETE"
+          - <<: *q4_period
+            metric_code: "operating_cash_flow"
+            cik: "0000000041"
+            accession_number: "current-unit-previous"
+            source_occurrence_id: "current-unit-previous-operating_cash_flow"
+            source_document_name: "current-unit-previous.xml"
+            source_sha256: "current-unit-previous-checksum"
+            concept_namespace: "http://fasb.org/us-gaap/2025"
+            concept_local_name: "NetCashProvidedByUsedInOperatingActivities"
+            raw_value: "100"
+            value_decimal: "100"
+            decimals: "-6"
+            precision: null
+            unit_ref: "old-unit"
+            context_ref: "old-context"
+            period_end: "2025-06-28"
+            duration_days: 273
+            form: "10-Q"
+            filing_date: "2025-07-31"
+            report_date: "2025-06-28"
+            supporting_occurrence_ids: ["current-unit-previous-operating_cash_flow", "current-unit-previous-operating_cash_flow-support"]
+            fiscal_period_focus: "Q3"
+            document_period_end_date: "2025-06-28"
+            fiscal_metadata_status: "COMPLETE"
+            period_classification: "year_to_date"
+          - <<: *q4_period
+            metric_code: "operating_cash_flow"
+            cik: "0000000042"
+            accession_number: "current-dimensions"
+            source_occurrence_id: "current-dimensions-operating_cash_flow"
+            source_document_name: "current-dimensions.xml"
+            source_sha256: "current-dimensions-checksum"
+            concept_namespace: "http://fasb.org/us-gaap/2025"
+            concept_local_name: "NetCashProvidedByUsedInOperatingActivities"
+            raw_value: "100"
+            value_decimal: "100"
+            decimals: "-6"
+            precision: null
+            unit_ref: "old-unit"
+            context_ref: "old-context"
+            dimension_count: 1
+            supporting_occurrence_ids: ["current-dimensions-operating_cash_flow", "current-dimensions-operating_cash_flow-support"]
+            fiscal_metadata_status: "COMPLETE"
+          - <<: *q4_period
+            metric_code: "operating_cash_flow"
+            cik: "0000000042"
+            accession_number: "current-dimensions-previous"
+            source_occurrence_id: "current-dimensions-previous-operating_cash_flow"
+            source_document_name: "current-dimensions-previous.xml"
+            source_sha256: "current-dimensions-previous-checksum"
+            concept_namespace: "http://fasb.org/us-gaap/2025"
+            concept_local_name: "NetCashProvidedByUsedInOperatingActivities"
+            raw_value: "100"
+            value_decimal: "100"
+            decimals: "-6"
+            precision: null
+            unit_ref: "old-unit"
+            context_ref: "old-context"
+            period_end: "2025-06-28"
+            duration_days: 273
+            form: "10-Q"
+            filing_date: "2025-07-31"
+            report_date: "2025-06-28"
+            supporting_occurrence_ids: ["current-dimensions-previous-operating_cash_flow", "current-dimensions-previous-operating_cash_flow-support"]
+            fiscal_period_focus: "Q3"
+            document_period_end_date: "2025-06-28"
+            fiscal_metadata_status: "COMPLETE"
+            period_classification: "year_to_date"
+          - <<: *q4_period
+            metric_code: "operating_cash_flow"
+            cik: "0000000043"
+            accession_number: "current-structure"
+            source_occurrence_id: "current-structure-operating_cash_flow"
+            source_document_name: "current-structure.xml"
+            source_sha256: "current-structure-checksum"
+            concept_namespace: "http://fasb.org/us-gaap/2025"
+            concept_local_name: "NetCashProvidedByUsedInOperatingActivities"
+            raw_value: "100"
+            value_decimal: "100"
+            decimals: "-6"
+            precision: null
+            unit_ref: "old-unit"
+            context_ref: "old-context"
+            period_start: null
+            supporting_occurrence_ids: ["current-structure-operating_cash_flow", "current-structure-operating_cash_flow-support"]
+            fiscal_metadata_status: "COMPLETE"
+          - <<: *q4_period
+            metric_code: "operating_cash_flow"
+            cik: "0000000043"
+            accession_number: "current-structure-previous"
+            source_occurrence_id: "current-structure-previous-operating_cash_flow"
+            source_document_name: "current-structure-previous.xml"
+            source_sha256: "current-structure-previous-checksum"
+            concept_namespace: "http://fasb.org/us-gaap/2025"
+            concept_local_name: "NetCashProvidedByUsedInOperatingActivities"
+            raw_value: "100"
+            value_decimal: "100"
+            decimals: "-6"
+            precision: null
+            unit_ref: "old-unit"
+            context_ref: "old-context"
+            period_end: "2025-06-28"
+            duration_days: 273
+            form: "10-Q"
+            filing_date: "2025-07-31"
+            report_date: "2025-06-28"
+            supporting_occurrence_ids: ["current-structure-previous-operating_cash_flow", "current-structure-previous-operating_cash_flow-support"]
+            fiscal_period_focus: "Q3"
+            document_period_end_date: "2025-06-28"
+            fiscal_metadata_status: "COMPLETE"
+            period_classification: "year_to_date"
+          - <<: *q4_period
+            metric_code: "operating_cash_flow"
+            cik: "0000000044"
+            accession_number: "current-instant"
+            source_occurrence_id: "current-instant-operating_cash_flow"
+            source_document_name: "current-instant.xml"
+            source_sha256: "current-instant-checksum"
+            concept_namespace: "http://fasb.org/us-gaap/2025"
+            concept_local_name: "NetCashProvidedByUsedInOperatingActivities"
+            raw_value: "100"
+            value_decimal: "100"
+            decimals: "-6"
+            precision: null
+            unit_ref: "old-unit"
+            context_ref: "old-context"
+            period_instant: "2025-09-27"
+            supporting_occurrence_ids: ["current-instant-operating_cash_flow", "current-instant-operating_cash_flow-support"]
+            fiscal_metadata_status: "COMPLETE"
+          - <<: *q4_period
+            metric_code: "operating_cash_flow"
+            cik: "0000000044"
+            accession_number: "current-instant-previous"
+            source_occurrence_id: "current-instant-previous-operating_cash_flow"
+            source_document_name: "current-instant-previous.xml"
+            source_sha256: "current-instant-previous-checksum"
+            concept_namespace: "http://fasb.org/us-gaap/2025"
+            concept_local_name: "NetCashProvidedByUsedInOperatingActivities"
+            raw_value: "100"
+            value_decimal: "100"
+            decimals: "-6"
+            precision: null
+            unit_ref: "old-unit"
+            context_ref: "old-context"
+            period_end: "2025-06-28"
+            duration_days: 273
+            form: "10-Q"
+            filing_date: "2025-07-31"
+            report_date: "2025-06-28"
+            supporting_occurrence_ids: ["current-instant-previous-operating_cash_flow", "current-instant-previous-operating_cash_flow-support"]
+            fiscal_period_focus: "Q3"
+            document_period_end_date: "2025-06-28"
+            fiscal_metadata_status: "COMPLETE"
+            period_classification: "year_to_date"
+    expect:
+      rows: &q4_issues_3
+        - {cik: "0000000020", accession_number: "different-start",
+           metric_code: "operating_cash_flow", fiscal_year_focus: 2025,
+           fiscal_period_focus: "Q4", report_date: "2025-09-27",
+           issue_code: "INCOMPATIBLE_CUMULATIVE_INPUTS", severity: "WARNING",
+           current_source_occurrence_id: "different-start-operating_cash_flow", previous_source_occurrence_ids: ["different-start-previous-operating_cash_flow"]}
+        - {cik: "0000000021", accession_number: "different-unit",
+           metric_code: "operating_cash_flow", fiscal_year_focus: 2025,
+           fiscal_period_focus: "Q4", report_date: "2025-09-27",
+           issue_code: "INCOMPATIBLE_CUMULATIVE_INPUTS", severity: "WARNING",
+           current_source_occurrence_id: "different-unit-operating_cash_flow", previous_source_occurrence_ids: ["different-unit-previous-operating_cash_flow"]}
+        - {cik: "0000000022", accession_number: "reversed-end",
+           metric_code: "operating_cash_flow", fiscal_year_focus: 2025,
+           fiscal_period_focus: "Q4", report_date: "2025-09-27",
+           issue_code: "INCOMPATIBLE_CUMULATIVE_INPUTS", severity: "WARNING",
+           current_source_occurrence_id: "reversed-end-operating_cash_flow", previous_source_occurrence_ids: ["reversed-end-previous-operating_cash_flow"]}
+        - {cik: "0000000023", accession_number: "previous-dimensions",
+           metric_code: "operating_cash_flow", fiscal_year_focus: 2025,
+           fiscal_period_focus: "Q4", report_date: "2025-09-27",
+           issue_code: "INCOMPATIBLE_CUMULATIVE_INPUTS", severity: "WARNING",
+           current_source_occurrence_id: "previous-dimensions-operating_cash_flow", previous_source_occurrence_ids: ["previous-dimensions-previous-operating_cash_flow"]}
+        - {cik: "0000000024", accession_number: "previous-null-value",
+           metric_code: "operating_cash_flow", fiscal_year_focus: 2025,
+           fiscal_period_focus: "Q4", report_date: "2025-09-27",
+           issue_code: "INCOMPATIBLE_CUMULATIVE_INPUTS", severity: "WARNING",
+           current_source_occurrence_id: "previous-null-value-operating_cash_flow", previous_source_occurrence_ids: ["previous-null-value-previous-operating_cash_flow"]}
+        - {cik: "0000000025", accession_number: "previous-report-date",
+           metric_code: "operating_cash_flow", fiscal_year_focus: 2025,
+           fiscal_period_focus: "Q4", report_date: "2025-09-27",
+           issue_code: "INCOMPATIBLE_CUMULATIVE_INPUTS", severity: "WARNING",
+           current_source_occurrence_id: "previous-report-date-operating_cash_flow", previous_source_occurrence_ids: ["previous-report-date-previous-operating_cash_flow"]}
+        - {cik: "0000000026", accession_number: "previous-form",
+           metric_code: "operating_cash_flow", fiscal_year_focus: 2025,
+           fiscal_period_focus: "Q4", report_date: "2025-09-27",
+           issue_code: "INCOMPATIBLE_CUMULATIVE_INPUTS", severity: "WARNING",
+           current_source_occurrence_id: "previous-form-operating_cash_flow", previous_source_occurrence_ids: ["previous-form-previous-operating_cash_flow"]}
+        - {cik: "0000000027", accession_number: "previous-structure",
+           metric_code: "operating_cash_flow", fiscal_year_focus: 2025,
+           fiscal_period_focus: "Q4", report_date: "2025-09-27",
+           issue_code: "INCOMPATIBLE_CUMULATIVE_INPUTS", severity: "WARNING",
+           current_source_occurrence_id: "previous-structure-operating_cash_flow", previous_source_occurrence_ids: ["previous-structure-previous-operating_cash_flow"]}
+        - {cik: "0000000028", accession_number: "duration-79",
+           metric_code: "operating_cash_flow", fiscal_year_focus: 2025,
+           fiscal_period_focus: "Q4", report_date: "2025-09-15",
+           issue_code: "UNSUPPORTED_DERIVED_DURATION", severity: "WARNING",
+           current_source_occurrence_id: "duration-79-operating_cash_flow", previous_source_occurrence_ids: ["duration-79-previous-operating_cash_flow"]}
+        - {cik: "0000000029", accession_number: "duration-101",
+           metric_code: "operating_cash_flow", fiscal_year_focus: 2025,
+           fiscal_period_focus: "Q4", report_date: "2025-10-07",
+           issue_code: "UNSUPPORTED_DERIVED_DURATION", severity: "WARNING",
+           current_source_occurrence_id: "duration-101-operating_cash_flow", previous_source_occurrence_ids: ["duration-101-previous-operating_cash_flow"]}
+        - {cik: "0000000040", accession_number: "current-null",
+           metric_code: "operating_cash_flow", fiscal_year_focus: 2025,
+           fiscal_period_focus: "Q4", report_date: "2025-09-27",
+           issue_code: "CURRENT_INPUT_INELIGIBLE", severity: "WARNING",
+           current_source_occurrence_id: "current-null-operating_cash_flow", previous_source_occurrence_ids: []}
+        - {cik: "0000000041", accession_number: "current-unit",
+           metric_code: "operating_cash_flow", fiscal_year_focus: 2025,
+           fiscal_period_focus: "Q4", report_date: "2025-09-27",
+           issue_code: "CURRENT_INPUT_INELIGIBLE", severity: "WARNING",
+           current_source_occurrence_id: "current-unit-operating_cash_flow", previous_source_occurrence_ids: ["current-unit-previous-operating_cash_flow"]}
+        - {cik: "0000000042", accession_number: "current-dimensions",
+           metric_code: "operating_cash_flow", fiscal_year_focus: 2025,
+           fiscal_period_focus: "Q4", report_date: "2025-09-27",
+           issue_code: "CURRENT_INPUT_INELIGIBLE", severity: "WARNING",
+           current_source_occurrence_id: "current-dimensions-operating_cash_flow", previous_source_occurrence_ids: ["current-dimensions-previous-operating_cash_flow"]}
+        - {cik: "0000000043", accession_number: "current-structure",
+           metric_code: "operating_cash_flow", fiscal_year_focus: 2025,
+           fiscal_period_focus: "Q4", report_date: "2025-09-27",
+           issue_code: "CURRENT_INPUT_INELIGIBLE", severity: "WARNING",
+           current_source_occurrence_id: "current-structure-operating_cash_flow", previous_source_occurrence_ids: ["current-structure-previous-operating_cash_flow"]}
+        - {cik: "0000000044", accession_number: "current-instant",
+           metric_code: "operating_cash_flow", fiscal_year_focus: 2025,
+           fiscal_period_focus: "Q4", report_date: "2025-09-27",
+           issue_code: "CURRENT_INPUT_INELIGIBLE", severity: "WARNING",
+           current_source_occurrence_id: "current-instant-operating_cash_flow", previous_source_occurrence_ids: ["current-instant-previous-operating_cash_flow"]}
+  - name: q4_pair_checks_and_issue_precedence_derived
+    model: int_derived_q4_financial_metrics
+    description: "Annual/Q3 pair incompatibility, derived duration limits, and current input eligibility have distinct outcomes. Missing numeric values, wrong units, dimensions and duration structure cannot be subtracted."
+    given:
+      - *q4_inputs_3
+      - input: ref('int_q4_financial_metric_derivation_issues')
+        rows: *q4_issues_3
+    expect:
+      rows: []
+  - name: q4_safe_decimal_overflow_and_boundaries_issues
+    model: int_q4_financial_metric_derivation_issues
+    description: "Positive and negative subtraction overflow are row-safe beside a valid exact 18-place fractional calculation. The 80- and 100-day endpoints both derive successfully."
+    given:
+      - &q4_inputs_4
+        input: ref('int_reported_financial_periods')
+        rows:
+          - <<: *q4_period
+            metric_code: "operating_cash_flow"
+            cik: "0000000050"
+            accession_number: "overflow-positive"
+            source_occurrence_id: "overflow-positive-operating_cash_flow"
+            source_document_name: "overflow-positive.xml"
+            source_sha256: "overflow-positive-checksum"
+            concept_namespace: "http://fasb.org/us-gaap/2025"
+            concept_local_name: "NetCashProvidedByUsedInOperatingActivities"
+            raw_value: "99999999999999999999.999999999999999999"
+            value_decimal: "99999999999999999999.999999999999999999"
+            decimals: "-6"
+            precision: null
+            unit_ref: "old-unit"
+            context_ref: "old-context"
+            supporting_occurrence_ids: ["overflow-positive-operating_cash_flow", "overflow-positive-operating_cash_flow-support"]
+            fiscal_metadata_status: "COMPLETE"
+          - <<: *q4_period
+            metric_code: "operating_cash_flow"
+            cik: "0000000050"
+            accession_number: "overflow-positive-previous"
+            source_occurrence_id: "overflow-positive-previous-operating_cash_flow"
+            source_document_name: "overflow-positive-previous.xml"
+            source_sha256: "overflow-positive-previous-checksum"
+            concept_namespace: "http://fasb.org/us-gaap/2025"
+            concept_local_name: "NetCashProvidedByUsedInOperatingActivities"
+            raw_value: "-99999999999999999999.999999999999999999"
+            value_decimal: "-99999999999999999999.999999999999999999"
+            decimals: "-6"
+            precision: null
+            unit_ref: "old-unit"
+            context_ref: "old-context"
+            period_end: "2025-06-28"
+            duration_days: 273
+            form: "10-Q"
+            filing_date: "2025-07-31"
+            report_date: "2025-06-28"
+            supporting_occurrence_ids: ["overflow-positive-previous-operating_cash_flow", "overflow-positive-previous-operating_cash_flow-support"]
+            fiscal_period_focus: "Q3"
+            document_period_end_date: "2025-06-28"
+            fiscal_metadata_status: "COMPLETE"
+            period_classification: "year_to_date"
+          - <<: *q4_period
+            metric_code: "operating_cash_flow"
+            cik: "0000000051"
+            accession_number: "overflow-negative"
+            source_occurrence_id: "overflow-negative-operating_cash_flow"
+            source_document_name: "overflow-negative.xml"
+            source_sha256: "overflow-negative-checksum"
+            concept_namespace: "http://fasb.org/us-gaap/2025"
+            concept_local_name: "NetCashProvidedByUsedInOperatingActivities"
+            raw_value: "-99999999999999999999.999999999999999999"
+            value_decimal: "-99999999999999999999.999999999999999999"
+            decimals: "-6"
+            precision: null
+            unit_ref: "old-unit"
+            context_ref: "old-context"
+            supporting_occurrence_ids: ["overflow-negative-operating_cash_flow", "overflow-negative-operating_cash_flow-support"]
+            fiscal_metadata_status: "COMPLETE"
+          - <<: *q4_period
+            metric_code: "operating_cash_flow"
+            cik: "0000000051"
+            accession_number: "overflow-negative-previous"
+            source_occurrence_id: "overflow-negative-previous-operating_cash_flow"
+            source_document_name: "overflow-negative-previous.xml"
+            source_sha256: "overflow-negative-previous-checksum"
+            concept_namespace: "http://fasb.org/us-gaap/2025"
+            concept_local_name: "NetCashProvidedByUsedInOperatingActivities"
+            raw_value: "99999999999999999999.999999999999999999"
+            value_decimal: "99999999999999999999.999999999999999999"
+            decimals: "-6"
+            precision: null
+            unit_ref: "old-unit"
+            context_ref: "old-context"
+            period_end: "2025-06-28"
+            duration_days: 273
+            form: "10-Q"
+            filing_date: "2025-07-31"
+            report_date: "2025-06-28"
+            supporting_occurrence_ids: ["overflow-negative-previous-operating_cash_flow", "overflow-negative-previous-operating_cash_flow-support"]
+            fiscal_period_focus: "Q3"
+            document_period_end_date: "2025-06-28"
+            fiscal_metadata_status: "COMPLETE"
+            period_classification: "year_to_date"
+          - <<: *q4_period
+            metric_code: "operating_cash_flow"
+            cik: "0000000052"
+            accession_number: "fraction"
+            source_occurrence_id: "fraction-operating_cash_flow"
+            source_document_name: "fraction.xml"
+            source_sha256: "fraction-checksum"
+            concept_namespace: "http://fasb.org/us-gaap/2025"
+            concept_local_name: "NetCashProvidedByUsedInOperatingActivities"
+            raw_value: "1.000000000000000002"
+            value_decimal: "1.000000000000000002"
+            decimals: "-6"
+            precision: null
+            unit_ref: "old-unit"
+            context_ref: "old-context"
+            supporting_occurrence_ids: ["fraction-operating_cash_flow", "fraction-operating_cash_flow-support"]
+            fiscal_metadata_status: "COMPLETE"
+          - <<: *q4_period
+            metric_code: "operating_cash_flow"
+            cik: "0000000052"
+            accession_number: "fraction-previous"
+            source_occurrence_id: "fraction-previous-operating_cash_flow"
+            source_document_name: "fraction-previous.xml"
+            source_sha256: "fraction-previous-checksum"
+            concept_namespace: "http://fasb.org/us-gaap/2025"
+            concept_local_name: "NetCashProvidedByUsedInOperatingActivities"
+            raw_value: "1.000000000000000001"
+            value_decimal: "1.000000000000000001"
+            decimals: "-6"
+            precision: null
+            unit_ref: "old-unit"
+            context_ref: "old-context"
+            period_end: "2025-06-28"
+            duration_days: 273
+            form: "10-Q"
+            filing_date: "2025-07-31"
+            report_date: "2025-06-28"
+            supporting_occurrence_ids: ["fraction-previous-operating_cash_flow", "fraction-previous-operating_cash_flow-support"]
+            fiscal_period_focus: "Q3"
+            document_period_end_date: "2025-06-28"
+            fiscal_metadata_status: "COMPLETE"
+            period_classification: "year_to_date"
+          - <<: *q4_period
+            metric_code: "operating_cash_flow"
+            cik: "0000000053"
+            accession_number: "boundary-80"
+            source_occurrence_id: "boundary-80-operating_cash_flow"
+            source_document_name: "boundary-80.xml"
+            source_sha256: "boundary-80-checksum"
+            concept_namespace: "http://fasb.org/us-gaap/2025"
+            concept_local_name: "NetCashProvidedByUsedInOperatingActivities"
+            raw_value: "150"
+            value_decimal: "150"
+            decimals: "-6"
+            precision: null
+            unit_ref: "old-unit"
+            context_ref: "old-context"
+            period_end: "2025-09-16"
+            duration_days: 353
+            report_date: "2025-09-16"
+            supporting_occurrence_ids: ["boundary-80-operating_cash_flow", "boundary-80-operating_cash_flow-support"]
+            document_period_end_date: "2025-09-16"
+            fiscal_metadata_status: "COMPLETE"
+          - <<: *q4_period
+            metric_code: "operating_cash_flow"
+            cik: "0000000053"
+            accession_number: "boundary-80-previous"
+            source_occurrence_id: "boundary-80-previous-operating_cash_flow"
+            source_document_name: "boundary-80-previous.xml"
+            source_sha256: "boundary-80-previous-checksum"
+            concept_namespace: "http://fasb.org/us-gaap/2025"
+            concept_local_name: "NetCashProvidedByUsedInOperatingActivities"
+            raw_value: "100"
+            value_decimal: "100"
+            decimals: "-6"
+            precision: null
+            unit_ref: "old-unit"
+            context_ref: "old-context"
+            period_end: "2025-06-28"
+            duration_days: 273
+            form: "10-Q"
+            filing_date: "2025-07-31"
+            report_date: "2025-06-28"
+            supporting_occurrence_ids: ["boundary-80-previous-operating_cash_flow", "boundary-80-previous-operating_cash_flow-support"]
+            fiscal_period_focus: "Q3"
+            document_period_end_date: "2025-06-28"
+            fiscal_metadata_status: "COMPLETE"
+            period_classification: "year_to_date"
+          - <<: *q4_period
+            metric_code: "operating_cash_flow"
+            cik: "0000000054"
+            accession_number: "boundary-100"
+            source_occurrence_id: "boundary-100-operating_cash_flow"
+            source_document_name: "boundary-100.xml"
+            source_sha256: "boundary-100-checksum"
+            concept_namespace: "http://fasb.org/us-gaap/2025"
+            concept_local_name: "NetCashProvidedByUsedInOperatingActivities"
+            raw_value: "150"
+            value_decimal: "150"
+            decimals: "-6"
+            precision: null
+            unit_ref: "old-unit"
+            context_ref: "old-context"
+            period_end: "2025-10-06"
+            duration_days: 373
+            report_date: "2025-10-06"
+            supporting_occurrence_ids: ["boundary-100-operating_cash_flow", "boundary-100-operating_cash_flow-support"]
+            document_period_end_date: "2025-10-06"
+            fiscal_metadata_status: "COMPLETE"
+          - <<: *q4_period
+            metric_code: "operating_cash_flow"
+            cik: "0000000054"
+            accession_number: "boundary-100-previous"
+            source_occurrence_id: "boundary-100-previous-operating_cash_flow"
+            source_document_name: "boundary-100-previous.xml"
+            source_sha256: "boundary-100-previous-checksum"
+            concept_namespace: "http://fasb.org/us-gaap/2025"
+            concept_local_name: "NetCashProvidedByUsedInOperatingActivities"
+            raw_value: "100"
+            value_decimal: "100"
+            decimals: "-6"
+            precision: null
+            unit_ref: "old-unit"
+            context_ref: "old-context"
+            period_end: "2025-06-28"
+            duration_days: 273
+            form: "10-Q"
+            filing_date: "2025-07-31"
+            report_date: "2025-06-28"
+            supporting_occurrence_ids: ["boundary-100-previous-operating_cash_flow", "boundary-100-previous-operating_cash_flow-support"]
+            fiscal_period_focus: "Q3"
+            document_period_end_date: "2025-06-28"
+            fiscal_metadata_status: "COMPLETE"
+            period_classification: "year_to_date"
+    expect:
+      rows: &q4_issues_4
+        - {cik: "0000000050", accession_number: "overflow-positive",
+           metric_code: "operating_cash_flow", fiscal_year_focus: 2025,
+           fiscal_period_focus: "Q4", report_date: "2025-09-27",
+           issue_code: "DERIVED_VALUE_OUT_OF_RANGE", severity: "WARNING",
+           current_source_occurrence_id: "overflow-positive-operating_cash_flow", previous_source_occurrence_ids: ["overflow-positive-previous-operating_cash_flow"]}
+        - {cik: "0000000051", accession_number: "overflow-negative",
+           metric_code: "operating_cash_flow", fiscal_year_focus: 2025,
+           fiscal_period_focus: "Q4", report_date: "2025-09-27",
+           issue_code: "DERIVED_VALUE_OUT_OF_RANGE", severity: "WARNING",
+           current_source_occurrence_id: "overflow-negative-operating_cash_flow", previous_source_occurrence_ids: ["overflow-negative-previous-operating_cash_flow"]}
+  - name: q4_safe_decimal_overflow_and_boundaries_derived
+    model: int_derived_q4_financial_metrics
+    description: "Positive and negative subtraction overflow are row-safe beside a valid exact 18-place fractional calculation. The 80- and 100-day endpoints both derive successfully."
+    given:
+      - *q4_inputs_4
+      - input: ref('int_q4_financial_metric_derivation_issues')
+        rows: *q4_issues_4
+    expect:
+      rows:
+        - {cik: "0000000052", accession_number: "fraction",
+           metric_code: "operating_cash_flow", form: "10-K",
+           filing_date: "2025-10-31", report_date: "2025-09-27",
+           fiscal_year_focus: 2025, fiscal_period_focus: "Q4",
+           period_kind: "duration", period_start: "2025-06-29",
+           period_end: "2025-09-27", period_instant: null,
+           period_label: "derived_quarter", value_origin: "derived",
+           value_decimal: "0.000000000000000001", unit_expression: "{http://www.xbrl.org/2003/iso4217}USD",
+           derivation_rule_version: "1", derivation_method: "ANNUAL_MINUS_Q3_YTD",
+           current_source_occurrence_id: "fraction-operating_cash_flow", current_source_document_name: "fraction.xml",
+           current_source_sha256: "fraction-checksum", current_value_decimal: "1.000000000000000002",
+           current_supporting_occurrence_ids: ["fraction-operating_cash_flow", "fraction-operating_cash_flow-support"], previous_accession_number: "fraction-previous",
+           previous_source_occurrence_id: "fraction-previous-operating_cash_flow", previous_source_document_name: "fraction-previous.xml",
+           previous_source_sha256: "fraction-previous-checksum", previous_value_decimal: "1.000000000000000001",
+           previous_supporting_occurrence_ids: ["fraction-previous-operating_cash_flow", "fraction-previous-operating_cash_flow-support"], cumulative_period_start: "2024-09-29",
+           previous_period_end: "2025-06-28", current_decimals: "-6",
+           current_precision: null, previous_decimals: "-6",
+           previous_precision: null}
+        - {cik: "0000000053", accession_number: "boundary-80",
+           metric_code: "operating_cash_flow", form: "10-K",
+           filing_date: "2025-10-31", report_date: "2025-09-16",
+           fiscal_year_focus: 2025, fiscal_period_focus: "Q4",
+           period_kind: "duration", period_start: "2025-06-29",
+           period_end: "2025-09-16", period_instant: null,
+           period_label: "derived_quarter", value_origin: "derived",
+           value_decimal: "50.000000000000000000", unit_expression: "{http://www.xbrl.org/2003/iso4217}USD",
+           derivation_rule_version: "1", derivation_method: "ANNUAL_MINUS_Q3_YTD",
+           current_source_occurrence_id: "boundary-80-operating_cash_flow", current_source_document_name: "boundary-80.xml",
+           current_source_sha256: "boundary-80-checksum", current_value_decimal: "150",
+           current_supporting_occurrence_ids: ["boundary-80-operating_cash_flow", "boundary-80-operating_cash_flow-support"], previous_accession_number: "boundary-80-previous",
+           previous_source_occurrence_id: "boundary-80-previous-operating_cash_flow", previous_source_document_name: "boundary-80-previous.xml",
+           previous_source_sha256: "boundary-80-previous-checksum", previous_value_decimal: "100",
+           previous_supporting_occurrence_ids: ["boundary-80-previous-operating_cash_flow", "boundary-80-previous-operating_cash_flow-support"], cumulative_period_start: "2024-09-29",
+           previous_period_end: "2025-06-28", current_decimals: "-6",
+           current_precision: null, previous_decimals: "-6",
+           previous_precision: null}
+        - {cik: "0000000054", accession_number: "boundary-100",
+           metric_code: "operating_cash_flow", form: "10-K",
+           filing_date: "2025-10-31", report_date: "2025-10-06",
+           fiscal_year_focus: 2025, fiscal_period_focus: "Q4",
+           period_kind: "duration", period_start: "2025-06-29",
+           period_end: "2025-10-06", period_instant: null,
+           period_label: "derived_quarter", value_origin: "derived",
+           value_decimal: "50.000000000000000000", unit_expression: "{http://www.xbrl.org/2003/iso4217}USD",
+           derivation_rule_version: "1", derivation_method: "ANNUAL_MINUS_Q3_YTD",
+           current_source_occurrence_id: "boundary-100-operating_cash_flow", current_source_document_name: "boundary-100.xml",
+           current_source_sha256: "boundary-100-checksum", current_value_decimal: "150",
+           current_supporting_occurrence_ids: ["boundary-100-operating_cash_flow", "boundary-100-operating_cash_flow-support"], previous_accession_number: "boundary-100-previous",
+           previous_source_occurrence_id: "boundary-100-previous-operating_cash_flow", previous_source_document_name: "boundary-100-previous.xml",
+           previous_source_sha256: "boundary-100-previous-checksum", previous_value_decimal: "100",
+           previous_supporting_occurrence_ids: ["boundary-100-previous-operating_cash_flow", "boundary-100-previous-operating_cash_flow-support"], cumulative_period_start: "2024-09-29",
+           previous_period_end: "2025-06-28", current_decimals: "-6",
+           current_precision: null, previous_decimals: "-6",
+           previous_precision: null}
