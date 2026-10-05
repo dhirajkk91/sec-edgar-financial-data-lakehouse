@@ -1219,6 +1219,94 @@ models:
         data_type: VARCHAR
         description: Preserved input previous precision; independently nullable. Previous accuracy is null for reported rows; no derived accuracy is invented.
 
+  - name: metric_quality_issues
+    description: >-
+      Unified view of six dedicated issue views and reported rows with non-null period_issue_code.
+      It preserves upstream occurrences and ordered evidence with UNION ALL; repeated records are valid
+      and no uniqueness is imposed. Selection, classification and derivation retain stage-specific nullability.
+      Classification uses the existing critical-metric severity profile without changing financial or filing-status behavior.
+    columns:
+      - name: cik
+        data_type: VARCHAR
+        description: Company Central Index Key preserved from the upstream issue.
+        data_tests:
+          - not_null
+      - name: accession_number
+        data_type: VARCHAR
+        description: Upstream filing accession; original and amended accessions remain separate.
+        data_tests:
+          - not_null
+      - name: metric_code
+        data_type: VARCHAR
+        description: Canonical upstream metric code; supplemental and future metrics are retained.
+        data_tests:
+          - not_null
+      - name: issue_stage
+        data_type: VARCHAR
+        description: selection, period_classification or derivation; identifies the upstream policy stage.
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ["selection", "period_classification", "derivation"]
+      - name: source_model
+        data_type: VARCHAR
+        description: Exact upstream model name without a schema prefix.
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ["int_revenue_selection_issues", "int_income_metric_selection_issues", "int_balance_sheet_metric_selection_issues", "int_cash_flow_metric_selection_issues", "int_reported_financial_periods", "int_quarterly_cash_flow_derivation_issues", "int_q4_financial_metric_derivation_issues"]
+      - name: issue_code
+        data_type: VARCHAR
+        description: Preserved selection/derivation issue code or classified period_issue_code.
+        data_tests:
+          - not_null
+      - name: severity
+        data_type: VARCHAR
+        description: Preserved upstream severity, except classification issues use ERROR for revenue, net_income, diluted_eps, total_assets and total_liabilities; WARNING otherwise. No filing status is computed.
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ["ERROR", "WARNING"]
+      - name: report_date
+        data_type: DATE
+        description: Verified upstream report date when available; may be null for filing-level issues.
+      - name: period_start
+        data_type: DATE
+        description: Available selection/classification duration start; null for instant selection and all derivation issues.
+      - name: period_end
+        data_type: DATE
+        description: Available selection/classification duration end; null for instant selection and all derivation issues.
+      - name: period_instant
+        data_type: DATE
+        description: Available balance-sheet selection/classification instant; null for duration selection and all derivation issues.
+      - name: fiscal_year_focus
+        data_type: INTEGER
+        description: Available classification/derivation fiscal year; null for selection issues and unresolved classification metadata.
+      - name: fiscal_period_focus
+        data_type: VARCHAR
+        description: Available classification/derivation focus, preserving Q4 calculation focus; null for selection or unresolved classification metadata.
+      - name: current_source_occurrence_id
+        data_type: VARCHAR
+        description: Classification primary occurrence or derivation current input; null for selection issues.
+      - name: source_occurrence_ids
+        data_type: VARCHAR[]
+        description: Complete ordered selection evidence or classification supporting IDs; one-element current-input list for derivation. Non-null, including empty upstream selection evidence.
+        data_tests:
+          - not_null
+      - name: previous_source_occurrence_ids
+        data_type: VARCHAR[]
+        description: Complete ordered derivation candidate IDs, including empty missing-predecessor evidence; typed empty list for selection and classification.
+        data_tests:
+          - not_null
+      - name: details
+        data_type: VARCHAR
+        description: Exact upstream issue details or period_classification_reason; never parsed or rewritten.
+        data_tests:
+          - not_null
+
 seeds:
   - name: metric_concept_map
     description: Approved revenue, income, balance-sheet and cash-flow concept mappings; one row per metric, namespace prefix, concept and period kind. Priority is evidence for later selection.

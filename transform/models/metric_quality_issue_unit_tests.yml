@@ -1,0 +1,508 @@
+unit_tests:
+  - name: metric_quality_all_sources_and_fields
+    model: metric_quality_issues
+    description: "All seven sources map every output column: duration, instant and filing-level selection evidence; preserved critical/supplemental ERROR and WARNING severities; all five seed-verified critical classification codes plus supplemental/future metrics; complete ordered arrays and both derivation sources, including Q4 focus without inferred boundaries."
+    given:
+      - input: ref('int_revenue_selection_issues')
+        rows:
+          - &quality_duration_issue
+            cik: "0000000001"
+            accession_number: "filing"
+            metric_code: "revenue"
+            issue_code: "REVENUE_VALUE_CONFLICT"
+            severity: "ERROR"
+            report_date: "2026-03-28"
+            period_start: "2025-09-28"
+            period_end: "2026-03-28"
+            source_occurrence_ids: ["primary-z", "support-a"]
+            details: "Exact upstream detail; retain punctuation and order."
+          - <<: *quality_duration_issue
+            accession_number: "missing-metadata"
+            issue_code: "MISSING_FILING_METADATA"
+            report_date: null
+            period_start: null
+            period_end: null
+            source_occurrence_ids: []
+            details: "No verified filing metadata is stored for this active filing."
+      - input: ref('int_income_metric_selection_issues')
+        rows:
+          - <<: *quality_duration_issue
+            metric_code: "net_income"
+            issue_code: "METRIC_ACCURACY_UNRESOLVED"
+          - <<: *quality_duration_issue
+            metric_code: "diluted_eps"
+            issue_code: "UNSUPPORTED_FORM"
+            severity: "WARNING"
+            period_start: null
+            period_end: null
+            source_occurrence_ids: []
+      - input: ref('int_balance_sheet_metric_selection_issues')
+        rows:
+          - &quality_instant_issue
+            cik: "0000000001"
+            accession_number: "filing"
+            metric_code: "total_assets"
+            issue_code: "METRIC_VALUE_CONFLICT"
+            severity: "ERROR"
+            report_date: "2026-03-28"
+            source_occurrence_ids: ["primary-z", "support-a"]
+            details: "Exact upstream detail; retain punctuation and order."
+            period_instant: "2026-03-28"
+          - <<: *quality_instant_issue
+            accession_number: "supplemental-metadata"
+            metric_code: "cash_and_equivalents"
+            issue_code: "MISSING_FILING_METADATA"
+            report_date: null
+            source_occurrence_ids: []
+            period_instant: null
+      - input: ref('int_cash_flow_metric_selection_issues')
+        rows:
+          - <<: *quality_duration_issue
+            metric_code: "operating_cash_flow"
+            issue_code: "METRIC_VALUE_CONFLICT"
+            severity: "WARNING"
+          - <<: *quality_duration_issue
+            metric_code: "capital_expenditures"
+            issue_code: "MISSING_REPORT_DATE"
+            report_date: null
+            period_start: null
+            period_end: null
+            source_occurrence_ids: []
+      - input: ref('int_reported_financial_periods')
+        rows:
+          - &quality_classification
+            cik: "0000000001"
+            accession_number: "classified"
+            metric_code: "revenue"
+            report_date: "2026-03-28"
+            period_start: "2025-09-28"
+            period_end: "2026-03-28"
+            period_instant: null
+            fiscal_year_focus: 2026
+            fiscal_period_focus: "Q2"
+            source_occurrence_id: "revenue-primary"
+            supporting_occurrence_ids: ["revenue-primary", "revenue-primary-support"]
+            period_classification: "unclassified"
+            period_issue_code: "FISCAL_METADATA_LINEAGE_MISMATCH"
+            period_classification_reason: "revenue classification reason copied exactly."
+          - <<: *quality_classification
+            metric_code: "net_income"
+            source_occurrence_id: "net_income-primary"
+            supporting_occurrence_ids: ["net_income-primary", "net_income-primary-support"]
+            period_classification_reason: "net_income classification reason copied exactly."
+          - <<: *quality_classification
+            metric_code: "diluted_eps"
+            source_occurrence_id: "diluted_eps-primary"
+            supporting_occurrence_ids: ["diluted_eps-primary", "diluted_eps-primary-support"]
+            period_classification_reason: "diluted_eps classification reason copied exactly."
+          - <<: *quality_classification
+            metric_code: "total_assets"
+            period_start: null
+            period_end: null
+            period_instant: "2026-03-28"
+            source_occurrence_id: "total_assets-primary"
+            supporting_occurrence_ids: ["total_assets-primary", "total_assets-primary-support"]
+            period_classification_reason: "total_assets classification reason copied exactly."
+          - <<: *quality_classification
+            metric_code: "total_liabilities"
+            period_start: null
+            period_end: null
+            period_instant: "2026-03-28"
+            source_occurrence_id: "total_liabilities-primary"
+            supporting_occurrence_ids: ["total_liabilities-primary", "total_liabilities-primary-support"]
+            period_classification_reason: "total_liabilities classification reason copied exactly."
+          - <<: *quality_classification
+            metric_code: "cash_and_equivalents"
+            period_start: null
+            period_end: null
+            period_instant: "2026-03-28"
+            source_occurrence_id: "cash_and_equivalents-primary"
+            supporting_occurrence_ids: ["cash_and_equivalents-primary", "cash_and_equivalents-primary-support"]
+            period_classification_reason: "cash_and_equivalents classification reason copied exactly."
+          - <<: *quality_classification
+            metric_code: "future_metric"
+            source_occurrence_id: "future_metric-primary"
+            supporting_occurrence_ids: ["future_metric-primary", "future_metric-primary-support"]
+            period_classification_reason: "future_metric classification reason copied exactly."
+      - input: ref('int_quarterly_cash_flow_derivation_issues')
+        rows:
+          - &quality_derivation
+            cik: "0000000001"
+            accession_number: "derive-Q2"
+            metric_code: "operating_cash_flow"
+            fiscal_year_focus: 2026
+            fiscal_period_focus: "Q2"
+            report_date: "2026-03-28"
+            issue_code: "MISSING_PREVIOUS_CUMULATIVE"
+            severity: "WARNING"
+            current_source_occurrence_id: "quarter-current"
+            previous_source_occurrence_ids: []
+            details: "Missing predecessor; do not infer dates from this detail: 2025-09-28."
+      - input: ref('int_q4_financial_metric_derivation_issues')
+        rows:
+          - <<: *quality_derivation
+            accession_number: "annual"
+            metric_code: "revenue"
+            fiscal_year_focus: 2025
+            fiscal_period_focus: "Q4"
+            report_date: "2025-09-27"
+            issue_code: "AMBIGUOUS_PREVIOUS_CUMULATIVE"
+            current_source_occurrence_id: "annual-current"
+            previous_source_occurrence_ids: ["first-candidate-z", "second-candidate-a"]
+            details: "Two Q3 candidates in deterministic accession/occurrence order; keep this reason unchanged."
+    expect:
+      rows:
+        - {cik: "0000000001", accession_number: "filing",
+           metric_code: "revenue", issue_stage: "selection",
+           source_model: "int_revenue_selection_issues", issue_code: "REVENUE_VALUE_CONFLICT",
+           severity: "ERROR", report_date: "2026-03-28",
+           period_start: "2025-09-28", period_end: "2026-03-28",
+           period_instant: null, fiscal_year_focus: null,
+           fiscal_period_focus: null, current_source_occurrence_id: null,
+           source_occurrence_ids: ["primary-z", "support-a"], previous_source_occurrence_ids: [],
+           details: "Exact upstream detail; retain punctuation and order."}
+        - {cik: "0000000001", accession_number: "missing-metadata",
+           metric_code: "revenue", issue_stage: "selection",
+           source_model: "int_revenue_selection_issues", issue_code: "MISSING_FILING_METADATA",
+           severity: "ERROR", report_date: null,
+           period_start: null, period_end: null,
+           period_instant: null, fiscal_year_focus: null,
+           fiscal_period_focus: null, current_source_occurrence_id: null,
+           source_occurrence_ids: [], previous_source_occurrence_ids: [],
+           details: "No verified filing metadata is stored for this active filing."}
+        - {cik: "0000000001", accession_number: "filing",
+           metric_code: "net_income", issue_stage: "selection",
+           source_model: "int_income_metric_selection_issues", issue_code: "METRIC_ACCURACY_UNRESOLVED",
+           severity: "ERROR", report_date: "2026-03-28",
+           period_start: "2025-09-28", period_end: "2026-03-28",
+           period_instant: null, fiscal_year_focus: null,
+           fiscal_period_focus: null, current_source_occurrence_id: null,
+           source_occurrence_ids: ["primary-z", "support-a"], previous_source_occurrence_ids: [],
+           details: "Exact upstream detail; retain punctuation and order."}
+        - {cik: "0000000001", accession_number: "filing",
+           metric_code: "diluted_eps", issue_stage: "selection",
+           source_model: "int_income_metric_selection_issues", issue_code: "UNSUPPORTED_FORM",
+           severity: "WARNING", report_date: "2026-03-28",
+           period_start: null, period_end: null,
+           period_instant: null, fiscal_year_focus: null,
+           fiscal_period_focus: null, current_source_occurrence_id: null,
+           source_occurrence_ids: [], previous_source_occurrence_ids: [],
+           details: "Exact upstream detail; retain punctuation and order."}
+        - {cik: "0000000001", accession_number: "filing",
+           metric_code: "total_assets", issue_stage: "selection",
+           source_model: "int_balance_sheet_metric_selection_issues", issue_code: "METRIC_VALUE_CONFLICT",
+           severity: "ERROR", report_date: "2026-03-28",
+           period_start: null, period_end: null,
+           period_instant: "2026-03-28", fiscal_year_focus: null,
+           fiscal_period_focus: null, current_source_occurrence_id: null,
+           source_occurrence_ids: ["primary-z", "support-a"], previous_source_occurrence_ids: [],
+           details: "Exact upstream detail; retain punctuation and order."}
+        - {cik: "0000000001", accession_number: "supplemental-metadata",
+           metric_code: "cash_and_equivalents", issue_stage: "selection",
+           source_model: "int_balance_sheet_metric_selection_issues", issue_code: "MISSING_FILING_METADATA",
+           severity: "ERROR", report_date: null,
+           period_start: null, period_end: null,
+           period_instant: null, fiscal_year_focus: null,
+           fiscal_period_focus: null, current_source_occurrence_id: null,
+           source_occurrence_ids: [], previous_source_occurrence_ids: [],
+           details: "Exact upstream detail; retain punctuation and order."}
+        - {cik: "0000000001", accession_number: "filing",
+           metric_code: "operating_cash_flow", issue_stage: "selection",
+           source_model: "int_cash_flow_metric_selection_issues", issue_code: "METRIC_VALUE_CONFLICT",
+           severity: "WARNING", report_date: "2026-03-28",
+           period_start: "2025-09-28", period_end: "2026-03-28",
+           period_instant: null, fiscal_year_focus: null,
+           fiscal_period_focus: null, current_source_occurrence_id: null,
+           source_occurrence_ids: ["primary-z", "support-a"], previous_source_occurrence_ids: [],
+           details: "Exact upstream detail; retain punctuation and order."}
+        - {cik: "0000000001", accession_number: "filing",
+           metric_code: "capital_expenditures", issue_stage: "selection",
+           source_model: "int_cash_flow_metric_selection_issues", issue_code: "MISSING_REPORT_DATE",
+           severity: "ERROR", report_date: null,
+           period_start: null, period_end: null,
+           period_instant: null, fiscal_year_focus: null,
+           fiscal_period_focus: null, current_source_occurrence_id: null,
+           source_occurrence_ids: [], previous_source_occurrence_ids: [],
+           details: "Exact upstream detail; retain punctuation and order."}
+        - {cik: "0000000001", accession_number: "classified",
+           metric_code: "revenue", issue_stage: "period_classification",
+           source_model: "int_reported_financial_periods", issue_code: "FISCAL_METADATA_LINEAGE_MISMATCH",
+           severity: "ERROR", report_date: "2026-03-28",
+           period_start: "2025-09-28", period_end: "2026-03-28",
+           period_instant: null, fiscal_year_focus: 2026,
+           fiscal_period_focus: "Q2", current_source_occurrence_id: "revenue-primary",
+           source_occurrence_ids: ["revenue-primary", "revenue-primary-support"], previous_source_occurrence_ids: [],
+           details: "revenue classification reason copied exactly."}
+        - {cik: "0000000001", accession_number: "classified",
+           metric_code: "net_income", issue_stage: "period_classification",
+           source_model: "int_reported_financial_periods", issue_code: "FISCAL_METADATA_LINEAGE_MISMATCH",
+           severity: "ERROR", report_date: "2026-03-28",
+           period_start: "2025-09-28", period_end: "2026-03-28",
+           period_instant: null, fiscal_year_focus: 2026,
+           fiscal_period_focus: "Q2", current_source_occurrence_id: "net_income-primary",
+           source_occurrence_ids: ["net_income-primary", "net_income-primary-support"], previous_source_occurrence_ids: [],
+           details: "net_income classification reason copied exactly."}
+        - {cik: "0000000001", accession_number: "classified",
+           metric_code: "diluted_eps", issue_stage: "period_classification",
+           source_model: "int_reported_financial_periods", issue_code: "FISCAL_METADATA_LINEAGE_MISMATCH",
+           severity: "ERROR", report_date: "2026-03-28",
+           period_start: "2025-09-28", period_end: "2026-03-28",
+           period_instant: null, fiscal_year_focus: 2026,
+           fiscal_period_focus: "Q2", current_source_occurrence_id: "diluted_eps-primary",
+           source_occurrence_ids: ["diluted_eps-primary", "diluted_eps-primary-support"], previous_source_occurrence_ids: [],
+           details: "diluted_eps classification reason copied exactly."}
+        - {cik: "0000000001", accession_number: "classified",
+           metric_code: "total_assets", issue_stage: "period_classification",
+           source_model: "int_reported_financial_periods", issue_code: "FISCAL_METADATA_LINEAGE_MISMATCH",
+           severity: "ERROR", report_date: "2026-03-28",
+           period_start: null, period_end: null,
+           period_instant: "2026-03-28", fiscal_year_focus: 2026,
+           fiscal_period_focus: "Q2", current_source_occurrence_id: "total_assets-primary",
+           source_occurrence_ids: ["total_assets-primary", "total_assets-primary-support"], previous_source_occurrence_ids: [],
+           details: "total_assets classification reason copied exactly."}
+        - {cik: "0000000001", accession_number: "classified",
+           metric_code: "total_liabilities", issue_stage: "period_classification",
+           source_model: "int_reported_financial_periods", issue_code: "FISCAL_METADATA_LINEAGE_MISMATCH",
+           severity: "ERROR", report_date: "2026-03-28",
+           period_start: null, period_end: null,
+           period_instant: "2026-03-28", fiscal_year_focus: 2026,
+           fiscal_period_focus: "Q2", current_source_occurrence_id: "total_liabilities-primary",
+           source_occurrence_ids: ["total_liabilities-primary", "total_liabilities-primary-support"], previous_source_occurrence_ids: [],
+           details: "total_liabilities classification reason copied exactly."}
+        - {cik: "0000000001", accession_number: "classified",
+           metric_code: "cash_and_equivalents", issue_stage: "period_classification",
+           source_model: "int_reported_financial_periods", issue_code: "FISCAL_METADATA_LINEAGE_MISMATCH",
+           severity: "WARNING", report_date: "2026-03-28",
+           period_start: null, period_end: null,
+           period_instant: "2026-03-28", fiscal_year_focus: 2026,
+           fiscal_period_focus: "Q2", current_source_occurrence_id: "cash_and_equivalents-primary",
+           source_occurrence_ids: ["cash_and_equivalents-primary", "cash_and_equivalents-primary-support"], previous_source_occurrence_ids: [],
+           details: "cash_and_equivalents classification reason copied exactly."}
+        - {cik: "0000000001", accession_number: "classified",
+           metric_code: "future_metric", issue_stage: "period_classification",
+           source_model: "int_reported_financial_periods", issue_code: "FISCAL_METADATA_LINEAGE_MISMATCH",
+           severity: "WARNING", report_date: "2026-03-28",
+           period_start: "2025-09-28", period_end: "2026-03-28",
+           period_instant: null, fiscal_year_focus: 2026,
+           fiscal_period_focus: "Q2", current_source_occurrence_id: "future_metric-primary",
+           source_occurrence_ids: ["future_metric-primary", "future_metric-primary-support"], previous_source_occurrence_ids: [],
+           details: "future_metric classification reason copied exactly."}
+        - {cik: "0000000001", accession_number: "derive-Q2",
+           metric_code: "operating_cash_flow", issue_stage: "derivation",
+           source_model: "int_quarterly_cash_flow_derivation_issues", issue_code: "MISSING_PREVIOUS_CUMULATIVE",
+           severity: "WARNING", report_date: "2026-03-28",
+           period_start: null, period_end: null,
+           period_instant: null, fiscal_year_focus: 2026,
+           fiscal_period_focus: "Q2", current_source_occurrence_id: "quarter-current",
+           source_occurrence_ids: ["quarter-current"], previous_source_occurrence_ids: [],
+           details: "Missing predecessor; do not infer dates from this detail: 2025-09-28."}
+        - {cik: "0000000001", accession_number: "annual",
+           metric_code: "revenue", issue_stage: "derivation",
+           source_model: "int_q4_financial_metric_derivation_issues", issue_code: "AMBIGUOUS_PREVIOUS_CUMULATIVE",
+           severity: "WARNING", report_date: "2025-09-27",
+           period_start: null, period_end: null,
+           period_instant: null, fiscal_year_focus: 2025,
+           fiscal_period_focus: "Q4", current_source_occurrence_id: "annual-current",
+           source_occurrence_ids: ["annual-current"], previous_source_occurrence_ids: ["first-candidate-z", "second-candidate-a"],
+           details: "Two Q3 candidates in deterministic accession/occurrence order; keep this reason unchanged."}
+  - name: metric_quality_preservation_filtering_and_nulls
+    model: metric_quality_issues
+    description: "Repeated issues and matching evidence across original/amended accessions remain separate. Classification with null period_issue_code is excluded. Preserve empty evidence, nullable report/period dates and unresolved fiscal fields without guessing values."
+    given:
+      - input: ref('int_revenue_selection_issues')
+        rows:
+          - <<: *quality_duration_issue
+            issue_code: "MISSING_FILING_METADATA"
+            report_date: null
+            period_start: null
+            period_end: null
+            source_occurrence_ids: []
+          - <<: *quality_duration_issue
+            issue_code: "MISSING_FILING_METADATA"
+            report_date: null
+            period_start: null
+            period_end: null
+            source_occurrence_ids: []
+          - <<: *quality_duration_issue
+            accession_number: "filing-amended"
+            issue_code: "MISSING_FILING_METADATA"
+            report_date: null
+            period_start: null
+            period_end: null
+            source_occurrence_ids: []
+      - input: ref('int_income_metric_selection_issues')
+        rows: []
+      - input: ref('int_balance_sheet_metric_selection_issues')
+        rows: []
+      - input: ref('int_cash_flow_metric_selection_issues')
+        rows: []
+      - input: ref('int_reported_financial_periods')
+        rows:
+          - <<: *quality_classification
+            metric_code: "capital_expenditures"
+            report_date: null
+            period_start: null
+            period_end: null
+            fiscal_year_focus: null
+            fiscal_period_focus: null
+            source_occurrence_id: "unresolved-primary"
+            supporting_occurrence_ids: ["unresolved-primary", "unresolved-primary-support"]
+            period_issue_code: "UNRESOLVED_FISCAL_METADATA"
+            period_classification_reason: "Nullable metadata remains unresolved; no dates or fiscal focus are guessed."
+          - <<: *quality_classification
+            metric_code: "capital_expenditures"
+            report_date: null
+            period_start: null
+            period_end: null
+            fiscal_year_focus: null
+            fiscal_period_focus: null
+            source_occurrence_id: "unresolved-primary"
+            supporting_occurrence_ids: ["unresolved-primary", "unresolved-primary-support"]
+            period_issue_code: "UNRESOLVED_FISCAL_METADATA"
+            period_classification_reason: "Nullable metadata remains unresolved; no dates or fiscal focus are guessed."
+          - <<: *quality_classification
+            accession_number: "classified-amended"
+            metric_code: "capital_expenditures"
+            report_date: null
+            period_start: null
+            period_end: null
+            fiscal_year_focus: null
+            fiscal_period_focus: null
+            source_occurrence_id: "unresolved-primary"
+            supporting_occurrence_ids: ["unresolved-primary", "unresolved-primary-support"]
+            period_issue_code: "UNRESOLVED_FISCAL_METADATA"
+            period_classification_reason: "Nullable metadata remains unresolved; no dates or fiscal focus are guessed."
+          - <<: *quality_classification
+            source_occurrence_id: "classified-no-issue"
+            supporting_occurrence_ids: ["classified-no-issue", "classified-no-issue-support"]
+            period_classification: "quarter"
+            period_issue_code: null
+            period_classification_reason: "Already classified; no issue to expose."
+      - input: ref('int_quarterly_cash_flow_derivation_issues')
+        rows: []
+      - input: ref('int_q4_financial_metric_derivation_issues')
+        rows:
+          - <<: *quality_derivation
+            accession_number: "annual-missing"
+            metric_code: "capital_expenditures"
+            fiscal_year_focus: 2024
+            fiscal_period_focus: "Q4"
+            report_date: "2024-09-28"
+            current_source_occurrence_id: "annual-missing-current"
+          - <<: *quality_derivation
+            accession_number: "annual-missing"
+            metric_code: "capital_expenditures"
+            fiscal_year_focus: 2024
+            fiscal_period_focus: "Q4"
+            report_date: "2024-09-28"
+            current_source_occurrence_id: "annual-missing-current"
+          - <<: *quality_derivation
+            accession_number: "annual-missing-amended"
+            metric_code: "capital_expenditures"
+            fiscal_year_focus: 2024
+            fiscal_period_focus: "Q4"
+            report_date: "2024-09-28"
+            current_source_occurrence_id: "annual-missing-current"
+    expect:
+      rows:
+        - {cik: "0000000001", accession_number: "filing",
+           metric_code: "revenue", issue_stage: "selection",
+           source_model: "int_revenue_selection_issues", issue_code: "MISSING_FILING_METADATA",
+           severity: "ERROR", report_date: null,
+           period_start: null, period_end: null,
+           period_instant: null, fiscal_year_focus: null,
+           fiscal_period_focus: null, current_source_occurrence_id: null,
+           source_occurrence_ids: [], previous_source_occurrence_ids: [],
+           details: "Exact upstream detail; retain punctuation and order."}
+        - {cik: "0000000001", accession_number: "filing",
+           metric_code: "revenue", issue_stage: "selection",
+           source_model: "int_revenue_selection_issues", issue_code: "MISSING_FILING_METADATA",
+           severity: "ERROR", report_date: null,
+           period_start: null, period_end: null,
+           period_instant: null, fiscal_year_focus: null,
+           fiscal_period_focus: null, current_source_occurrence_id: null,
+           source_occurrence_ids: [], previous_source_occurrence_ids: [],
+           details: "Exact upstream detail; retain punctuation and order."}
+        - {cik: "0000000001", accession_number: "filing-amended",
+           metric_code: "revenue", issue_stage: "selection",
+           source_model: "int_revenue_selection_issues", issue_code: "MISSING_FILING_METADATA",
+           severity: "ERROR", report_date: null,
+           period_start: null, period_end: null,
+           period_instant: null, fiscal_year_focus: null,
+           fiscal_period_focus: null, current_source_occurrence_id: null,
+           source_occurrence_ids: [], previous_source_occurrence_ids: [],
+           details: "Exact upstream detail; retain punctuation and order."}
+        - {cik: "0000000001", accession_number: "classified",
+           metric_code: "capital_expenditures", issue_stage: "period_classification",
+           source_model: "int_reported_financial_periods", issue_code: "UNRESOLVED_FISCAL_METADATA",
+           severity: "WARNING", report_date: null,
+           period_start: null, period_end: null,
+           period_instant: null, fiscal_year_focus: null,
+           fiscal_period_focus: null, current_source_occurrence_id: "unresolved-primary",
+           source_occurrence_ids: ["unresolved-primary", "unresolved-primary-support"], previous_source_occurrence_ids: [],
+           details: "Nullable metadata remains unresolved; no dates or fiscal focus are guessed."}
+        - {cik: "0000000001", accession_number: "classified",
+           metric_code: "capital_expenditures", issue_stage: "period_classification",
+           source_model: "int_reported_financial_periods", issue_code: "UNRESOLVED_FISCAL_METADATA",
+           severity: "WARNING", report_date: null,
+           period_start: null, period_end: null,
+           period_instant: null, fiscal_year_focus: null,
+           fiscal_period_focus: null, current_source_occurrence_id: "unresolved-primary",
+           source_occurrence_ids: ["unresolved-primary", "unresolved-primary-support"], previous_source_occurrence_ids: [],
+           details: "Nullable metadata remains unresolved; no dates or fiscal focus are guessed."}
+        - {cik: "0000000001", accession_number: "classified-amended",
+           metric_code: "capital_expenditures", issue_stage: "period_classification",
+           source_model: "int_reported_financial_periods", issue_code: "UNRESOLVED_FISCAL_METADATA",
+           severity: "WARNING", report_date: null,
+           period_start: null, period_end: null,
+           period_instant: null, fiscal_year_focus: null,
+           fiscal_period_focus: null, current_source_occurrence_id: "unresolved-primary",
+           source_occurrence_ids: ["unresolved-primary", "unresolved-primary-support"], previous_source_occurrence_ids: [],
+           details: "Nullable metadata remains unresolved; no dates or fiscal focus are guessed."}
+        - {cik: "0000000001", accession_number: "annual-missing",
+           metric_code: "capital_expenditures", issue_stage: "derivation",
+           source_model: "int_q4_financial_metric_derivation_issues", issue_code: "MISSING_PREVIOUS_CUMULATIVE",
+           severity: "WARNING", report_date: "2024-09-28",
+           period_start: null, period_end: null,
+           period_instant: null, fiscal_year_focus: 2024,
+           fiscal_period_focus: "Q4", current_source_occurrence_id: "annual-missing-current",
+           source_occurrence_ids: ["annual-missing-current"], previous_source_occurrence_ids: [],
+           details: "Missing predecessor; do not infer dates from this detail: 2025-09-28."}
+        - {cik: "0000000001", accession_number: "annual-missing",
+           metric_code: "capital_expenditures", issue_stage: "derivation",
+           source_model: "int_q4_financial_metric_derivation_issues", issue_code: "MISSING_PREVIOUS_CUMULATIVE",
+           severity: "WARNING", report_date: "2024-09-28",
+           period_start: null, period_end: null,
+           period_instant: null, fiscal_year_focus: 2024,
+           fiscal_period_focus: "Q4", current_source_occurrence_id: "annual-missing-current",
+           source_occurrence_ids: ["annual-missing-current"], previous_source_occurrence_ids: [],
+           details: "Missing predecessor; do not infer dates from this detail: 2025-09-28."}
+        - {cik: "0000000001", accession_number: "annual-missing-amended",
+           metric_code: "capital_expenditures", issue_stage: "derivation",
+           source_model: "int_q4_financial_metric_derivation_issues", issue_code: "MISSING_PREVIOUS_CUMULATIVE",
+           severity: "WARNING", report_date: "2024-09-28",
+           period_start: null, period_end: null,
+           period_instant: null, fiscal_year_focus: 2024,
+           fiscal_period_focus: "Q4", current_source_occurrence_id: "annual-missing-current",
+           source_occurrence_ids: ["annual-missing-current"], previous_source_occurrence_ids: [],
+           details: "Missing predecessor; do not infer dates from this detail: 2025-09-28."}
+  - name: metric_quality_typed_empty_inputs
+    model: metric_quality_issues
+    description: "All seven typed empty inputs yield an empty relation; actual ordered types are additionally verified from the compiled view."
+    given:
+      - input: ref('int_revenue_selection_issues')
+        rows: []
+      - input: ref('int_income_metric_selection_issues')
+        rows: []
+      - input: ref('int_balance_sheet_metric_selection_issues')
+        rows: []
+      - input: ref('int_cash_flow_metric_selection_issues')
+        rows: []
+      - input: ref('int_reported_financial_periods')
+        rows: []
+      - input: ref('int_quarterly_cash_flow_derivation_issues')
+        rows: []
+      - input: ref('int_q4_financial_metric_derivation_issues')
+        rows: []
+    expect:
+      rows: []
