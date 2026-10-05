@@ -1048,6 +1048,177 @@ models:
         data_tests:
           - not_null
 
+  - name: fct_financial_metrics
+    description: >-
+      Financial fact view assembled without calculations or deduplication from eligible classified reported rows
+      and both successful derived-quarter views. Grain is (cik, accession_number, metric_code, period_kind,
+      period_start, period_end, period_instant), including nullable boundaries; original and amended accessions
+      remain independent. Reported evidence and derived dual-input evidence have origin-specific nullability.
+    columns:
+      - name: cik
+        data_type: VARCHAR
+        description: Preserved input cik.
+        data_tests:
+          - not_null
+      - name: accession_number
+        data_type: VARCHAR
+        description: Preserved input accession number.
+        data_tests:
+          - not_null
+      - name: metric_code
+        data_type: VARCHAR
+        description: Preserved input metric code.
+        data_tests:
+          - not_null
+      - name: form
+        data_type: VARCHAR
+        description: Preserved input form.
+        data_tests:
+          - not_null
+      - name: filing_date
+        data_type: DATE
+        description: Preserved input filing date.
+        data_tests:
+          - not_null
+      - name: report_date
+        data_type: DATE
+        description: Preserved input report date.
+        data_tests:
+          - not_null
+      - name: fiscal_year_focus
+        data_type: INTEGER
+        description: Reported fiscal year or preserved derived fiscal year; may be unresolved for a reported instant.
+      - name: fiscal_period_focus
+        data_type: VARCHAR
+        description: Reported fiscal focus or preserved derived focus, including Q4; may be unresolved for a reported instant.
+      - name: period_kind
+        data_type: VARCHAR
+        description: Preserved input period kind.
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ["duration", "instant"]
+      - name: period_start
+        data_type: DATE
+        description: Duration start copied from its input; null for instant rows.
+      - name: period_end
+        data_type: DATE
+        description: Duration end copied from its input; null for instant rows.
+      - name: period_instant
+        data_type: DATE
+        description: Instant date copied from its input; null for duration rows.
+      - name: period_label
+        data_type: VARCHAR
+        description: Reported classification (annual, quarter, year_to_date, instant), or the preserved derived_quarter label.
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ["annual", "quarter", "year_to_date", "instant", "derived_quarter"]
+      - name: value_origin
+        data_type: VARCHAR
+        description: reported or derived; controls the evidence and rule-version requirements.
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ["reported", "derived"]
+      - name: value_decimal
+        data_type: DECIMAL(38,18)
+        description: Exact input DECIMAL(38,18), without recalculation or sign changes.
+        data_tests:
+          - not_null
+      - name: unit_expression
+        data_type: VARCHAR
+        description: Original input unit expression, including USD/share for reported diluted EPS.
+        data_tests:
+          - not_null
+      - name: selection_rule_version
+        data_type: VARCHAR
+        description: Reported-only selection rule version; required for reported rows, null for derived rows. Tagged evidence for derived inputs is accessible through their occurrence IDs.
+      - name: period_rule_version
+        data_type: VARCHAR
+        description: Reported-only period rule version; required for reported rows, null for derived rows. Tagged evidence for derived inputs is accessible through their occurrence IDs.
+      - name: derivation_rule_version
+        data_type: VARCHAR
+        description: Preserved derivation rule version; required for derived rows, null for reported rows.
+      - name: derivation_method
+        data_type: VARCHAR
+        description: Preserved derivation method; required for derived rows, null for reported rows.
+      - name: concept_namespace
+        data_type: VARCHAR
+        description: Reported-only concept namespace; required for reported rows, null for derived rows. Tagged evidence for derived inputs is accessible through their occurrence IDs.
+      - name: concept_local_name
+        data_type: VARCHAR
+        description: Reported-only concept local name; required for reported rows, null for derived rows. Tagged evidence for derived inputs is accessible through their occurrence IDs.
+      - name: raw_value
+        data_type: VARCHAR
+        description: Reported-only raw value; required for reported rows, null for derived rows. Tagged evidence for derived inputs is accessible through their occurrence IDs.
+      - name: current_source_occurrence_id
+        data_type: VARCHAR
+        description: Primary occurrence ID for the reported value or the current input of a derived quarter.
+        data_tests:
+          - not_null
+      - name: current_source_document_name
+        data_type: VARCHAR
+        description: Source document name for the reported value or the current input of a derived quarter.
+        data_tests:
+          - not_null
+      - name: current_source_sha256
+        data_type: VARCHAR
+        description: Source document checksum for the reported value or the current input of a derived quarter.
+        data_tests:
+          - not_null
+      - name: current_value_decimal
+        data_type: DECIMAL(38,18)
+        description: Selected reported value, or the current cumulative input value for a derived row.
+        data_tests:
+          - not_null
+      - name: current_supporting_occurrence_ids
+        data_type: VARCHAR[]
+        description: Complete ordered supporting occurrence IDs of the reported or current derived input.
+        data_tests:
+          - not_null
+      - name: previous_accession_number
+        data_type: VARCHAR
+        description: Predecessor filing accession; required for derived rows, null for reported rows.
+      - name: previous_source_occurrence_id
+        data_type: VARCHAR
+        description: Predecessor primary occurrence ID; required for derived rows, null for reported rows.
+      - name: previous_source_document_name
+        data_type: VARCHAR
+        description: Predecessor source document name; required for derived rows, null for reported rows.
+      - name: previous_source_sha256
+        data_type: VARCHAR
+        description: Predecessor source document checksum; required for derived rows, null for reported rows.
+      - name: previous_value_decimal
+        data_type: DECIMAL(38,18)
+        description: Exact predecessor cumulative value; required for derived rows, null for reported rows.
+      - name: previous_supporting_occurrence_ids
+        data_type: VARCHAR[]
+        description: Complete ordered previous-input IDs for derived rows; typed empty VARCHAR list for reported rows.
+        data_tests:
+          - not_null
+      - name: cumulative_period_start
+        data_type: DATE
+        description: Preserved common cumulative start for derived rows; null for reported rows.
+      - name: previous_period_end
+        data_type: DATE
+        description: Preserved predecessor end for derived rows; null for reported rows.
+      - name: current_decimals
+        data_type: VARCHAR
+        description: Preserved input current decimals; independently nullable. Previous accuracy is null for reported rows; no derived accuracy is invented.
+      - name: current_precision
+        data_type: VARCHAR
+        description: Preserved input current precision; independently nullable. Previous accuracy is null for reported rows; no derived accuracy is invented.
+      - name: previous_decimals
+        data_type: VARCHAR
+        description: Preserved input previous decimals; independently nullable. Previous accuracy is null for reported rows; no derived accuracy is invented.
+      - name: previous_precision
+        data_type: VARCHAR
+        description: Preserved input previous precision; independently nullable. Previous accuracy is null for reported rows; no derived accuracy is invented.
+
 seeds:
   - name: metric_concept_map
     description: Approved revenue, income, balance-sheet and cash-flow concept mappings; one row per metric, namespace prefix, concept and period kind. Priority is evidence for later selection.

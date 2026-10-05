@@ -1,0 +1,486 @@
+unit_tests:
+  - name: financial_mart_complete_mixed_mapping
+    model: fct_financial_metrics
+    description: "Complete 40-column mappings for all reported labels, Q2/Q3 cash derivations and Q4. Preserve original/amended filings, distinct same-accession durations, exact small Decimals, zero/negative values, USD/share EPS, raw text, complete ordered lineage and independent accuracy. Classified extensions and PARTIAL metadata remain eligible."
+    given:
+      - input: ref('int_reported_financial_periods')
+        rows:
+          - &mart_reported
+            cik: "0000000001"
+            accession_number: "annual"
+            metric_code: "revenue"
+            form: "10-K"
+            filing_date: "2025-10-31"
+            report_date: "2025-09-27"
+            fiscal_year_focus: 2025
+            fiscal_period_focus: "FY"
+            period_kind: "duration"
+            period_start: "2024-09-29"
+            period_end: "2025-09-27"
+            period_instant: null
+            period_label: "reported_duration"
+            period_classification: "annual"
+            fiscal_metadata_status: "PARTIAL"
+            value_decimal: "100.000000000000000001"
+            unit_expression: "{http://www.xbrl.org/2003/iso4217}USD"
+            selection_rule_version: "selected-1"
+            period_rule_version: "classified-1"
+            concept_namespace: "http://fasb.org/us-gaap/2025"
+            concept_local_name: "RevenueFromContractWithCustomerExcludingAssessedTax"
+            raw_value: "+100.000000000000000001"
+            source_occurrence_id: "annual-primary"
+            source_document_name: "annual.xml"
+            source_sha256: "annual-sha"
+            supporting_occurrence_ids: ["annual-primary", "annual-support"]
+            decimals: null
+            precision: "18"
+          - <<: *mart_reported
+            accession_number: "annual-amended"
+            form: "10-K/A"
+            value_decimal: "105"
+            raw_value: "105"
+            source_occurrence_id: "annual-amended-primary"
+            source_document_name: "annual-amended.xml"
+            source_sha256: "annual-amended-sha"
+            supporting_occurrence_ids: ["annual-amended-primary", "annual-amended-support"]
+          - <<: *mart_reported
+            accession_number: "q3"
+            form: "10-Q"
+            filing_date: "2026-07-30"
+            report_date: "2026-06-27"
+            fiscal_year_focus: 2026
+            fiscal_period_focus: "Q3"
+            period_start: "2026-03-29"
+            period_end: "2026-06-27"
+            period_classification: "quarter"
+            value_decimal: "0"
+            raw_value: "0"
+            source_occurrence_id: "q3-quarter-primary"
+            source_document_name: "q3.xml"
+            source_sha256: "q3-sha"
+            supporting_occurrence_ids: ["q3-quarter-primary", "q3-quarter-support"]
+            decimals: "-6"
+            precision: null
+          - <<: *mart_reported
+            accession_number: "q3"
+            form: "10-Q"
+            filing_date: "2026-07-30"
+            report_date: "2026-06-27"
+            fiscal_year_focus: 2026
+            fiscal_period_focus: "Q3"
+            period_start: "2025-09-28"
+            period_end: "2026-06-27"
+            period_classification: "year_to_date"
+            value_decimal: "100"
+            raw_value: "100"
+            source_occurrence_id: "q3-ytd-primary"
+            source_document_name: "q3.xml"
+            source_sha256: "q3-sha"
+            supporting_occurrence_ids: ["q3-ytd-primary", "q3-ytd-support"]
+          - <<: *mart_reported
+            accession_number: "balance"
+            metric_code: "total_assets"
+            period_kind: "instant"
+            period_start: null
+            period_end: null
+            period_instant: "2025-09-27"
+            period_label: "reported_instant"
+            period_classification: "instant"
+            value_decimal: "50"
+            concept_local_name: "Assets"
+            raw_value: "50"
+            source_occurrence_id: "balance-primary"
+            source_document_name: "balance.xml"
+            source_sha256: "balance-sha"
+            supporting_occurrence_ids: ["balance-primary", "balance-support"]
+          - <<: *mart_reported
+            accession_number: "eps"
+            metric_code: "diluted_eps"
+            value_decimal: "-0.010000000000000001"
+            unit_expression: "{http://www.xbrl.org/2003/iso4217}USD / {http://www.xbrl.org/2003/instance}shares"
+            concept_local_name: "EarningsPerShareDiluted"
+            raw_value: "-0.010000000000000001"
+            source_occurrence_id: "eps-primary"
+            source_document_name: "eps.xml"
+            source_sha256: "eps-sha"
+            supporting_occurrence_ids: ["eps-primary", "eps-support"]
+            decimals: "18"
+            precision: null
+          - <<: *mart_reported
+            accession_number: "extension"
+            metric_code: "another_classified_metric"
+            value_decimal: "-20"
+            unit_expression: "preserved-extension-unit"
+            concept_namespace: "https://example.test/taxonomy"
+            concept_local_name: "AnotherMetric"
+            raw_value: "-20"
+            source_occurrence_id: "extension-primary"
+            source_document_name: "extension.xml"
+            source_sha256: "extension-sha"
+            supporting_occurrence_ids: ["extension-primary", "extension-support"]
+      - input: ref('int_derived_quarterly_cash_flow')
+        rows:
+          - &mart_derived
+            cik: "0000000001"
+            accession_number: "derived-q2"
+            metric_code: "capital_expenditures"
+            form: "10-Q"
+            filing_date: "2026-04-30"
+            report_date: "2026-03-28"
+            fiscal_year_focus: 2026
+            fiscal_period_focus: "Q2"
+            period_kind: "duration"
+            period_start: "2025-12-28"
+            period_end: "2026-03-28"
+            period_instant: null
+            period_label: "derived_quarter"
+            value_origin: "derived"
+            value_decimal: "-5.250000000000000002"
+            unit_expression: "{http://www.xbrl.org/2003/iso4217}USD"
+            derivation_rule_version: "derive-1"
+            derivation_method: "CURRENT_YTD_MINUS_PREVIOUS_CUMULATIVE"
+            current_source_occurrence_id: "derived-q2-current"
+            current_source_document_name: "derived-q2.xml"
+            current_source_sha256: "derived-q2-sha"
+            current_value_decimal: "-8.500000000000000003"
+            current_supporting_occurrence_ids: ["derived-q2-current", "derived-q2-support"]
+            previous_accession_number: "derived-q2-previous"
+            previous_source_occurrence_id: "derived-q2-previous-primary"
+            previous_source_document_name: "derived-q2-previous.xml"
+            previous_source_sha256: "derived-q2-previous-sha"
+            previous_value_decimal: "-3.250000000000000001"
+            previous_supporting_occurrence_ids: ["derived-q2-previous-primary", "derived-q2-previous-support"]
+            cumulative_period_start: "2025-09-28"
+            previous_period_end: "2025-12-27"
+            current_decimals: null
+            current_precision: "18"
+            previous_decimals: "-6"
+            previous_precision: null
+          - <<: *mart_derived
+            accession_number: "derived-q3"
+            metric_code: "operating_cash_flow"
+            filing_date: "2026-07-30"
+            report_date: "2026-06-27"
+            fiscal_period_focus: "Q3"
+            period_start: "2026-03-29"
+            period_end: "2026-06-27"
+            value_decimal: "0.000000000000000000"
+            current_source_occurrence_id: "derived-q3-current"
+            current_source_document_name: "derived-q3.xml"
+            current_source_sha256: "derived-q3-sha"
+            current_value_decimal: "100"
+            current_supporting_occurrence_ids: ["derived-q3-current", "derived-q3-support"]
+            previous_accession_number: "derived-q3-previous"
+            previous_source_occurrence_id: "derived-q3-previous-primary"
+            previous_source_document_name: "derived-q3-previous.xml"
+            previous_source_sha256: "derived-q3-previous-sha"
+            previous_value_decimal: "100"
+            previous_supporting_occurrence_ids: ["derived-q3-previous-primary", "derived-q3-previous-support"]
+            previous_period_end: "2026-03-28"
+            current_decimals: "2"
+            current_precision: null
+            previous_decimals: null
+            previous_precision: "10"
+      - input: ref('int_derived_q4_financial_metrics')
+        rows:
+          - <<: *mart_derived
+            accession_number: "derived-q4"
+            metric_code: "revenue"
+            form: "10-K"
+            filing_date: "2025-10-31"
+            report_date: "2025-09-27"
+            fiscal_year_focus: 2025
+            fiscal_period_focus: "Q4"
+            period_start: "2025-06-29"
+            period_end: "2025-09-27"
+            value_decimal: "102466000000.000000000000000000"
+            derivation_method: "ANNUAL_MINUS_Q3_YTD"
+            current_source_occurrence_id: "derived-q4-current"
+            current_source_document_name: "derived-q4.xml"
+            current_source_sha256: "derived-q4-sha"
+            current_value_decimal: "416161000000"
+            current_supporting_occurrence_ids: ["derived-q4-current", "derived-q4-support"]
+            previous_accession_number: "derived-q4-previous"
+            previous_source_occurrence_id: "derived-q4-previous-primary"
+            previous_source_document_name: "derived-q4-previous.xml"
+            previous_source_sha256: "derived-q4-previous-sha"
+            previous_value_decimal: "313695000000"
+            previous_supporting_occurrence_ids: ["derived-q4-previous-primary", "derived-q4-previous-support"]
+            cumulative_period_start: "2024-09-29"
+            previous_period_end: "2025-06-28"
+    expect:
+      rows:
+        - {cik: "0000000001", accession_number: "annual",
+           metric_code: "revenue", form: "10-K",
+           filing_date: "2025-10-31", report_date: "2025-09-27",
+           fiscal_year_focus: 2025, fiscal_period_focus: "FY",
+           period_kind: "duration", period_start: "2024-09-29",
+           period_end: "2025-09-27", period_instant: null,
+           period_label: "annual", value_origin: "reported",
+           value_decimal: "100.000000000000000001", unit_expression: "{http://www.xbrl.org/2003/iso4217}USD",
+           selection_rule_version: "selected-1", period_rule_version: "classified-1",
+           derivation_rule_version: null, derivation_method: null,
+           concept_namespace: "http://fasb.org/us-gaap/2025", concept_local_name: "RevenueFromContractWithCustomerExcludingAssessedTax",
+           raw_value: "+100.000000000000000001", current_source_occurrence_id: "annual-primary",
+           current_source_document_name: "annual.xml", current_source_sha256: "annual-sha",
+           current_value_decimal: "100.000000000000000001", current_supporting_occurrence_ids: ["annual-primary", "annual-support"],
+           previous_accession_number: null, previous_source_occurrence_id: null,
+           previous_source_document_name: null, previous_source_sha256: null,
+           previous_value_decimal: null, previous_supporting_occurrence_ids: [],
+           cumulative_period_start: null, previous_period_end: null,
+           current_decimals: null, current_precision: "18",
+           previous_decimals: null, previous_precision: null}
+        - {cik: "0000000001", accession_number: "annual-amended",
+           metric_code: "revenue", form: "10-K/A",
+           filing_date: "2025-10-31", report_date: "2025-09-27",
+           fiscal_year_focus: 2025, fiscal_period_focus: "FY",
+           period_kind: "duration", period_start: "2024-09-29",
+           period_end: "2025-09-27", period_instant: null,
+           period_label: "annual", value_origin: "reported",
+           value_decimal: "105", unit_expression: "{http://www.xbrl.org/2003/iso4217}USD",
+           selection_rule_version: "selected-1", period_rule_version: "classified-1",
+           derivation_rule_version: null, derivation_method: null,
+           concept_namespace: "http://fasb.org/us-gaap/2025", concept_local_name: "RevenueFromContractWithCustomerExcludingAssessedTax",
+           raw_value: "105", current_source_occurrence_id: "annual-amended-primary",
+           current_source_document_name: "annual-amended.xml", current_source_sha256: "annual-amended-sha",
+           current_value_decimal: "105", current_supporting_occurrence_ids: ["annual-amended-primary", "annual-amended-support"],
+           previous_accession_number: null, previous_source_occurrence_id: null,
+           previous_source_document_name: null, previous_source_sha256: null,
+           previous_value_decimal: null, previous_supporting_occurrence_ids: [],
+           cumulative_period_start: null, previous_period_end: null,
+           current_decimals: null, current_precision: "18",
+           previous_decimals: null, previous_precision: null}
+        - {cik: "0000000001", accession_number: "q3",
+           metric_code: "revenue", form: "10-Q",
+           filing_date: "2026-07-30", report_date: "2026-06-27",
+           fiscal_year_focus: 2026, fiscal_period_focus: "Q3",
+           period_kind: "duration", period_start: "2026-03-29",
+           period_end: "2026-06-27", period_instant: null,
+           period_label: "quarter", value_origin: "reported",
+           value_decimal: "0", unit_expression: "{http://www.xbrl.org/2003/iso4217}USD",
+           selection_rule_version: "selected-1", period_rule_version: "classified-1",
+           derivation_rule_version: null, derivation_method: null,
+           concept_namespace: "http://fasb.org/us-gaap/2025", concept_local_name: "RevenueFromContractWithCustomerExcludingAssessedTax",
+           raw_value: "0", current_source_occurrence_id: "q3-quarter-primary",
+           current_source_document_name: "q3.xml", current_source_sha256: "q3-sha",
+           current_value_decimal: "0", current_supporting_occurrence_ids: ["q3-quarter-primary", "q3-quarter-support"],
+           previous_accession_number: null, previous_source_occurrence_id: null,
+           previous_source_document_name: null, previous_source_sha256: null,
+           previous_value_decimal: null, previous_supporting_occurrence_ids: [],
+           cumulative_period_start: null, previous_period_end: null,
+           current_decimals: "-6", current_precision: null,
+           previous_decimals: null, previous_precision: null}
+        - {cik: "0000000001", accession_number: "q3",
+           metric_code: "revenue", form: "10-Q",
+           filing_date: "2026-07-30", report_date: "2026-06-27",
+           fiscal_year_focus: 2026, fiscal_period_focus: "Q3",
+           period_kind: "duration", period_start: "2025-09-28",
+           period_end: "2026-06-27", period_instant: null,
+           period_label: "year_to_date", value_origin: "reported",
+           value_decimal: "100", unit_expression: "{http://www.xbrl.org/2003/iso4217}USD",
+           selection_rule_version: "selected-1", period_rule_version: "classified-1",
+           derivation_rule_version: null, derivation_method: null,
+           concept_namespace: "http://fasb.org/us-gaap/2025", concept_local_name: "RevenueFromContractWithCustomerExcludingAssessedTax",
+           raw_value: "100", current_source_occurrence_id: "q3-ytd-primary",
+           current_source_document_name: "q3.xml", current_source_sha256: "q3-sha",
+           current_value_decimal: "100", current_supporting_occurrence_ids: ["q3-ytd-primary", "q3-ytd-support"],
+           previous_accession_number: null, previous_source_occurrence_id: null,
+           previous_source_document_name: null, previous_source_sha256: null,
+           previous_value_decimal: null, previous_supporting_occurrence_ids: [],
+           cumulative_period_start: null, previous_period_end: null,
+           current_decimals: null, current_precision: "18",
+           previous_decimals: null, previous_precision: null}
+        - {cik: "0000000001", accession_number: "balance",
+           metric_code: "total_assets", form: "10-K",
+           filing_date: "2025-10-31", report_date: "2025-09-27",
+           fiscal_year_focus: 2025, fiscal_period_focus: "FY",
+           period_kind: "instant", period_start: null,
+           period_end: null, period_instant: "2025-09-27",
+           period_label: "instant", value_origin: "reported",
+           value_decimal: "50", unit_expression: "{http://www.xbrl.org/2003/iso4217}USD",
+           selection_rule_version: "selected-1", period_rule_version: "classified-1",
+           derivation_rule_version: null, derivation_method: null,
+           concept_namespace: "http://fasb.org/us-gaap/2025", concept_local_name: "Assets",
+           raw_value: "50", current_source_occurrence_id: "balance-primary",
+           current_source_document_name: "balance.xml", current_source_sha256: "balance-sha",
+           current_value_decimal: "50", current_supporting_occurrence_ids: ["balance-primary", "balance-support"],
+           previous_accession_number: null, previous_source_occurrence_id: null,
+           previous_source_document_name: null, previous_source_sha256: null,
+           previous_value_decimal: null, previous_supporting_occurrence_ids: [],
+           cumulative_period_start: null, previous_period_end: null,
+           current_decimals: null, current_precision: "18",
+           previous_decimals: null, previous_precision: null}
+        - {cik: "0000000001", accession_number: "eps",
+           metric_code: "diluted_eps", form: "10-K",
+           filing_date: "2025-10-31", report_date: "2025-09-27",
+           fiscal_year_focus: 2025, fiscal_period_focus: "FY",
+           period_kind: "duration", period_start: "2024-09-29",
+           period_end: "2025-09-27", period_instant: null,
+           period_label: "annual", value_origin: "reported",
+           value_decimal: "-0.010000000000000001", unit_expression: "{http://www.xbrl.org/2003/iso4217}USD / {http://www.xbrl.org/2003/instance}shares",
+           selection_rule_version: "selected-1", period_rule_version: "classified-1",
+           derivation_rule_version: null, derivation_method: null,
+           concept_namespace: "http://fasb.org/us-gaap/2025", concept_local_name: "EarningsPerShareDiluted",
+           raw_value: "-0.010000000000000001", current_source_occurrence_id: "eps-primary",
+           current_source_document_name: "eps.xml", current_source_sha256: "eps-sha",
+           current_value_decimal: "-0.010000000000000001", current_supporting_occurrence_ids: ["eps-primary", "eps-support"],
+           previous_accession_number: null, previous_source_occurrence_id: null,
+           previous_source_document_name: null, previous_source_sha256: null,
+           previous_value_decimal: null, previous_supporting_occurrence_ids: [],
+           cumulative_period_start: null, previous_period_end: null,
+           current_decimals: "18", current_precision: null,
+           previous_decimals: null, previous_precision: null}
+        - {cik: "0000000001", accession_number: "extension",
+           metric_code: "another_classified_metric", form: "10-K",
+           filing_date: "2025-10-31", report_date: "2025-09-27",
+           fiscal_year_focus: 2025, fiscal_period_focus: "FY",
+           period_kind: "duration", period_start: "2024-09-29",
+           period_end: "2025-09-27", period_instant: null,
+           period_label: "annual", value_origin: "reported",
+           value_decimal: "-20", unit_expression: "preserved-extension-unit",
+           selection_rule_version: "selected-1", period_rule_version: "classified-1",
+           derivation_rule_version: null, derivation_method: null,
+           concept_namespace: "https://example.test/taxonomy", concept_local_name: "AnotherMetric",
+           raw_value: "-20", current_source_occurrence_id: "extension-primary",
+           current_source_document_name: "extension.xml", current_source_sha256: "extension-sha",
+           current_value_decimal: "-20", current_supporting_occurrence_ids: ["extension-primary", "extension-support"],
+           previous_accession_number: null, previous_source_occurrence_id: null,
+           previous_source_document_name: null, previous_source_sha256: null,
+           previous_value_decimal: null, previous_supporting_occurrence_ids: [],
+           cumulative_period_start: null, previous_period_end: null,
+           current_decimals: null, current_precision: "18",
+           previous_decimals: null, previous_precision: null}
+        - {cik: "0000000001", accession_number: "derived-q2",
+           metric_code: "capital_expenditures", form: "10-Q",
+           filing_date: "2026-04-30", report_date: "2026-03-28",
+           fiscal_year_focus: 2026, fiscal_period_focus: "Q2",
+           period_kind: "duration", period_start: "2025-12-28",
+           period_end: "2026-03-28", period_instant: null,
+           period_label: "derived_quarter", value_origin: "derived",
+           value_decimal: "-5.250000000000000002", unit_expression: "{http://www.xbrl.org/2003/iso4217}USD",
+           selection_rule_version: null, period_rule_version: null,
+           derivation_rule_version: "derive-1", derivation_method: "CURRENT_YTD_MINUS_PREVIOUS_CUMULATIVE",
+           concept_namespace: null, concept_local_name: null,
+           raw_value: null, current_source_occurrence_id: "derived-q2-current",
+           current_source_document_name: "derived-q2.xml", current_source_sha256: "derived-q2-sha",
+           current_value_decimal: "-8.500000000000000003", current_supporting_occurrence_ids: ["derived-q2-current", "derived-q2-support"],
+           previous_accession_number: "derived-q2-previous", previous_source_occurrence_id: "derived-q2-previous-primary",
+           previous_source_document_name: "derived-q2-previous.xml", previous_source_sha256: "derived-q2-previous-sha",
+           previous_value_decimal: "-3.250000000000000001", previous_supporting_occurrence_ids: ["derived-q2-previous-primary", "derived-q2-previous-support"],
+           cumulative_period_start: "2025-09-28", previous_period_end: "2025-12-27",
+           current_decimals: null, current_precision: "18",
+           previous_decimals: "-6", previous_precision: null}
+        - {cik: "0000000001", accession_number: "derived-q3",
+           metric_code: "operating_cash_flow", form: "10-Q",
+           filing_date: "2026-07-30", report_date: "2026-06-27",
+           fiscal_year_focus: 2026, fiscal_period_focus: "Q3",
+           period_kind: "duration", period_start: "2026-03-29",
+           period_end: "2026-06-27", period_instant: null,
+           period_label: "derived_quarter", value_origin: "derived",
+           value_decimal: "0.000000000000000000", unit_expression: "{http://www.xbrl.org/2003/iso4217}USD",
+           selection_rule_version: null, period_rule_version: null,
+           derivation_rule_version: "derive-1", derivation_method: "CURRENT_YTD_MINUS_PREVIOUS_CUMULATIVE",
+           concept_namespace: null, concept_local_name: null,
+           raw_value: null, current_source_occurrence_id: "derived-q3-current",
+           current_source_document_name: "derived-q3.xml", current_source_sha256: "derived-q3-sha",
+           current_value_decimal: "100", current_supporting_occurrence_ids: ["derived-q3-current", "derived-q3-support"],
+           previous_accession_number: "derived-q3-previous", previous_source_occurrence_id: "derived-q3-previous-primary",
+           previous_source_document_name: "derived-q3-previous.xml", previous_source_sha256: "derived-q3-previous-sha",
+           previous_value_decimal: "100", previous_supporting_occurrence_ids: ["derived-q3-previous-primary", "derived-q3-previous-support"],
+           cumulative_period_start: "2025-09-28", previous_period_end: "2026-03-28",
+           current_decimals: "2", current_precision: null,
+           previous_decimals: null, previous_precision: "10"}
+        - {cik: "0000000001", accession_number: "derived-q4",
+           metric_code: "revenue", form: "10-K",
+           filing_date: "2025-10-31", report_date: "2025-09-27",
+           fiscal_year_focus: 2025, fiscal_period_focus: "Q4",
+           period_kind: "duration", period_start: "2025-06-29",
+           period_end: "2025-09-27", period_instant: null,
+           period_label: "derived_quarter", value_origin: "derived",
+           value_decimal: "102466000000.000000000000000000", unit_expression: "{http://www.xbrl.org/2003/iso4217}USD",
+           selection_rule_version: null, period_rule_version: null,
+           derivation_rule_version: "derive-1", derivation_method: "ANNUAL_MINUS_Q3_YTD",
+           concept_namespace: null, concept_local_name: null,
+           raw_value: null, current_source_occurrence_id: "derived-q4-current",
+           current_source_document_name: "derived-q4.xml", current_source_sha256: "derived-q4-sha",
+           current_value_decimal: "416161000000", current_supporting_occurrence_ids: ["derived-q4-current", "derived-q4-support"],
+           previous_accession_number: "derived-q4-previous", previous_source_occurrence_id: "derived-q4-previous-primary",
+           previous_source_document_name: "derived-q4-previous.xml", previous_source_sha256: "derived-q4-previous-sha",
+           previous_value_decimal: "313695000000", previous_supporting_occurrence_ids: ["derived-q4-previous-primary", "derived-q4-previous-support"],
+           cumulative_period_start: "2024-09-29", previous_period_end: "2025-06-28",
+           current_decimals: null, current_precision: "18",
+           previous_decimals: "-6", previous_precision: null}
+  - name: financial_mart_unclassified_and_unresolved_instant
+    model: fct_financial_metrics
+    description: "Exclude unclassified evidence without guessing fiscal fields for a valid instant. Both derived inputs are typed empty relations."
+    given:
+      - input: ref('int_reported_financial_periods')
+        rows:
+          - <<: *mart_reported
+            accession_number: "unclassified"
+            fiscal_year_focus: null
+            fiscal_period_focus: null
+            period_classification: "unclassified"
+            value_decimal: "7"
+            raw_value: "7"
+            source_occurrence_id: "unclassified-primary"
+            source_document_name: "unclassified.xml"
+            source_sha256: "unclassified-sha"
+            supporting_occurrence_ids: ["unclassified-primary", "unclassified-support"]
+          - <<: *mart_reported
+            accession_number: "unresolved-instant"
+            metric_code: "cash_and_equivalents"
+            fiscal_year_focus: null
+            fiscal_period_focus: null
+            period_kind: "instant"
+            period_start: null
+            period_end: null
+            period_instant: "2025-09-27"
+            period_label: "reported_instant"
+            period_classification: "instant"
+            value_decimal: "9.000000000000000001"
+            concept_local_name: "CashAndCashEquivalentsAtCarryingValue"
+            raw_value: "9.000000000000000001"
+            source_occurrence_id: "unresolved-instant-primary"
+            source_document_name: "unresolved-instant.xml"
+            source_sha256: "unresolved-instant-sha"
+            supporting_occurrence_ids: ["unresolved-instant-primary", "unresolved-instant-support"]
+            precision: null
+      - input: ref('int_derived_quarterly_cash_flow')
+        rows: []
+      - input: ref('int_derived_q4_financial_metrics')
+        rows: []
+    expect:
+      rows:
+        - {cik: "0000000001", accession_number: "unresolved-instant",
+           metric_code: "cash_and_equivalents", form: "10-K",
+           filing_date: "2025-10-31", report_date: "2025-09-27",
+           fiscal_year_focus: null, fiscal_period_focus: null,
+           period_kind: "instant", period_start: null,
+           period_end: null, period_instant: "2025-09-27",
+           period_label: "instant", value_origin: "reported",
+           value_decimal: "9.000000000000000001", unit_expression: "{http://www.xbrl.org/2003/iso4217}USD",
+           selection_rule_version: "selected-1", period_rule_version: "classified-1",
+           derivation_rule_version: null, derivation_method: null,
+           concept_namespace: "http://fasb.org/us-gaap/2025", concept_local_name: "CashAndCashEquivalentsAtCarryingValue",
+           raw_value: "9.000000000000000001", current_source_occurrence_id: "unresolved-instant-primary",
+           current_source_document_name: "unresolved-instant.xml", current_source_sha256: "unresolved-instant-sha",
+           current_value_decimal: "9.000000000000000001", current_supporting_occurrence_ids: ["unresolved-instant-primary", "unresolved-instant-support"],
+           previous_accession_number: null, previous_source_occurrence_id: null,
+           previous_source_document_name: null, previous_source_sha256: null,
+           previous_value_decimal: null, previous_supporting_occurrence_ids: [],
+           cumulative_period_start: null, previous_period_end: null,
+           current_decimals: null, current_precision: null,
+           previous_decimals: null, previous_precision: null}
+  - name: financial_mart_typed_empty_inputs
+    model: fct_financial_metrics
+    description: "All three typed empty input relations yield an empty mart; actual ordered types are additionally verified against the compiled model."
+    given:
+      - input: ref('int_reported_financial_periods')
+        rows: []
+      - input: ref('int_derived_quarterly_cash_flow')
+        rows: []
+      - input: ref('int_derived_q4_financial_metrics')
+        rows: []
+    expect:
+      rows: []
