@@ -198,11 +198,15 @@ The result is explicitly derived, with exact DECIMAL(38,18) subtraction and both
 
 ### The missing fourth quarter
 
-There is usually no separate 10-Q for the fourth quarter. A standalone Q4 income-statement value may need to be calculated as the 10-K annual value minus the nine-month year-to-date value from the third-quarter 10-Q.
+There is usually no separate 10-Q for the fourth quarter. `gold.int_derived_q4_financial_metrics` calculates Q4 as the reported annual value minus the matching Q3 nine-month year-to-date value for revenue, net income, operating cash flow and capital expenditures. Diluted EPS and other metrics are excluded. The row belongs to the annual accession and is labeled `derived_quarter`, with method `ANNUAL_MINUS_Q3_YTD`. Its `Q4` focus describes the calculated period; the annual input retains its reported DEI focus of `FY`.
 
-That calculation will come later. Before using it, we need to know that both values belong to the same company, fiscal year, metric, unit, and dimensional context. Neither source can be ambiguous.
+Targets are classified annual FY rows from 10-K or 10-K/A filings. An existing classified reported quarter suppresses derivation for that filing and metric. The predecessor must be a Q3 year-to-date row from a different 10-Q or 10-Q/A accession with the same company, metric and reported fiscal year. A Q3 quarter cannot replace the cumulative input. Every fiscal-role candidate is counted before pair checks; original and amended filings remain separate candidates, and multiple candidates block calculation even when values agree or only one pair is compatible.
 
-A calculated Q4 row will be labeled `derived_quarter`, keep both input occurrence IDs, and show the calculation method. A dashboard user should always be able to tell the difference between a value the company reported and one the lakehouse derived.
+Both inputs must be dimensionless USD Decimal values and valid durations ending on their own verified report dates. Their cumulative starts must match, and the Q3 end must precede the annual end. The derived period starts the next day and must span 80–100 inclusive days. These checks use actual reported boundaries, without guessing a fiscal-year start or requiring document-scoped unit IDs, context IDs or taxonomy namespaces to match. A usable classified PARTIAL extraction remains eligible.
+
+Exact guarded DECIMAL(38,18) subtraction preserves zero and negative results and the tagged capital-expenditure sign. Both source identities, ordered supporting-ID lists and independent decimals/precision attributes remain traceable; no accuracy or reported raw value is invented for the calculation. `gold.int_q4_financial_metric_derivation_issues` records one supplemental WARNING per unsuccessful target with a Q4 calculation focus and candidate evidence ordered by accession and occurrence ID. Issue precedence is current input ineligibility, missing predecessor, ambiguous predecessors, incompatible inputs, unsupported duration, then Decimal overflow. Each attempted target has one derived row or one issue. Missing Q4 inputs do not invalidate the annual metric or substitute zero.
+
+Arithmetic compatibility does not independently prove a consistent accounting basis or resolve restatements. The current local sample has FY2024 annual data and FY2026 cumulative data, so it cannot establish a matched Q4 calculation. Successful behavior is covered by controlled fixtures until matching annual and Q3 filings are loaded through the existing pipeline.
 
 ## How a candidate becomes a selected metric
 
