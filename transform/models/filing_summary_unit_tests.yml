@@ -1,0 +1,1427 @@
+unit_tests:
+  - name: filing_summary_business_policy
+    model: dim_filings
+    description: "Annual/quarterly and amended forms retain separate filings. Warnings and Silver PARTIAL allow Gold COMPLETE. Reported period coverage is mandatory; YTD/derived values do not substitute. Verify every ordered failure/partial rule, missing metadata/report date, unsupported forms and no selected metrics."
+    given:
+      - input: ref('stg_silver_active_filings')
+        rows:
+          - &filing_summary_stg_silver_active_filings
+            cik: "0000000001"
+            accession_number: "annual-complete"
+            source_document_name: "annual-complete.xml"
+            source_sha256: "0000000001-annual-complete-sha"
+            silver_status: "PARTIAL"
+            parser_version: "parser-1"
+            schema_version: "schema-1"
+            activation_run_id: "activation-annual-complete"
+            activated_at: "2026-07-30T15:00:00+00:00"
+            version_path: "/silver/0000000001/annual-complete/v1"
+            publication_path: "/silver/0000000001/annual-complete/v1/publication.json"
+            publication_sha256: "0000000001-annual-complete-publication-sha"
+            accepted_count: 13
+            dimension_count: 2
+            rejected_count: 3
+            candidate_count: 16
+          - <<: *filing_summary_stg_silver_active_filings
+            accession_number: "quarter-complete"
+            source_document_name: "quarter-complete.xml"
+            source_sha256: "0000000001-quarter-complete-sha"
+            silver_status: "COMPLETE"
+            activation_run_id: "activation-quarter-complete"
+            version_path: "/silver/0000000001/quarter-complete/v1"
+            publication_path: "/silver/0000000001/quarter-complete/v1/publication.json"
+            publication_sha256: "0000000001-quarter-complete-publication-sha"
+          - <<: *filing_summary_stg_silver_active_filings
+            accession_number: "annual-amended"
+            source_document_name: "annual-amended.xml"
+            source_sha256: "0000000001-annual-amended-sha"
+            silver_status: "COMPLETE"
+            activation_run_id: "activation-annual-amended"
+            version_path: "/silver/0000000001/annual-amended/v1"
+            publication_path: "/silver/0000000001/annual-amended/v1/publication.json"
+            publication_sha256: "0000000001-annual-amended-publication-sha"
+          - <<: *filing_summary_stg_silver_active_filings
+            accession_number: "quarter-amended"
+            source_document_name: "quarter-amended.xml"
+            source_sha256: "0000000001-quarter-amended-sha"
+            silver_status: "COMPLETE"
+            activation_run_id: "activation-quarter-amended"
+            version_path: "/silver/0000000001/quarter-amended/v1"
+            publication_path: "/silver/0000000001/quarter-amended/v1/publication.json"
+            publication_sha256: "0000000001-quarter-amended-publication-sha"
+          - <<: *filing_summary_stg_silver_active_filings
+            accession_number: "non-substituting-values"
+            source_document_name: "non-substituting-values.xml"
+            source_sha256: "0000000001-non-substituting-values-sha"
+            silver_status: "COMPLETE"
+            activation_run_id: "activation-non-substituting-values"
+            version_path: "/silver/0000000001/non-substituting-values/v1"
+            publication_path: "/silver/0000000001/non-substituting-values/v1/publication.json"
+            publication_sha256: "0000000001-non-substituting-values-publication-sha"
+          - <<: *filing_summary_stg_silver_active_filings
+            accession_number: "derived-cannot-substitute"
+            source_document_name: "derived-cannot-substitute.xml"
+            source_sha256: "0000000001-derived-cannot-substitute-sha"
+            silver_status: "COMPLETE"
+            activation_run_id: "activation-derived-cannot-substitute"
+            version_path: "/silver/0000000001/derived-cannot-substitute/v1"
+            publication_path: "/silver/0000000001/derived-cannot-substitute/v1/publication.json"
+            publication_sha256: "0000000001-derived-cannot-substitute-publication-sha"
+          - <<: *filing_summary_stg_silver_active_filings
+            accession_number: "metric-error"
+            source_document_name: "metric-error.xml"
+            source_sha256: "0000000001-metric-error-sha"
+            silver_status: "COMPLETE"
+            activation_run_id: "activation-metric-error"
+            version_path: "/silver/0000000001/metric-error/v1"
+            publication_path: "/silver/0000000001/metric-error/v1/publication.json"
+            publication_sha256: "0000000001-metric-error-publication-sha"
+          - <<: *filing_summary_stg_silver_active_filings
+            accession_number: "missing-metadata"
+            source_document_name: "missing-metadata.xml"
+            source_sha256: "0000000001-missing-metadata-sha"
+            silver_status: "COMPLETE"
+            activation_run_id: "activation-missing-metadata"
+            version_path: "/silver/0000000001/missing-metadata/v1"
+            publication_path: "/silver/0000000001/missing-metadata/v1/publication.json"
+            publication_sha256: "0000000001-missing-metadata-publication-sha"
+          - <<: *filing_summary_stg_silver_active_filings
+            accession_number: "missing-report"
+            source_document_name: "missing-report.xml"
+            source_sha256: "0000000001-missing-report-sha"
+            silver_status: "COMPLETE"
+            activation_run_id: "activation-missing-report"
+            version_path: "/silver/0000000001/missing-report/v1"
+            publication_path: "/silver/0000000001/missing-report/v1/publication.json"
+            publication_sha256: "0000000001-missing-report-publication-sha"
+          - <<: *filing_summary_stg_silver_active_filings
+            accession_number: "unsupported-form"
+            source_document_name: "unsupported-form.xml"
+            source_sha256: "0000000001-unsupported-form-sha"
+            silver_status: "COMPLETE"
+            activation_run_id: "activation-unsupported-form"
+            version_path: "/silver/0000000001/unsupported-form/v1"
+            publication_path: "/silver/0000000001/unsupported-form/v1/publication.json"
+            publication_sha256: "0000000001-unsupported-form-publication-sha"
+          - <<: *filing_summary_stg_silver_active_filings
+            accession_number: "unsupported-with-values"
+            source_document_name: "unsupported-with-values.xml"
+            source_sha256: "0000000001-unsupported-with-values-sha"
+            silver_status: "COMPLETE"
+            activation_run_id: "activation-unsupported-with-values"
+            version_path: "/silver/0000000001/unsupported-with-values/v1"
+            publication_path: "/silver/0000000001/unsupported-with-values/v1/publication.json"
+            publication_sha256: "0000000001-unsupported-with-values-publication-sha"
+          - <<: *filing_summary_stg_silver_active_filings
+            accession_number: "no-selected-metrics"
+            source_document_name: "no-selected-metrics.xml"
+            source_sha256: "0000000001-no-selected-metrics-sha"
+            silver_status: "COMPLETE"
+            activation_run_id: "activation-no-selected-metrics"
+            version_path: "/silver/0000000001/no-selected-metrics/v1"
+            publication_path: "/silver/0000000001/no-selected-metrics/v1/publication.json"
+            publication_sha256: "0000000001-no-selected-metrics-publication-sha"
+      - input: ref('stg_silver_filing_metadata')
+        rows:
+          - &filing_summary_stg_silver_filing_metadata
+            cik: "0000000001"
+            accession_number: "annual-complete"
+            form: "10-K"
+            filing_date: "2025-10-31"
+            report_date: "2025-09-27"
+            primary_document: "annual-complete.htm"
+            metadata_run_id: "metadata-annual-complete"
+            submissions_sha256: "0000000001-annual-complete-submissions-sha"
+          - <<: *filing_summary_stg_silver_filing_metadata
+            accession_number: "quarter-complete"
+            form: "10-Q"
+            filing_date: "2026-07-30"
+            report_date: "2026-06-27"
+            primary_document: "quarter-complete.htm"
+            metadata_run_id: "metadata-quarter-complete"
+            submissions_sha256: "0000000001-quarter-complete-submissions-sha"
+          - <<: *filing_summary_stg_silver_filing_metadata
+            accession_number: "annual-amended"
+            form: "10-K/A"
+            primary_document: "annual-amended.htm"
+            metadata_run_id: "metadata-annual-amended"
+            submissions_sha256: "0000000001-annual-amended-submissions-sha"
+          - <<: *filing_summary_stg_silver_filing_metadata
+            accession_number: "quarter-amended"
+            form: "10-Q/A"
+            filing_date: "2026-07-30"
+            report_date: "2026-06-27"
+            primary_document: "quarter-amended.htm"
+            metadata_run_id: "metadata-quarter-amended"
+            submissions_sha256: "0000000001-quarter-amended-submissions-sha"
+          - <<: *filing_summary_stg_silver_filing_metadata
+            accession_number: "non-substituting-values"
+            form: "10-Q"
+            filing_date: "2026-07-30"
+            report_date: "2026-06-27"
+            primary_document: "non-substituting-values.htm"
+            metadata_run_id: "metadata-non-substituting-values"
+            submissions_sha256: "0000000001-non-substituting-values-submissions-sha"
+          - <<: *filing_summary_stg_silver_filing_metadata
+            accession_number: "derived-cannot-substitute"
+            primary_document: "derived-cannot-substitute.htm"
+            metadata_run_id: "metadata-derived-cannot-substitute"
+            submissions_sha256: "0000000001-derived-cannot-substitute-submissions-sha"
+          - <<: *filing_summary_stg_silver_filing_metadata
+            accession_number: "metric-error"
+            form: "10-Q"
+            filing_date: "2026-07-30"
+            report_date: "2026-06-27"
+            primary_document: "metric-error.htm"
+            metadata_run_id: "metadata-metric-error"
+            submissions_sha256: "0000000001-metric-error-submissions-sha"
+          - <<: *filing_summary_stg_silver_filing_metadata
+            accession_number: "missing-report"
+            form: "8-K"
+            filing_date: "2026-07-30"
+            report_date: null
+            primary_document: "missing-report.htm"
+            metadata_run_id: "metadata-missing-report"
+            submissions_sha256: "0000000001-missing-report-submissions-sha"
+          - <<: *filing_summary_stg_silver_filing_metadata
+            accession_number: "unsupported-form"
+            form: "8-K/A"
+            filing_date: "2026-07-30"
+            primary_document: "unsupported-form.htm"
+            metadata_run_id: "metadata-unsupported-form"
+            submissions_sha256: "0000000001-unsupported-form-submissions-sha"
+          - <<: *filing_summary_stg_silver_filing_metadata
+            accession_number: "unsupported-with-values"
+            form: "8-K/A"
+            filing_date: "2026-07-30"
+            primary_document: "unsupported-with-values.htm"
+            metadata_run_id: "metadata-unsupported-with-values"
+            submissions_sha256: "0000000001-unsupported-with-values-submissions-sha"
+          - <<: *filing_summary_stg_silver_filing_metadata
+            accession_number: "no-selected-metrics"
+            form: "10-Q"
+            filing_date: "2026-07-30"
+            report_date: "2026-06-27"
+            primary_document: "no-selected-metrics.htm"
+            metadata_run_id: "metadata-no-selected-metrics"
+            submissions_sha256: "0000000001-no-selected-metrics-submissions-sha"
+      - input: ref('stg_silver_filing_fiscal_metadata')
+        rows:
+          - &filing_summary_stg_silver_filing_fiscal_metadata
+            cik: "0000000001"
+            accession_number: "annual-complete"
+            source_document_name: "annual-complete.xml"
+            source_sha256: "0000000001-annual-complete-sha"
+            extraction_version: "1"
+            form: "10-K"
+            report_date: "2025-09-27"
+            metadata_run_id: "metadata-annual-complete"
+            submissions_sha256: "0000000001-annual-complete-submissions-sha"
+            extraction_status: "PARTIAL"
+            fiscal_year_focus: 2025
+            fiscal_period_focus: "FY"
+            document_period_end_date: "2025-09-27"
+          - <<: *filing_summary_stg_silver_filing_fiscal_metadata
+            accession_number: "quarter-complete"
+            source_document_name: "quarter-complete.xml"
+            source_sha256: "0000000001-quarter-complete-sha"
+            form: "10-Q"
+            report_date: "2026-06-27"
+            metadata_run_id: "metadata-quarter-complete"
+            submissions_sha256: "0000000001-quarter-complete-submissions-sha"
+            extraction_status: "COMPLETE"
+            fiscal_year_focus: 2026
+            fiscal_period_focus: "Q3"
+            document_period_end_date: "2026-06-27"
+          - <<: *filing_summary_stg_silver_filing_fiscal_metadata
+            accession_number: "annual-amended"
+            source_document_name: "annual-amended.xml"
+            source_sha256: "0000000001-annual-amended-sha"
+            form: "10-K/A"
+            metadata_run_id: "metadata-annual-amended"
+            submissions_sha256: "0000000001-annual-amended-submissions-sha"
+            extraction_status: "COMPLETE"
+          - <<: *filing_summary_stg_silver_filing_fiscal_metadata
+            accession_number: "quarter-amended"
+            source_document_name: "quarter-amended.xml"
+            source_sha256: "0000000001-quarter-amended-sha"
+            form: "10-Q/A"
+            report_date: "2026-06-27"
+            metadata_run_id: "metadata-quarter-amended"
+            submissions_sha256: "0000000001-quarter-amended-submissions-sha"
+            extraction_status: "COMPLETE"
+            fiscal_year_focus: 2026
+            fiscal_period_focus: "Q3"
+            document_period_end_date: "2026-06-27"
+      - input: ref('fct_financial_metrics')
+        rows:
+          - &filing_summary_fct_financial_metrics
+            cik: "0000000001"
+            accession_number: "annual-complete"
+            metric_code: "diluted_eps"
+            value_origin: "reported"
+            period_label: "annual"
+            period_kind: "duration"
+            period_start: "2024-09-29"
+            period_end: "2025-09-27"
+            period_instant: null
+            current_source_document_name: "annual-complete.xml"
+            current_source_sha256: "0000000001-annual-complete-sha"
+            current_source_occurrence_id: "0000000001-annual-complete-diluted_eps-annual"
+            value_decimal: "1"
+          - <<: *filing_summary_fct_financial_metrics
+            metric_code: "net_income"
+            current_source_occurrence_id: "0000000001-annual-complete-net_income-annual"
+          - <<: *filing_summary_fct_financial_metrics
+            metric_code: "revenue"
+            current_source_occurrence_id: "0000000001-annual-complete-revenue-annual"
+          - <<: *filing_summary_fct_financial_metrics
+            metric_code: "total_assets"
+            period_label: "instant"
+            period_kind: "instant"
+            period_start: null
+            period_end: null
+            period_instant: "2025-09-27"
+            current_source_occurrence_id: "0000000001-annual-complete-total_assets-instant"
+          - <<: *filing_summary_fct_financial_metrics
+            metric_code: "total_liabilities"
+            period_label: "instant"
+            period_kind: "instant"
+            period_start: null
+            period_end: null
+            period_instant: "2025-09-27"
+            current_source_occurrence_id: "0000000001-annual-complete-total_liabilities-instant"
+          - <<: *filing_summary_fct_financial_metrics
+            metric_code: "revenue"
+            value_origin: "derived"
+            period_label: "derived_quarter"
+            period_start: "2025-06-29"
+            current_source_occurrence_id: "0000000001-annual-complete-revenue-derived_quarter"
+          - <<: *filing_summary_fct_financial_metrics
+            accession_number: "quarter-complete"
+            period_label: "quarter"
+            period_start: "2026-03-29"
+            period_end: "2026-06-27"
+            current_source_document_name: "quarter-complete.xml"
+            current_source_sha256: "0000000001-quarter-complete-sha"
+            current_source_occurrence_id: "0000000001-quarter-complete-diluted_eps-quarter"
+          - <<: *filing_summary_fct_financial_metrics
+            accession_number: "quarter-complete"
+            metric_code: "net_income"
+            period_label: "quarter"
+            period_start: "2026-03-29"
+            period_end: "2026-06-27"
+            current_source_document_name: "quarter-complete.xml"
+            current_source_sha256: "0000000001-quarter-complete-sha"
+            current_source_occurrence_id: "0000000001-quarter-complete-net_income-quarter"
+          - <<: *filing_summary_fct_financial_metrics
+            accession_number: "quarter-complete"
+            metric_code: "revenue"
+            period_label: "quarter"
+            period_start: "2026-03-29"
+            period_end: "2026-06-27"
+            current_source_document_name: "quarter-complete.xml"
+            current_source_sha256: "0000000001-quarter-complete-sha"
+            current_source_occurrence_id: "0000000001-quarter-complete-revenue-quarter"
+          - <<: *filing_summary_fct_financial_metrics
+            accession_number: "quarter-complete"
+            metric_code: "total_assets"
+            period_label: "instant"
+            period_kind: "instant"
+            period_start: null
+            period_end: null
+            period_instant: "2026-06-27"
+            current_source_document_name: "quarter-complete.xml"
+            current_source_sha256: "0000000001-quarter-complete-sha"
+            current_source_occurrence_id: "0000000001-quarter-complete-total_assets-instant"
+          - <<: *filing_summary_fct_financial_metrics
+            accession_number: "quarter-complete"
+            metric_code: "total_liabilities"
+            period_label: "instant"
+            period_kind: "instant"
+            period_start: null
+            period_end: null
+            period_instant: "2026-06-27"
+            current_source_document_name: "quarter-complete.xml"
+            current_source_sha256: "0000000001-quarter-complete-sha"
+            current_source_occurrence_id: "0000000001-quarter-complete-total_liabilities-instant"
+          - <<: *filing_summary_fct_financial_metrics
+            accession_number: "quarter-complete"
+            metric_code: "revenue"
+            period_label: "year_to_date"
+            period_start: "2025-09-28"
+            period_end: "2026-06-27"
+            current_source_document_name: "quarter-complete.xml"
+            current_source_sha256: "0000000001-quarter-complete-sha"
+            current_source_occurrence_id: "0000000001-quarter-complete-revenue-year_to_date"
+          - <<: *filing_summary_fct_financial_metrics
+            accession_number: "annual-amended"
+            current_source_document_name: "annual-amended.xml"
+            current_source_sha256: "0000000001-annual-amended-sha"
+            current_source_occurrence_id: "0000000001-annual-amended-diluted_eps-annual"
+          - <<: *filing_summary_fct_financial_metrics
+            accession_number: "annual-amended"
+            metric_code: "net_income"
+            current_source_document_name: "annual-amended.xml"
+            current_source_sha256: "0000000001-annual-amended-sha"
+            current_source_occurrence_id: "0000000001-annual-amended-net_income-annual"
+          - <<: *filing_summary_fct_financial_metrics
+            accession_number: "annual-amended"
+            metric_code: "revenue"
+            current_source_document_name: "annual-amended.xml"
+            current_source_sha256: "0000000001-annual-amended-sha"
+            current_source_occurrence_id: "0000000001-annual-amended-revenue-annual"
+          - <<: *filing_summary_fct_financial_metrics
+            accession_number: "annual-amended"
+            metric_code: "total_assets"
+            period_label: "instant"
+            period_kind: "instant"
+            period_start: null
+            period_end: null
+            period_instant: "2025-09-27"
+            current_source_document_name: "annual-amended.xml"
+            current_source_sha256: "0000000001-annual-amended-sha"
+            current_source_occurrence_id: "0000000001-annual-amended-total_assets-instant"
+          - <<: *filing_summary_fct_financial_metrics
+            accession_number: "annual-amended"
+            metric_code: "total_liabilities"
+            period_label: "instant"
+            period_kind: "instant"
+            period_start: null
+            period_end: null
+            period_instant: "2025-09-27"
+            current_source_document_name: "annual-amended.xml"
+            current_source_sha256: "0000000001-annual-amended-sha"
+            current_source_occurrence_id: "0000000001-annual-amended-total_liabilities-instant"
+          - <<: *filing_summary_fct_financial_metrics
+            accession_number: "quarter-amended"
+            period_label: "quarter"
+            period_start: "2026-03-29"
+            period_end: "2026-06-27"
+            current_source_document_name: "quarter-amended.xml"
+            current_source_sha256: "0000000001-quarter-amended-sha"
+            current_source_occurrence_id: "0000000001-quarter-amended-diluted_eps-quarter"
+          - <<: *filing_summary_fct_financial_metrics
+            accession_number: "quarter-amended"
+            metric_code: "net_income"
+            period_label: "quarter"
+            period_start: "2026-03-29"
+            period_end: "2026-06-27"
+            current_source_document_name: "quarter-amended.xml"
+            current_source_sha256: "0000000001-quarter-amended-sha"
+            current_source_occurrence_id: "0000000001-quarter-amended-net_income-quarter"
+          - <<: *filing_summary_fct_financial_metrics
+            accession_number: "quarter-amended"
+            metric_code: "revenue"
+            period_label: "quarter"
+            period_start: "2026-03-29"
+            period_end: "2026-06-27"
+            current_source_document_name: "quarter-amended.xml"
+            current_source_sha256: "0000000001-quarter-amended-sha"
+            current_source_occurrence_id: "0000000001-quarter-amended-revenue-quarter"
+          - <<: *filing_summary_fct_financial_metrics
+            accession_number: "quarter-amended"
+            metric_code: "total_assets"
+            period_label: "instant"
+            period_kind: "instant"
+            period_start: null
+            period_end: null
+            period_instant: "2026-06-27"
+            current_source_document_name: "quarter-amended.xml"
+            current_source_sha256: "0000000001-quarter-amended-sha"
+            current_source_occurrence_id: "0000000001-quarter-amended-total_assets-instant"
+          - <<: *filing_summary_fct_financial_metrics
+            accession_number: "quarter-amended"
+            metric_code: "total_liabilities"
+            period_label: "instant"
+            period_kind: "instant"
+            period_start: null
+            period_end: null
+            period_instant: "2026-06-27"
+            current_source_document_name: "quarter-amended.xml"
+            current_source_sha256: "0000000001-quarter-amended-sha"
+            current_source_occurrence_id: "0000000001-quarter-amended-total_liabilities-instant"
+          - <<: *filing_summary_fct_financial_metrics
+            accession_number: "non-substituting-values"
+            metric_code: "revenue"
+            period_label: "year_to_date"
+            period_start: "2025-09-28"
+            period_end: "2026-06-27"
+            current_source_document_name: "non-substituting-values.xml"
+            current_source_sha256: "0000000001-non-substituting-values-sha"
+            current_source_occurrence_id: "0000000001-non-substituting-values-revenue-year_to_date"
+          - <<: *filing_summary_fct_financial_metrics
+            accession_number: "non-substituting-values"
+            metric_code: "net_income"
+            period_label: "year_to_date"
+            period_start: "2025-09-28"
+            period_end: "2026-06-27"
+            current_source_document_name: "non-substituting-values.xml"
+            current_source_sha256: "0000000001-non-substituting-values-sha"
+            current_source_occurrence_id: "0000000001-non-substituting-values-net_income-year_to_date"
+          - <<: *filing_summary_fct_financial_metrics
+            accession_number: "non-substituting-values"
+            period_label: "year_to_date"
+            period_start: "2025-09-28"
+            period_end: "2026-06-27"
+            current_source_document_name: "non-substituting-values.xml"
+            current_source_sha256: "0000000001-non-substituting-values-sha"
+            current_source_occurrence_id: "0000000001-non-substituting-values-diluted_eps-year_to_date"
+          - <<: *filing_summary_fct_financial_metrics
+            accession_number: "non-substituting-values"
+            metric_code: "operating_cash_flow"
+            value_origin: "derived"
+            period_label: "derived_quarter"
+            period_start: "2026-03-29"
+            period_end: "2026-06-27"
+            current_source_document_name: "non-substituting-values.xml"
+            current_source_sha256: "0000000001-non-substituting-values-sha"
+            current_source_occurrence_id: "0000000001-non-substituting-values-operating_cash_flow-derived_quarter"
+          - <<: *filing_summary_fct_financial_metrics
+            accession_number: "non-substituting-values"
+            metric_code: "total_assets"
+            period_label: "instant"
+            period_kind: "instant"
+            period_start: null
+            period_end: null
+            period_instant: "2026-06-27"
+            current_source_document_name: "non-substituting-values.xml"
+            current_source_sha256: "0000000001-non-substituting-values-sha"
+            current_source_occurrence_id: "0000000001-non-substituting-values-total_assets-instant"
+          - <<: *filing_summary_fct_financial_metrics
+            accession_number: "derived-cannot-substitute"
+            metric_code: "net_income"
+            current_source_document_name: "derived-cannot-substitute.xml"
+            current_source_sha256: "0000000001-derived-cannot-substitute-sha"
+            current_source_occurrence_id: "0000000001-derived-cannot-substitute-net_income-annual"
+          - <<: *filing_summary_fct_financial_metrics
+            accession_number: "derived-cannot-substitute"
+            current_source_document_name: "derived-cannot-substitute.xml"
+            current_source_sha256: "0000000001-derived-cannot-substitute-sha"
+            current_source_occurrence_id: "0000000001-derived-cannot-substitute-diluted_eps-annual"
+          - <<: *filing_summary_fct_financial_metrics
+            accession_number: "derived-cannot-substitute"
+            metric_code: "total_assets"
+            period_label: "instant"
+            period_kind: "instant"
+            period_start: null
+            period_end: null
+            period_instant: "2025-09-27"
+            current_source_document_name: "derived-cannot-substitute.xml"
+            current_source_sha256: "0000000001-derived-cannot-substitute-sha"
+            current_source_occurrence_id: "0000000001-derived-cannot-substitute-total_assets-instant"
+          - <<: *filing_summary_fct_financial_metrics
+            accession_number: "derived-cannot-substitute"
+            metric_code: "total_liabilities"
+            period_label: "instant"
+            period_kind: "instant"
+            period_start: null
+            period_end: null
+            period_instant: "2025-09-27"
+            current_source_document_name: "derived-cannot-substitute.xml"
+            current_source_sha256: "0000000001-derived-cannot-substitute-sha"
+            current_source_occurrence_id: "0000000001-derived-cannot-substitute-total_liabilities-instant"
+          - <<: *filing_summary_fct_financial_metrics
+            accession_number: "derived-cannot-substitute"
+            metric_code: "revenue"
+            value_origin: "derived"
+            period_label: "derived_quarter"
+            period_start: "2025-06-29"
+            current_source_document_name: "derived-cannot-substitute.xml"
+            current_source_sha256: "0000000001-derived-cannot-substitute-sha"
+            current_source_occurrence_id: "0000000001-derived-cannot-substitute-revenue-derived_quarter"
+          - <<: *filing_summary_fct_financial_metrics
+            accession_number: "metric-error"
+            period_label: "quarter"
+            period_start: "2026-03-29"
+            period_end: "2026-06-27"
+            current_source_document_name: "metric-error.xml"
+            current_source_sha256: "0000000001-metric-error-sha"
+            current_source_occurrence_id: "0000000001-metric-error-diluted_eps-quarter"
+          - <<: *filing_summary_fct_financial_metrics
+            accession_number: "metric-error"
+            metric_code: "net_income"
+            period_label: "quarter"
+            period_start: "2026-03-29"
+            period_end: "2026-06-27"
+            current_source_document_name: "metric-error.xml"
+            current_source_sha256: "0000000001-metric-error-sha"
+            current_source_occurrence_id: "0000000001-metric-error-net_income-quarter"
+          - <<: *filing_summary_fct_financial_metrics
+            accession_number: "metric-error"
+            metric_code: "revenue"
+            period_label: "quarter"
+            period_start: "2026-03-29"
+            period_end: "2026-06-27"
+            current_source_document_name: "metric-error.xml"
+            current_source_sha256: "0000000001-metric-error-sha"
+            current_source_occurrence_id: "0000000001-metric-error-revenue-quarter"
+          - <<: *filing_summary_fct_financial_metrics
+            accession_number: "metric-error"
+            metric_code: "total_assets"
+            period_label: "instant"
+            period_kind: "instant"
+            period_start: null
+            period_end: null
+            period_instant: "2026-06-27"
+            current_source_document_name: "metric-error.xml"
+            current_source_sha256: "0000000001-metric-error-sha"
+            current_source_occurrence_id: "0000000001-metric-error-total_assets-instant"
+          - <<: *filing_summary_fct_financial_metrics
+            accession_number: "metric-error"
+            metric_code: "total_liabilities"
+            period_label: "instant"
+            period_kind: "instant"
+            period_start: null
+            period_end: null
+            period_instant: "2026-06-27"
+            current_source_document_name: "metric-error.xml"
+            current_source_sha256: "0000000001-metric-error-sha"
+            current_source_occurrence_id: "0000000001-metric-error-total_liabilities-instant"
+          - <<: *filing_summary_fct_financial_metrics
+            accession_number: "missing-metadata"
+            current_source_document_name: "missing-metadata.xml"
+            current_source_sha256: "0000000001-missing-metadata-sha"
+            current_source_occurrence_id: "0000000001-missing-metadata-diluted_eps-annual"
+          - <<: *filing_summary_fct_financial_metrics
+            accession_number: "missing-metadata"
+            metric_code: "net_income"
+            current_source_document_name: "missing-metadata.xml"
+            current_source_sha256: "0000000001-missing-metadata-sha"
+            current_source_occurrence_id: "0000000001-missing-metadata-net_income-annual"
+          - <<: *filing_summary_fct_financial_metrics
+            accession_number: "missing-metadata"
+            metric_code: "revenue"
+            current_source_document_name: "missing-metadata.xml"
+            current_source_sha256: "0000000001-missing-metadata-sha"
+            current_source_occurrence_id: "0000000001-missing-metadata-revenue-annual"
+          - <<: *filing_summary_fct_financial_metrics
+            accession_number: "missing-metadata"
+            metric_code: "total_assets"
+            period_label: "instant"
+            period_kind: "instant"
+            period_start: null
+            period_end: null
+            period_instant: "2025-09-27"
+            current_source_document_name: "missing-metadata.xml"
+            current_source_sha256: "0000000001-missing-metadata-sha"
+            current_source_occurrence_id: "0000000001-missing-metadata-total_assets-instant"
+          - <<: *filing_summary_fct_financial_metrics
+            accession_number: "missing-metadata"
+            metric_code: "total_liabilities"
+            period_label: "instant"
+            period_kind: "instant"
+            period_start: null
+            period_end: null
+            period_instant: "2025-09-27"
+            current_source_document_name: "missing-metadata.xml"
+            current_source_sha256: "0000000001-missing-metadata-sha"
+            current_source_occurrence_id: "0000000001-missing-metadata-total_liabilities-instant"
+          - <<: *filing_summary_fct_financial_metrics
+            accession_number: "missing-report"
+            metric_code: "revenue"
+            current_source_document_name: "missing-report.xml"
+            current_source_sha256: "0000000001-missing-report-sha"
+            current_source_occurrence_id: "0000000001-missing-report-revenue-annual"
+          - <<: *filing_summary_fct_financial_metrics
+            accession_number: "unsupported-with-values"
+            current_source_document_name: "unsupported-with-values.xml"
+            current_source_sha256: "0000000001-unsupported-with-values-sha"
+            current_source_occurrence_id: "0000000001-unsupported-with-values-diluted_eps-annual"
+          - <<: *filing_summary_fct_financial_metrics
+            accession_number: "unsupported-with-values"
+            metric_code: "net_income"
+            current_source_document_name: "unsupported-with-values.xml"
+            current_source_sha256: "0000000001-unsupported-with-values-sha"
+            current_source_occurrence_id: "0000000001-unsupported-with-values-net_income-annual"
+          - <<: *filing_summary_fct_financial_metrics
+            accession_number: "unsupported-with-values"
+            metric_code: "revenue"
+            current_source_document_name: "unsupported-with-values.xml"
+            current_source_sha256: "0000000001-unsupported-with-values-sha"
+            current_source_occurrence_id: "0000000001-unsupported-with-values-revenue-annual"
+          - <<: *filing_summary_fct_financial_metrics
+            accession_number: "unsupported-with-values"
+            metric_code: "total_assets"
+            period_label: "instant"
+            period_kind: "instant"
+            period_start: null
+            period_end: null
+            period_instant: "2025-09-27"
+            current_source_document_name: "unsupported-with-values.xml"
+            current_source_sha256: "0000000001-unsupported-with-values-sha"
+            current_source_occurrence_id: "0000000001-unsupported-with-values-total_assets-instant"
+          - <<: *filing_summary_fct_financial_metrics
+            accession_number: "unsupported-with-values"
+            metric_code: "total_liabilities"
+            period_label: "instant"
+            period_kind: "instant"
+            period_start: null
+            period_end: null
+            period_instant: "2025-09-27"
+            current_source_document_name: "unsupported-with-values.xml"
+            current_source_sha256: "0000000001-unsupported-with-values-sha"
+            current_source_occurrence_id: "0000000001-unsupported-with-values-total_liabilities-instant"
+      - input: ref('metric_quality_issues')
+        rows:
+          - &filing_summary_metric_quality_issues
+            cik: "0000000001"
+            accession_number: "annual-complete"
+            metric_code: "operating_cash_flow"
+            severity: "WARNING"
+            issue_stage: "derivation"
+            source_model: "int_quarterly_cash_flow_derivation_issues"
+            issue_code: "MISSING_PREVIOUS_CUMULATIVE"
+            current_source_occurrence_id: "0000000001-annual-complete-current"
+            source_occurrence_ids: ["0000000001-annual-complete-current"]
+            previous_source_occurrence_ids: []
+            details: "Existing upstream issue occurrence."
+          - <<: *filing_summary_metric_quality_issues
+            accession_number: "quarter-complete"
+            current_source_occurrence_id: "0000000001-quarter-complete-current"
+            source_occurrence_ids: ["0000000001-quarter-complete-current"]
+          - <<: *filing_summary_metric_quality_issues
+            accession_number: "non-substituting-values"
+            severity: "ERROR"
+            current_source_occurrence_id: "0000000001-non-substituting-values-current"
+            source_occurrence_ids: ["0000000001-non-substituting-values-current"]
+          - <<: *filing_summary_metric_quality_issues
+            accession_number: "derived-cannot-substitute"
+            current_source_occurrence_id: "0000000001-derived-cannot-substitute-current"
+            source_occurrence_ids: ["0000000001-derived-cannot-substitute-current"]
+          - <<: *filing_summary_metric_quality_issues
+            accession_number: "metric-error"
+            severity: "ERROR"
+            current_source_occurrence_id: "0000000001-metric-error-current"
+            source_occurrence_ids: ["0000000001-metric-error-current"]
+          - <<: *filing_summary_metric_quality_issues
+            accession_number: "metric-error"
+            current_source_occurrence_id: "0000000001-metric-error-current"
+            source_occurrence_ids: ["0000000001-metric-error-current"]
+          - <<: *filing_summary_metric_quality_issues
+            accession_number: "missing-metadata"
+            severity: "ERROR"
+            current_source_occurrence_id: "0000000001-missing-metadata-current"
+            source_occurrence_ids: ["0000000001-missing-metadata-current"]
+          - <<: *filing_summary_metric_quality_issues
+            accession_number: "missing-report"
+            severity: "ERROR"
+            current_source_occurrence_id: "0000000001-missing-report-current"
+            source_occurrence_ids: ["0000000001-missing-report-current"]
+          - <<: *filing_summary_metric_quality_issues
+            accession_number: "unsupported-form"
+            severity: "ERROR"
+            current_source_occurrence_id: "0000000001-unsupported-form-current"
+            source_occurrence_ids: ["0000000001-unsupported-form-current"]
+          - <<: *filing_summary_metric_quality_issues
+            accession_number: "no-selected-metrics"
+            severity: "ERROR"
+            current_source_occurrence_id: "0000000001-no-selected-metrics-current"
+            source_occurrence_ids: ["0000000001-no-selected-metrics-current"]
+    expect:
+      rows:
+        - {cik: "0000000001", accession_number: "annual-complete",
+           form: "10-K", filing_date: "2025-10-31",
+           report_date: "2025-09-27", primary_document: "annual-complete.htm",
+           is_amendment: false, fiscal_year_focus: 2025,
+           fiscal_period_focus: "FY", document_period_end_date: "2025-09-27",
+           fiscal_metadata_status: "PARTIAL", fiscal_extraction_version: "1",
+           metadata_run_id: "metadata-annual-complete", submissions_sha256: "0000000001-annual-complete-submissions-sha",
+           source_document_name: "annual-complete.xml", source_sha256: "0000000001-annual-complete-sha",
+           silver_status: "PARTIAL", parser_version: "parser-1",
+           schema_version: "schema-1", activation_run_id: "activation-annual-complete",
+           activated_at: "2026-07-30T15:00:00+00:00", version_path: "/silver/0000000001/annual-complete/v1",
+           publication_path: "/silver/0000000001/annual-complete/v1/publication.json", publication_sha256: "0000000001-annual-complete-publication-sha",
+           accepted_fact_count: 13, dimension_count: 2,
+           rejected_fact_count: 3, candidate_fact_count: 16,
+           financial_metric_row_count: 6, reported_metric_row_count: 5,
+           derived_metric_row_count: 1, distinct_metric_count: 5,
+           present_critical_metric_count: 5, missing_critical_metric_codes: [],
+           quality_issue_count: 1, error_issue_count: 0,
+           warning_issue_count: 1, gold_quality_status: "COMPLETE",
+           gold_quality_reason: "CRITICAL_METRICS_PRESENT", quality_rule_version: "1"}
+        - {cik: "0000000001", accession_number: "quarter-complete",
+           form: "10-Q", filing_date: "2026-07-30",
+           report_date: "2026-06-27", primary_document: "quarter-complete.htm",
+           is_amendment: false, fiscal_year_focus: 2026,
+           fiscal_period_focus: "Q3", document_period_end_date: "2026-06-27",
+           fiscal_metadata_status: "COMPLETE", fiscal_extraction_version: "1",
+           metadata_run_id: "metadata-quarter-complete", submissions_sha256: "0000000001-quarter-complete-submissions-sha",
+           source_document_name: "quarter-complete.xml", source_sha256: "0000000001-quarter-complete-sha",
+           silver_status: "COMPLETE", parser_version: "parser-1",
+           schema_version: "schema-1", activation_run_id: "activation-quarter-complete",
+           activated_at: "2026-07-30T15:00:00+00:00", version_path: "/silver/0000000001/quarter-complete/v1",
+           publication_path: "/silver/0000000001/quarter-complete/v1/publication.json", publication_sha256: "0000000001-quarter-complete-publication-sha",
+           accepted_fact_count: 13, dimension_count: 2,
+           rejected_fact_count: 3, candidate_fact_count: 16,
+           financial_metric_row_count: 6, reported_metric_row_count: 6,
+           derived_metric_row_count: 0, distinct_metric_count: 5,
+           present_critical_metric_count: 5, missing_critical_metric_codes: [],
+           quality_issue_count: 1, error_issue_count: 0,
+           warning_issue_count: 1, gold_quality_status: "COMPLETE",
+           gold_quality_reason: "CRITICAL_METRICS_PRESENT", quality_rule_version: "1"}
+        - {cik: "0000000001", accession_number: "annual-amended",
+           form: "10-K/A", filing_date: "2025-10-31",
+           report_date: "2025-09-27", primary_document: "annual-amended.htm",
+           is_amendment: true, fiscal_year_focus: 2025,
+           fiscal_period_focus: "FY", document_period_end_date: "2025-09-27",
+           fiscal_metadata_status: "COMPLETE", fiscal_extraction_version: "1",
+           metadata_run_id: "metadata-annual-amended", submissions_sha256: "0000000001-annual-amended-submissions-sha",
+           source_document_name: "annual-amended.xml", source_sha256: "0000000001-annual-amended-sha",
+           silver_status: "COMPLETE", parser_version: "parser-1",
+           schema_version: "schema-1", activation_run_id: "activation-annual-amended",
+           activated_at: "2026-07-30T15:00:00+00:00", version_path: "/silver/0000000001/annual-amended/v1",
+           publication_path: "/silver/0000000001/annual-amended/v1/publication.json", publication_sha256: "0000000001-annual-amended-publication-sha",
+           accepted_fact_count: 13, dimension_count: 2,
+           rejected_fact_count: 3, candidate_fact_count: 16,
+           financial_metric_row_count: 5, reported_metric_row_count: 5,
+           derived_metric_row_count: 0, distinct_metric_count: 5,
+           present_critical_metric_count: 5, missing_critical_metric_codes: [],
+           quality_issue_count: 0, error_issue_count: 0,
+           warning_issue_count: 0, gold_quality_status: "COMPLETE",
+           gold_quality_reason: "CRITICAL_METRICS_PRESENT", quality_rule_version: "1"}
+        - {cik: "0000000001", accession_number: "quarter-amended",
+           form: "10-Q/A", filing_date: "2026-07-30",
+           report_date: "2026-06-27", primary_document: "quarter-amended.htm",
+           is_amendment: true, fiscal_year_focus: 2026,
+           fiscal_period_focus: "Q3", document_period_end_date: "2026-06-27",
+           fiscal_metadata_status: "COMPLETE", fiscal_extraction_version: "1",
+           metadata_run_id: "metadata-quarter-amended", submissions_sha256: "0000000001-quarter-amended-submissions-sha",
+           source_document_name: "quarter-amended.xml", source_sha256: "0000000001-quarter-amended-sha",
+           silver_status: "COMPLETE", parser_version: "parser-1",
+           schema_version: "schema-1", activation_run_id: "activation-quarter-amended",
+           activated_at: "2026-07-30T15:00:00+00:00", version_path: "/silver/0000000001/quarter-amended/v1",
+           publication_path: "/silver/0000000001/quarter-amended/v1/publication.json", publication_sha256: "0000000001-quarter-amended-publication-sha",
+           accepted_fact_count: 13, dimension_count: 2,
+           rejected_fact_count: 3, candidate_fact_count: 16,
+           financial_metric_row_count: 5, reported_metric_row_count: 5,
+           derived_metric_row_count: 0, distinct_metric_count: 5,
+           present_critical_metric_count: 5, missing_critical_metric_codes: [],
+           quality_issue_count: 0, error_issue_count: 0,
+           warning_issue_count: 0, gold_quality_status: "COMPLETE",
+           gold_quality_reason: "CRITICAL_METRICS_PRESENT", quality_rule_version: "1"}
+        - {cik: "0000000001", accession_number: "non-substituting-values",
+           form: "10-Q", filing_date: "2026-07-30",
+           report_date: "2026-06-27", primary_document: "non-substituting-values.htm",
+           is_amendment: false, fiscal_year_focus: null,
+           fiscal_period_focus: null, document_period_end_date: null,
+           fiscal_metadata_status: null, fiscal_extraction_version: null,
+           metadata_run_id: "metadata-non-substituting-values", submissions_sha256: "0000000001-non-substituting-values-submissions-sha",
+           source_document_name: "non-substituting-values.xml", source_sha256: "0000000001-non-substituting-values-sha",
+           silver_status: "COMPLETE", parser_version: "parser-1",
+           schema_version: "schema-1", activation_run_id: "activation-non-substituting-values",
+           activated_at: "2026-07-30T15:00:00+00:00", version_path: "/silver/0000000001/non-substituting-values/v1",
+           publication_path: "/silver/0000000001/non-substituting-values/v1/publication.json", publication_sha256: "0000000001-non-substituting-values-publication-sha",
+           accepted_fact_count: 13, dimension_count: 2,
+           rejected_fact_count: 3, candidate_fact_count: 16,
+           financial_metric_row_count: 5, reported_metric_row_count: 4,
+           derived_metric_row_count: 1, distinct_metric_count: 5,
+           present_critical_metric_count: 1, missing_critical_metric_codes: ["diluted_eps", "net_income", "revenue", "total_liabilities"],
+           quality_issue_count: 1, error_issue_count: 1,
+           warning_issue_count: 0, gold_quality_status: "PARTIAL",
+           gold_quality_reason: "MISSING_CRITICAL_METRICS", quality_rule_version: "1"}
+        - {cik: "0000000001", accession_number: "derived-cannot-substitute",
+           form: "10-K", filing_date: "2025-10-31",
+           report_date: "2025-09-27", primary_document: "derived-cannot-substitute.htm",
+           is_amendment: false, fiscal_year_focus: null,
+           fiscal_period_focus: null, document_period_end_date: null,
+           fiscal_metadata_status: null, fiscal_extraction_version: null,
+           metadata_run_id: "metadata-derived-cannot-substitute", submissions_sha256: "0000000001-derived-cannot-substitute-submissions-sha",
+           source_document_name: "derived-cannot-substitute.xml", source_sha256: "0000000001-derived-cannot-substitute-sha",
+           silver_status: "COMPLETE", parser_version: "parser-1",
+           schema_version: "schema-1", activation_run_id: "activation-derived-cannot-substitute",
+           activated_at: "2026-07-30T15:00:00+00:00", version_path: "/silver/0000000001/derived-cannot-substitute/v1",
+           publication_path: "/silver/0000000001/derived-cannot-substitute/v1/publication.json", publication_sha256: "0000000001-derived-cannot-substitute-publication-sha",
+           accepted_fact_count: 13, dimension_count: 2,
+           rejected_fact_count: 3, candidate_fact_count: 16,
+           financial_metric_row_count: 5, reported_metric_row_count: 4,
+           derived_metric_row_count: 1, distinct_metric_count: 5,
+           present_critical_metric_count: 4, missing_critical_metric_codes: ["revenue"],
+           quality_issue_count: 1, error_issue_count: 0,
+           warning_issue_count: 1, gold_quality_status: "PARTIAL",
+           gold_quality_reason: "MISSING_CRITICAL_METRICS", quality_rule_version: "1"}
+        - {cik: "0000000001", accession_number: "metric-error",
+           form: "10-Q", filing_date: "2026-07-30",
+           report_date: "2026-06-27", primary_document: "metric-error.htm",
+           is_amendment: false, fiscal_year_focus: null,
+           fiscal_period_focus: null, document_period_end_date: null,
+           fiscal_metadata_status: null, fiscal_extraction_version: null,
+           metadata_run_id: "metadata-metric-error", submissions_sha256: "0000000001-metric-error-submissions-sha",
+           source_document_name: "metric-error.xml", source_sha256: "0000000001-metric-error-sha",
+           silver_status: "COMPLETE", parser_version: "parser-1",
+           schema_version: "schema-1", activation_run_id: "activation-metric-error",
+           activated_at: "2026-07-30T15:00:00+00:00", version_path: "/silver/0000000001/metric-error/v1",
+           publication_path: "/silver/0000000001/metric-error/v1/publication.json", publication_sha256: "0000000001-metric-error-publication-sha",
+           accepted_fact_count: 13, dimension_count: 2,
+           rejected_fact_count: 3, candidate_fact_count: 16,
+           financial_metric_row_count: 5, reported_metric_row_count: 5,
+           derived_metric_row_count: 0, distinct_metric_count: 5,
+           present_critical_metric_count: 5, missing_critical_metric_codes: [],
+           quality_issue_count: 2, error_issue_count: 1,
+           warning_issue_count: 1, gold_quality_status: "PARTIAL",
+           gold_quality_reason: "METRIC_ERRORS", quality_rule_version: "1"}
+        - {cik: "0000000001", accession_number: "missing-metadata",
+           form: null, filing_date: null,
+           report_date: null, primary_document: null,
+           is_amendment: null, fiscal_year_focus: null,
+           fiscal_period_focus: null, document_period_end_date: null,
+           fiscal_metadata_status: null, fiscal_extraction_version: null,
+           metadata_run_id: null, submissions_sha256: null,
+           source_document_name: "missing-metadata.xml", source_sha256: "0000000001-missing-metadata-sha",
+           silver_status: "COMPLETE", parser_version: "parser-1",
+           schema_version: "schema-1", activation_run_id: "activation-missing-metadata",
+           activated_at: "2026-07-30T15:00:00+00:00", version_path: "/silver/0000000001/missing-metadata/v1",
+           publication_path: "/silver/0000000001/missing-metadata/v1/publication.json", publication_sha256: "0000000001-missing-metadata-publication-sha",
+           accepted_fact_count: 13, dimension_count: 2,
+           rejected_fact_count: 3, candidate_fact_count: 16,
+           financial_metric_row_count: 5, reported_metric_row_count: 5,
+           derived_metric_row_count: 0, distinct_metric_count: 5,
+           present_critical_metric_count: 0, missing_critical_metric_codes: ["diluted_eps", "net_income", "revenue", "total_assets", "total_liabilities"],
+           quality_issue_count: 1, error_issue_count: 1,
+           warning_issue_count: 0, gold_quality_status: "FAILED",
+           gold_quality_reason: "MISSING_FILING_METADATA", quality_rule_version: "1"}
+        - {cik: "0000000001", accession_number: "missing-report",
+           form: "8-K", filing_date: "2026-07-30",
+           report_date: null, primary_document: "missing-report.htm",
+           is_amendment: false, fiscal_year_focus: null,
+           fiscal_period_focus: null, document_period_end_date: null,
+           fiscal_metadata_status: null, fiscal_extraction_version: null,
+           metadata_run_id: "metadata-missing-report", submissions_sha256: "0000000001-missing-report-submissions-sha",
+           source_document_name: "missing-report.xml", source_sha256: "0000000001-missing-report-sha",
+           silver_status: "COMPLETE", parser_version: "parser-1",
+           schema_version: "schema-1", activation_run_id: "activation-missing-report",
+           activated_at: "2026-07-30T15:00:00+00:00", version_path: "/silver/0000000001/missing-report/v1",
+           publication_path: "/silver/0000000001/missing-report/v1/publication.json", publication_sha256: "0000000001-missing-report-publication-sha",
+           accepted_fact_count: 13, dimension_count: 2,
+           rejected_fact_count: 3, candidate_fact_count: 16,
+           financial_metric_row_count: 1, reported_metric_row_count: 1,
+           derived_metric_row_count: 0, distinct_metric_count: 1,
+           present_critical_metric_count: 0, missing_critical_metric_codes: ["diluted_eps", "net_income", "revenue", "total_assets", "total_liabilities"],
+           quality_issue_count: 1, error_issue_count: 1,
+           warning_issue_count: 0, gold_quality_status: "FAILED",
+           gold_quality_reason: "MISSING_REPORT_DATE", quality_rule_version: "1"}
+        - {cik: "0000000001", accession_number: "unsupported-form",
+           form: "8-K/A", filing_date: "2026-07-30",
+           report_date: "2025-09-27", primary_document: "unsupported-form.htm",
+           is_amendment: true, fiscal_year_focus: null,
+           fiscal_period_focus: null, document_period_end_date: null,
+           fiscal_metadata_status: null, fiscal_extraction_version: null,
+           metadata_run_id: "metadata-unsupported-form", submissions_sha256: "0000000001-unsupported-form-submissions-sha",
+           source_document_name: "unsupported-form.xml", source_sha256: "0000000001-unsupported-form-sha",
+           silver_status: "COMPLETE", parser_version: "parser-1",
+           schema_version: "schema-1", activation_run_id: "activation-unsupported-form",
+           activated_at: "2026-07-30T15:00:00+00:00", version_path: "/silver/0000000001/unsupported-form/v1",
+           publication_path: "/silver/0000000001/unsupported-form/v1/publication.json", publication_sha256: "0000000001-unsupported-form-publication-sha",
+           accepted_fact_count: 13, dimension_count: 2,
+           rejected_fact_count: 3, candidate_fact_count: 16,
+           financial_metric_row_count: 0, reported_metric_row_count: 0,
+           derived_metric_row_count: 0, distinct_metric_count: 0,
+           present_critical_metric_count: 0, missing_critical_metric_codes: ["diluted_eps", "net_income", "revenue", "total_assets", "total_liabilities"],
+           quality_issue_count: 1, error_issue_count: 1,
+           warning_issue_count: 0, gold_quality_status: "FAILED",
+           gold_quality_reason: "UNSUPPORTED_FORM", quality_rule_version: "1"}
+        - {cik: "0000000001", accession_number: "unsupported-with-values",
+           form: "8-K/A", filing_date: "2026-07-30",
+           report_date: "2025-09-27", primary_document: "unsupported-with-values.htm",
+           is_amendment: true, fiscal_year_focus: null,
+           fiscal_period_focus: null, document_period_end_date: null,
+           fiscal_metadata_status: null, fiscal_extraction_version: null,
+           metadata_run_id: "metadata-unsupported-with-values", submissions_sha256: "0000000001-unsupported-with-values-submissions-sha",
+           source_document_name: "unsupported-with-values.xml", source_sha256: "0000000001-unsupported-with-values-sha",
+           silver_status: "COMPLETE", parser_version: "parser-1",
+           schema_version: "schema-1", activation_run_id: "activation-unsupported-with-values",
+           activated_at: "2026-07-30T15:00:00+00:00", version_path: "/silver/0000000001/unsupported-with-values/v1",
+           publication_path: "/silver/0000000001/unsupported-with-values/v1/publication.json", publication_sha256: "0000000001-unsupported-with-values-publication-sha",
+           accepted_fact_count: 13, dimension_count: 2,
+           rejected_fact_count: 3, candidate_fact_count: 16,
+           financial_metric_row_count: 5, reported_metric_row_count: 5,
+           derived_metric_row_count: 0, distinct_metric_count: 5,
+           present_critical_metric_count: 0, missing_critical_metric_codes: ["diluted_eps", "net_income", "revenue", "total_assets", "total_liabilities"],
+           quality_issue_count: 0, error_issue_count: 0,
+           warning_issue_count: 0, gold_quality_status: "FAILED",
+           gold_quality_reason: "UNSUPPORTED_FORM", quality_rule_version: "1"}
+        - {cik: "0000000001", accession_number: "no-selected-metrics",
+           form: "10-Q", filing_date: "2026-07-30",
+           report_date: "2026-06-27", primary_document: "no-selected-metrics.htm",
+           is_amendment: false, fiscal_year_focus: null,
+           fiscal_period_focus: null, document_period_end_date: null,
+           fiscal_metadata_status: null, fiscal_extraction_version: null,
+           metadata_run_id: "metadata-no-selected-metrics", submissions_sha256: "0000000001-no-selected-metrics-submissions-sha",
+           source_document_name: "no-selected-metrics.xml", source_sha256: "0000000001-no-selected-metrics-sha",
+           silver_status: "COMPLETE", parser_version: "parser-1",
+           schema_version: "schema-1", activation_run_id: "activation-no-selected-metrics",
+           activated_at: "2026-07-30T15:00:00+00:00", version_path: "/silver/0000000001/no-selected-metrics/v1",
+           publication_path: "/silver/0000000001/no-selected-metrics/v1/publication.json", publication_sha256: "0000000001-no-selected-metrics-publication-sha",
+           accepted_fact_count: 13, dimension_count: 2,
+           rejected_fact_count: 3, candidate_fact_count: 16,
+           financial_metric_row_count: 0, reported_metric_row_count: 0,
+           derived_metric_row_count: 0, distinct_metric_count: 0,
+           present_critical_metric_count: 0, missing_critical_metric_codes: ["diluted_eps", "net_income", "revenue", "total_assets", "total_liabilities"],
+           quality_issue_count: 1, error_issue_count: 1,
+           warning_issue_count: 0, gold_quality_status: "FAILED",
+           gold_quality_reason: "NO_SELECTED_METRICS", quality_rule_version: "1"}
+  - name: filing_summary_grain_lineage_and_aggregation
+    model: dim_filings
+    description: "Company/accession isolation, separate metric/issue aggregates, duplicate issue counts and stale-source exclusion. Consistent PARTIAL fiscal fields attach independently; each required fiscal source/metadata lineage mismatch remains unattached. Inactive metric/issue records add no summaries."
+    given:
+      - input: ref('stg_silver_active_filings')
+        rows:
+          - <<: *filing_summary_stg_silver_active_filings
+            accession_number: "shared"
+            source_document_name: "shared.xml"
+            source_sha256: "0000000001-shared-sha"
+            activation_run_id: "activation-shared"
+            version_path: "/silver/0000000001/shared/v1"
+            publication_path: "/silver/0000000001/shared/v1/publication.json"
+            publication_sha256: "0000000001-shared-publication-sha"
+          - <<: *filing_summary_stg_silver_active_filings
+            cik: "0000000002"
+            accession_number: "shared"
+            source_document_name: "shared.xml"
+            source_sha256: "0000000002-shared-sha"
+            silver_status: "COMPLETE"
+            activation_run_id: "activation-shared"
+            version_path: "/silver/0000000002/shared/v1"
+            publication_path: "/silver/0000000002/shared/v1/publication.json"
+            publication_sha256: "0000000002-shared-publication-sha"
+          - <<: *filing_summary_stg_silver_active_filings
+            accession_number: "other-accession"
+            source_document_name: "other-accession.xml"
+            source_sha256: "0000000001-other-accession-sha"
+            silver_status: "COMPLETE"
+            activation_run_id: "activation-other-accession"
+            version_path: "/silver/0000000001/other-accession/v1"
+            publication_path: "/silver/0000000001/other-accession/v1/publication.json"
+            publication_sha256: "0000000001-other-accession-publication-sha"
+          - <<: *filing_summary_stg_silver_active_filings
+            accession_number: "fiscal-document"
+            source_document_name: "fiscal-document.xml"
+            source_sha256: "0000000001-fiscal-document-sha"
+            silver_status: "COMPLETE"
+            activation_run_id: "activation-fiscal-document"
+            version_path: "/silver/0000000001/fiscal-document/v1"
+            publication_path: "/silver/0000000001/fiscal-document/v1/publication.json"
+            publication_sha256: "0000000001-fiscal-document-publication-sha"
+          - <<: *filing_summary_stg_silver_active_filings
+            accession_number: "fiscal-checksum"
+            source_document_name: "fiscal-checksum.xml"
+            source_sha256: "0000000001-fiscal-checksum-sha"
+            silver_status: "COMPLETE"
+            activation_run_id: "activation-fiscal-checksum"
+            version_path: "/silver/0000000001/fiscal-checksum/v1"
+            publication_path: "/silver/0000000001/fiscal-checksum/v1/publication.json"
+            publication_sha256: "0000000001-fiscal-checksum-publication-sha"
+          - <<: *filing_summary_stg_silver_active_filings
+            accession_number: "fiscal-report"
+            source_document_name: "fiscal-report.xml"
+            source_sha256: "0000000001-fiscal-report-sha"
+            silver_status: "COMPLETE"
+            activation_run_id: "activation-fiscal-report"
+            version_path: "/silver/0000000001/fiscal-report/v1"
+            publication_path: "/silver/0000000001/fiscal-report/v1/publication.json"
+            publication_sha256: "0000000001-fiscal-report-publication-sha"
+          - <<: *filing_summary_stg_silver_active_filings
+            accession_number: "fiscal-submissions"
+            source_document_name: "fiscal-submissions.xml"
+            source_sha256: "0000000001-fiscal-submissions-sha"
+            silver_status: "COMPLETE"
+            activation_run_id: "activation-fiscal-submissions"
+            version_path: "/silver/0000000001/fiscal-submissions/v1"
+            publication_path: "/silver/0000000001/fiscal-submissions/v1/publication.json"
+            publication_sha256: "0000000001-fiscal-submissions-publication-sha"
+      - input: ref('stg_silver_filing_metadata')
+        rows:
+          - <<: *filing_summary_stg_silver_filing_metadata
+            accession_number: "shared"
+            primary_document: "shared.htm"
+            metadata_run_id: "metadata-shared"
+            submissions_sha256: "0000000001-shared-submissions-sha"
+          - <<: *filing_summary_stg_silver_filing_metadata
+            cik: "0000000002"
+            accession_number: "shared"
+            form: "10-Q"
+            filing_date: "2026-07-30"
+            report_date: "2026-06-27"
+            primary_document: "shared.htm"
+            metadata_run_id: "metadata-shared"
+            submissions_sha256: "0000000002-shared-submissions-sha"
+          - <<: *filing_summary_stg_silver_filing_metadata
+            accession_number: "other-accession"
+            primary_document: "other-accession.htm"
+            metadata_run_id: "metadata-other-accession"
+            submissions_sha256: "0000000001-other-accession-submissions-sha"
+          - <<: *filing_summary_stg_silver_filing_metadata
+            accession_number: "fiscal-document"
+            primary_document: "fiscal-document.htm"
+            metadata_run_id: "metadata-fiscal-document"
+            submissions_sha256: "0000000001-fiscal-document-submissions-sha"
+          - <<: *filing_summary_stg_silver_filing_metadata
+            accession_number: "fiscal-checksum"
+            primary_document: "fiscal-checksum.htm"
+            metadata_run_id: "metadata-fiscal-checksum"
+            submissions_sha256: "0000000001-fiscal-checksum-submissions-sha"
+          - <<: *filing_summary_stg_silver_filing_metadata
+            accession_number: "fiscal-report"
+            primary_document: "fiscal-report.htm"
+            metadata_run_id: "metadata-fiscal-report"
+            submissions_sha256: "0000000001-fiscal-report-submissions-sha"
+          - <<: *filing_summary_stg_silver_filing_metadata
+            accession_number: "fiscal-submissions"
+            primary_document: "fiscal-submissions.htm"
+            metadata_run_id: "metadata-fiscal-submissions"
+            submissions_sha256: "0000000001-fiscal-submissions-submissions-sha"
+      - input: ref('stg_silver_filing_fiscal_metadata')
+        rows:
+          - <<: *filing_summary_stg_silver_filing_fiscal_metadata
+            accession_number: "shared"
+            source_document_name: "shared.xml"
+            source_sha256: "0000000001-shared-sha"
+            metadata_run_id: "metadata-shared"
+            submissions_sha256: "0000000001-shared-submissions-sha"
+            fiscal_period_focus: null
+          - <<: *filing_summary_stg_silver_filing_fiscal_metadata
+            cik: "0000000002"
+            accession_number: "shared"
+            source_document_name: "shared.xml"
+            source_sha256: "0000000002-shared-sha"
+            report_date: "2026-06-27"
+            metadata_run_id: "metadata-shared"
+            submissions_sha256: "0000000002-shared-submissions-sha"
+            extraction_status: "COMPLETE"
+            fiscal_year_focus: 2026
+            fiscal_period_focus: "Q3"
+            document_period_end_date: "2026-06-27"
+          - <<: *filing_summary_stg_silver_filing_fiscal_metadata
+            accession_number: "other-accession"
+            source_document_name: "other-accession.xml"
+            source_sha256: "0000000001-other-accession-sha"
+            metadata_run_id: "wrong-run"
+            submissions_sha256: "0000000001-other-accession-submissions-sha"
+            extraction_status: "COMPLETE"
+          - <<: *filing_summary_stg_silver_filing_fiscal_metadata
+            accession_number: "fiscal-document"
+            source_document_name: "wrong.xml"
+            source_sha256: "0000000001-fiscal-document-sha"
+            metadata_run_id: "metadata-fiscal-document"
+            submissions_sha256: "0000000001-fiscal-document-submissions-sha"
+            extraction_status: "COMPLETE"
+          - <<: *filing_summary_stg_silver_filing_fiscal_metadata
+            accession_number: "fiscal-checksum"
+            source_document_name: "fiscal-checksum.xml"
+            source_sha256: "wrong-sha"
+            metadata_run_id: "metadata-fiscal-checksum"
+            submissions_sha256: "0000000001-fiscal-checksum-submissions-sha"
+            extraction_status: "COMPLETE"
+          - <<: *filing_summary_stg_silver_filing_fiscal_metadata
+            accession_number: "fiscal-report"
+            source_document_name: "fiscal-report.xml"
+            source_sha256: "0000000001-fiscal-report-sha"
+            report_date: "2025-09-26"
+            metadata_run_id: "metadata-fiscal-report"
+            submissions_sha256: "0000000001-fiscal-report-submissions-sha"
+            extraction_status: "COMPLETE"
+          - <<: *filing_summary_stg_silver_filing_fiscal_metadata
+            accession_number: "fiscal-submissions"
+            source_document_name: "fiscal-submissions.xml"
+            source_sha256: "0000000001-fiscal-submissions-sha"
+            metadata_run_id: "metadata-fiscal-submissions"
+            submissions_sha256: "wrong-submissions-sha"
+            extraction_status: "COMPLETE"
+      - input: ref('fct_financial_metrics')
+        rows:
+          - <<: *filing_summary_fct_financial_metrics
+            accession_number: "shared"
+            metric_code: "revenue"
+            current_source_document_name: "shared.xml"
+            current_source_sha256: "0000000001-shared-sha"
+            current_source_occurrence_id: "0000000001-shared-revenue-annual"
+          - <<: *filing_summary_fct_financial_metrics
+            accession_number: "shared"
+            metric_code: "total_assets"
+            period_label: "instant"
+            period_kind: "instant"
+            period_start: null
+            period_end: null
+            period_instant: "2025-09-27"
+            current_source_document_name: "shared.xml"
+            current_source_sha256: "0000000001-shared-sha"
+            current_source_occurrence_id: "0000000001-shared-total_assets-instant"
+          - <<: *filing_summary_fct_financial_metrics
+            accession_number: "shared"
+            metric_code: "revenue"
+            value_origin: "derived"
+            period_label: "derived_quarter"
+            period_start: "2025-06-29"
+            current_source_document_name: "shared.xml"
+            current_source_sha256: "0000000001-shared-sha"
+            current_source_occurrence_id: "0000000001-shared-revenue-derived_quarter"
+          - <<: *filing_summary_fct_financial_metrics
+            accession_number: "shared"
+            metric_code: "net_income"
+            current_source_document_name: "shared.xml"
+            current_source_sha256: "stale-sha"
+            current_source_occurrence_id: "0000000001-shared-net_income-annual"
+          - <<: *filing_summary_fct_financial_metrics
+            accession_number: "shared"
+            current_source_document_name: "stale.xml"
+            current_source_sha256: "0000000001-shared-sha"
+            current_source_occurrence_id: "0000000001-shared-diluted_eps-annual"
+          - <<: *filing_summary_fct_financial_metrics
+            accession_number: "inactive"
+            metric_code: "total_liabilities"
+            period_label: "instant"
+            period_kind: "instant"
+            period_start: null
+            period_end: null
+            period_instant: "2025-09-27"
+            current_source_document_name: "shared.xml"
+            current_source_sha256: "0000000001-shared-sha"
+            current_source_occurrence_id: "0000000001-shared-total_liabilities-instant"
+          - <<: *filing_summary_fct_financial_metrics
+            cik: "0000000099"
+            accession_number: "shared"
+            metric_code: "total_liabilities"
+            period_label: "instant"
+            period_kind: "instant"
+            period_start: null
+            period_end: null
+            period_instant: "2025-09-27"
+            current_source_document_name: "shared.xml"
+            current_source_sha256: "0000000001-shared-sha"
+            current_source_occurrence_id: "0000000001-shared-total_liabilities-instant"
+          - <<: *filing_summary_fct_financial_metrics
+            cik: "0000000002"
+            accession_number: "shared"
+            period_label: "quarter"
+            period_start: "2026-03-29"
+            period_end: "2026-06-27"
+            current_source_document_name: "shared.xml"
+            current_source_sha256: "0000000002-shared-sha"
+            current_source_occurrence_id: "0000000002-shared-diluted_eps-quarter"
+          - <<: *filing_summary_fct_financial_metrics
+            cik: "0000000002"
+            accession_number: "shared"
+            metric_code: "net_income"
+            period_label: "quarter"
+            period_start: "2026-03-29"
+            period_end: "2026-06-27"
+            current_source_document_name: "shared.xml"
+            current_source_sha256: "0000000002-shared-sha"
+            current_source_occurrence_id: "0000000002-shared-net_income-quarter"
+          - <<: *filing_summary_fct_financial_metrics
+            cik: "0000000002"
+            accession_number: "shared"
+            metric_code: "revenue"
+            period_label: "quarter"
+            period_start: "2026-03-29"
+            period_end: "2026-06-27"
+            current_source_document_name: "shared.xml"
+            current_source_sha256: "0000000002-shared-sha"
+            current_source_occurrence_id: "0000000002-shared-revenue-quarter"
+          - <<: *filing_summary_fct_financial_metrics
+            cik: "0000000002"
+            accession_number: "shared"
+            metric_code: "total_assets"
+            period_label: "instant"
+            period_kind: "instant"
+            period_start: null
+            period_end: null
+            period_instant: "2026-06-27"
+            current_source_document_name: "shared.xml"
+            current_source_sha256: "0000000002-shared-sha"
+            current_source_occurrence_id: "0000000002-shared-total_assets-instant"
+          - <<: *filing_summary_fct_financial_metrics
+            cik: "0000000002"
+            accession_number: "shared"
+            metric_code: "total_liabilities"
+            period_label: "instant"
+            period_kind: "instant"
+            period_start: null
+            period_end: null
+            period_instant: "2026-06-27"
+            current_source_document_name: "shared.xml"
+            current_source_sha256: "0000000002-shared-sha"
+            current_source_occurrence_id: "0000000002-shared-total_liabilities-instant"
+      - input: ref('metric_quality_issues')
+        rows:
+          - <<: *filing_summary_metric_quality_issues
+            accession_number: "shared"
+            current_source_occurrence_id: "0000000001-shared-current"
+            source_occurrence_ids: ["0000000001-shared-current"]
+          - <<: *filing_summary_metric_quality_issues
+            accession_number: "shared"
+            current_source_occurrence_id: "0000000001-shared-current"
+            source_occurrence_ids: ["0000000001-shared-current"]
+          - <<: *filing_summary_metric_quality_issues
+            accession_number: "shared"
+            severity: "ERROR"
+            current_source_occurrence_id: "0000000001-shared-current"
+            source_occurrence_ids: ["0000000001-shared-current"]
+          - <<: *filing_summary_metric_quality_issues
+            cik: "0000000002"
+            accession_number: "shared"
+            current_source_occurrence_id: "0000000002-shared-current"
+            source_occurrence_ids: ["0000000002-shared-current"]
+          - <<: *filing_summary_metric_quality_issues
+            accession_number: "inactive"
+            severity: "ERROR"
+            current_source_occurrence_id: "0000000001-inactive-current"
+            source_occurrence_ids: ["0000000001-inactive-current"]
+    expect:
+      rows:
+        - {cik: "0000000001", accession_number: "shared",
+           form: "10-K", filing_date: "2025-10-31",
+           report_date: "2025-09-27", primary_document: "shared.htm",
+           is_amendment: false, fiscal_year_focus: 2025,
+           fiscal_period_focus: null, document_period_end_date: "2025-09-27",
+           fiscal_metadata_status: "PARTIAL", fiscal_extraction_version: "1",
+           metadata_run_id: "metadata-shared", submissions_sha256: "0000000001-shared-submissions-sha",
+           source_document_name: "shared.xml", source_sha256: "0000000001-shared-sha",
+           silver_status: "PARTIAL", parser_version: "parser-1",
+           schema_version: "schema-1", activation_run_id: "activation-shared",
+           activated_at: "2026-07-30T15:00:00+00:00", version_path: "/silver/0000000001/shared/v1",
+           publication_path: "/silver/0000000001/shared/v1/publication.json", publication_sha256: "0000000001-shared-publication-sha",
+           accepted_fact_count: 13, dimension_count: 2,
+           rejected_fact_count: 3, candidate_fact_count: 16,
+           financial_metric_row_count: 3, reported_metric_row_count: 2,
+           derived_metric_row_count: 1, distinct_metric_count: 2,
+           present_critical_metric_count: 2, missing_critical_metric_codes: ["diluted_eps", "net_income", "total_liabilities"],
+           quality_issue_count: 3, error_issue_count: 1,
+           warning_issue_count: 2, gold_quality_status: "PARTIAL",
+           gold_quality_reason: "MISSING_CRITICAL_METRICS", quality_rule_version: "1"}
+        - {cik: "0000000002", accession_number: "shared",
+           form: "10-Q", filing_date: "2026-07-30",
+           report_date: "2026-06-27", primary_document: "shared.htm",
+           is_amendment: false, fiscal_year_focus: null,
+           fiscal_period_focus: null, document_period_end_date: null,
+           fiscal_metadata_status: null, fiscal_extraction_version: null,
+           metadata_run_id: "metadata-shared", submissions_sha256: "0000000002-shared-submissions-sha",
+           source_document_name: "shared.xml", source_sha256: "0000000002-shared-sha",
+           silver_status: "COMPLETE", parser_version: "parser-1",
+           schema_version: "schema-1", activation_run_id: "activation-shared",
+           activated_at: "2026-07-30T15:00:00+00:00", version_path: "/silver/0000000002/shared/v1",
+           publication_path: "/silver/0000000002/shared/v1/publication.json", publication_sha256: "0000000002-shared-publication-sha",
+           accepted_fact_count: 13, dimension_count: 2,
+           rejected_fact_count: 3, candidate_fact_count: 16,
+           financial_metric_row_count: 5, reported_metric_row_count: 5,
+           derived_metric_row_count: 0, distinct_metric_count: 5,
+           present_critical_metric_count: 5, missing_critical_metric_codes: [],
+           quality_issue_count: 1, error_issue_count: 0,
+           warning_issue_count: 1, gold_quality_status: "COMPLETE",
+           gold_quality_reason: "CRITICAL_METRICS_PRESENT", quality_rule_version: "1"}
+        - {cik: "0000000001", accession_number: "other-accession",
+           form: "10-K", filing_date: "2025-10-31",
+           report_date: "2025-09-27", primary_document: "other-accession.htm",
+           is_amendment: false, fiscal_year_focus: null,
+           fiscal_period_focus: null, document_period_end_date: null,
+           fiscal_metadata_status: null, fiscal_extraction_version: null,
+           metadata_run_id: "metadata-other-accession", submissions_sha256: "0000000001-other-accession-submissions-sha",
+           source_document_name: "other-accession.xml", source_sha256: "0000000001-other-accession-sha",
+           silver_status: "COMPLETE", parser_version: "parser-1",
+           schema_version: "schema-1", activation_run_id: "activation-other-accession",
+           activated_at: "2026-07-30T15:00:00+00:00", version_path: "/silver/0000000001/other-accession/v1",
+           publication_path: "/silver/0000000001/other-accession/v1/publication.json", publication_sha256: "0000000001-other-accession-publication-sha",
+           accepted_fact_count: 13, dimension_count: 2,
+           rejected_fact_count: 3, candidate_fact_count: 16,
+           financial_metric_row_count: 0, reported_metric_row_count: 0,
+           derived_metric_row_count: 0, distinct_metric_count: 0,
+           present_critical_metric_count: 0, missing_critical_metric_codes: ["diluted_eps", "net_income", "revenue", "total_assets", "total_liabilities"],
+           quality_issue_count: 0, error_issue_count: 0,
+           warning_issue_count: 0, gold_quality_status: "FAILED",
+           gold_quality_reason: "NO_SELECTED_METRICS", quality_rule_version: "1"}
+        - {cik: "0000000001", accession_number: "fiscal-document",
+           form: "10-K", filing_date: "2025-10-31",
+           report_date: "2025-09-27", primary_document: "fiscal-document.htm",
+           is_amendment: false, fiscal_year_focus: null,
+           fiscal_period_focus: null, document_period_end_date: null,
+           fiscal_metadata_status: null, fiscal_extraction_version: null,
+           metadata_run_id: "metadata-fiscal-document", submissions_sha256: "0000000001-fiscal-document-submissions-sha",
+           source_document_name: "fiscal-document.xml", source_sha256: "0000000001-fiscal-document-sha",
+           silver_status: "COMPLETE", parser_version: "parser-1",
+           schema_version: "schema-1", activation_run_id: "activation-fiscal-document",
+           activated_at: "2026-07-30T15:00:00+00:00", version_path: "/silver/0000000001/fiscal-document/v1",
+           publication_path: "/silver/0000000001/fiscal-document/v1/publication.json", publication_sha256: "0000000001-fiscal-document-publication-sha",
+           accepted_fact_count: 13, dimension_count: 2,
+           rejected_fact_count: 3, candidate_fact_count: 16,
+           financial_metric_row_count: 0, reported_metric_row_count: 0,
+           derived_metric_row_count: 0, distinct_metric_count: 0,
+           present_critical_metric_count: 0, missing_critical_metric_codes: ["diluted_eps", "net_income", "revenue", "total_assets", "total_liabilities"],
+           quality_issue_count: 0, error_issue_count: 0,
+           warning_issue_count: 0, gold_quality_status: "FAILED",
+           gold_quality_reason: "NO_SELECTED_METRICS", quality_rule_version: "1"}
+        - {cik: "0000000001", accession_number: "fiscal-checksum",
+           form: "10-K", filing_date: "2025-10-31",
+           report_date: "2025-09-27", primary_document: "fiscal-checksum.htm",
+           is_amendment: false, fiscal_year_focus: null,
+           fiscal_period_focus: null, document_period_end_date: null,
+           fiscal_metadata_status: null, fiscal_extraction_version: null,
+           metadata_run_id: "metadata-fiscal-checksum", submissions_sha256: "0000000001-fiscal-checksum-submissions-sha",
+           source_document_name: "fiscal-checksum.xml", source_sha256: "0000000001-fiscal-checksum-sha",
+           silver_status: "COMPLETE", parser_version: "parser-1",
+           schema_version: "schema-1", activation_run_id: "activation-fiscal-checksum",
+           activated_at: "2026-07-30T15:00:00+00:00", version_path: "/silver/0000000001/fiscal-checksum/v1",
+           publication_path: "/silver/0000000001/fiscal-checksum/v1/publication.json", publication_sha256: "0000000001-fiscal-checksum-publication-sha",
+           accepted_fact_count: 13, dimension_count: 2,
+           rejected_fact_count: 3, candidate_fact_count: 16,
+           financial_metric_row_count: 0, reported_metric_row_count: 0,
+           derived_metric_row_count: 0, distinct_metric_count: 0,
+           present_critical_metric_count: 0, missing_critical_metric_codes: ["diluted_eps", "net_income", "revenue", "total_assets", "total_liabilities"],
+           quality_issue_count: 0, error_issue_count: 0,
+           warning_issue_count: 0, gold_quality_status: "FAILED",
+           gold_quality_reason: "NO_SELECTED_METRICS", quality_rule_version: "1"}
+        - {cik: "0000000001", accession_number: "fiscal-report",
+           form: "10-K", filing_date: "2025-10-31",
+           report_date: "2025-09-27", primary_document: "fiscal-report.htm",
+           is_amendment: false, fiscal_year_focus: null,
+           fiscal_period_focus: null, document_period_end_date: null,
+           fiscal_metadata_status: null, fiscal_extraction_version: null,
+           metadata_run_id: "metadata-fiscal-report", submissions_sha256: "0000000001-fiscal-report-submissions-sha",
+           source_document_name: "fiscal-report.xml", source_sha256: "0000000001-fiscal-report-sha",
+           silver_status: "COMPLETE", parser_version: "parser-1",
+           schema_version: "schema-1", activation_run_id: "activation-fiscal-report",
+           activated_at: "2026-07-30T15:00:00+00:00", version_path: "/silver/0000000001/fiscal-report/v1",
+           publication_path: "/silver/0000000001/fiscal-report/v1/publication.json", publication_sha256: "0000000001-fiscal-report-publication-sha",
+           accepted_fact_count: 13, dimension_count: 2,
+           rejected_fact_count: 3, candidate_fact_count: 16,
+           financial_metric_row_count: 0, reported_metric_row_count: 0,
+           derived_metric_row_count: 0, distinct_metric_count: 0,
+           present_critical_metric_count: 0, missing_critical_metric_codes: ["diluted_eps", "net_income", "revenue", "total_assets", "total_liabilities"],
+           quality_issue_count: 0, error_issue_count: 0,
+           warning_issue_count: 0, gold_quality_status: "FAILED",
+           gold_quality_reason: "NO_SELECTED_METRICS", quality_rule_version: "1"}
+        - {cik: "0000000001", accession_number: "fiscal-submissions",
+           form: "10-K", filing_date: "2025-10-31",
+           report_date: "2025-09-27", primary_document: "fiscal-submissions.htm",
+           is_amendment: false, fiscal_year_focus: null,
+           fiscal_period_focus: null, document_period_end_date: null,
+           fiscal_metadata_status: null, fiscal_extraction_version: null,
+           metadata_run_id: "metadata-fiscal-submissions", submissions_sha256: "0000000001-fiscal-submissions-submissions-sha",
+           source_document_name: "fiscal-submissions.xml", source_sha256: "0000000001-fiscal-submissions-sha",
+           silver_status: "COMPLETE", parser_version: "parser-1",
+           schema_version: "schema-1", activation_run_id: "activation-fiscal-submissions",
+           activated_at: "2026-07-30T15:00:00+00:00", version_path: "/silver/0000000001/fiscal-submissions/v1",
+           publication_path: "/silver/0000000001/fiscal-submissions/v1/publication.json", publication_sha256: "0000000001-fiscal-submissions-publication-sha",
+           accepted_fact_count: 13, dimension_count: 2,
+           rejected_fact_count: 3, candidate_fact_count: 16,
+           financial_metric_row_count: 0, reported_metric_row_count: 0,
+           derived_metric_row_count: 0, distinct_metric_count: 0,
+           present_critical_metric_count: 0, missing_critical_metric_codes: ["diluted_eps", "net_income", "revenue", "total_assets", "total_liabilities"],
+           quality_issue_count: 0, error_issue_count: 0,
+           warning_issue_count: 0, gold_quality_status: "FAILED",
+           gold_quality_reason: "NO_SELECTED_METRICS", quality_rule_version: "1"}
+  - name: filing_summary_typed_empty_inputs
+    model: dim_filings
+    description: "All five typed empty inputs yield no summary rows; actual ordered database types are additionally verified from the compiled view."
+    given:
+      - input: ref('stg_silver_active_filings')
+        rows: []
+      - input: ref('stg_silver_filing_metadata')
+        rows: []
+      - input: ref('stg_silver_filing_fiscal_metadata')
+        rows: []
+      - input: ref('fct_financial_metrics')
+        rows: []
+      - input: ref('metric_quality_issues')
+        rows: []
+    expect:
+      rows: []
