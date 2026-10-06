@@ -1307,6 +1307,207 @@ models:
         data_tests:
           - not_null
 
+  - name: dim_filings
+    description: >-
+      One dashboard summary per active (cik, accession_number). Left joins preserve filings with unavailable metadata
+      or no selected financial rows. Metrics and issues are aggregated separately; metrics match the exact active source.
+      Fiscal metadata requires agreement with active source and verified discovery lineage. Gold coverage and quality
+      are summary fields only and remain independent of Silver processing and publication statuses.
+    columns:
+      - name: cik
+        data_type: VARCHAR
+        description: "Company Central Index Key from active Silver; part of the summary grain."
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('stg_silver_active_filings')
+                field: cik
+      - name: accession_number
+        data_type: VARCHAR
+        description: "Active filing accession; original and amended accessions remain independent."
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('stg_silver_active_filings')
+                field: accession_number
+      - name: form
+        data_type: VARCHAR
+        description: "Verified filing form when metadata is available; no form is inferred."
+      - name: filing_date
+        data_type: DATE
+        description: "Verified filing date; null without available filing metadata."
+      - name: report_date
+        data_type: DATE
+        description: "Verified reporting date; null when unavailable."
+      - name: primary_document
+        data_type: VARCHAR
+        description: "Verified primary filing document; null when metadata is unavailable."
+      - name: is_amendment
+        data_type: BOOLEAN
+        description: "Exact form suffix /A; null when form is unavailable. No amendment relationship is inferred."
+      - name: fiscal_year_focus
+        data_type: INTEGER
+        description: "Independently resolved fiscal year from consistent active-source fiscal metadata; otherwise null."
+      - name: fiscal_period_focus
+        data_type: VARCHAR
+        description: "Independently resolved reported fiscal focus from consistent fiscal metadata; otherwise null."
+      - name: document_period_end_date
+        data_type: DATE
+        description: "Fiscal document end from consistent fiscal metadata; never inferred from report_date."
+      - name: fiscal_metadata_status
+        data_type: VARCHAR
+        description: "Preserved extraction status of consistently attached fiscal metadata, including PARTIAL; otherwise null."
+      - name: fiscal_extraction_version
+        data_type: VARCHAR
+        description: "Preserved fiscal extraction version; supported-version filtering belongs to the staging view."
+      - name: metadata_run_id
+        data_type: VARCHAR
+        description: "Verified filing metadata discovery run; null when filing metadata is unavailable."
+      - name: submissions_sha256
+        data_type: VARCHAR
+        description: "Verified submissions checksum from filing metadata; null when unavailable."
+      - name: source_document_name
+        data_type: VARCHAR
+        description: "Preserved active Silver source document name."
+        data_tests:
+          - not_null
+      - name: source_sha256
+        data_type: VARCHAR
+        description: "Preserved active Silver source sha256."
+        data_tests:
+          - not_null
+      - name: silver_status
+        data_type: VARCHAR
+        description: "Preserved active Silver silver status."
+        data_tests:
+          - not_null
+      - name: parser_version
+        data_type: VARCHAR
+        description: "Preserved active Silver parser version."
+        data_tests:
+          - not_null
+      - name: schema_version
+        data_type: VARCHAR
+        description: "Preserved active Silver schema version."
+        data_tests:
+          - not_null
+      - name: activation_run_id
+        data_type: VARCHAR
+        description: "Preserved active Silver activation run id."
+        data_tests:
+          - not_null
+      - name: activated_at
+        data_type: TIMESTAMPTZ
+        description: "Preserved active Silver activated at."
+        data_tests:
+          - not_null
+      - name: version_path
+        data_type: VARCHAR
+        description: "Preserved active Silver version path."
+        data_tests:
+          - not_null
+      - name: publication_path
+        data_type: VARCHAR
+        description: "Preserved active Silver publication path."
+        data_tests:
+          - not_null
+      - name: publication_sha256
+        data_type: VARCHAR
+        description: "Preserved active Silver publication sha256."
+        data_tests:
+          - not_null
+      - name: accepted_fact_count
+        data_type: BIGINT
+        description: "Preserved active Silver accepted_count as BIGINT; defaults to zero only when unavailable."
+        data_tests:
+          - not_null
+      - name: dimension_count
+        data_type: BIGINT
+        description: "Preserved active Silver dimension_count as BIGINT; defaults to zero only when unavailable."
+        data_tests:
+          - not_null
+      - name: rejected_fact_count
+        data_type: BIGINT
+        description: "Preserved active Silver rejected_count as BIGINT; defaults to zero only when unavailable."
+        data_tests:
+          - not_null
+      - name: candidate_fact_count
+        data_type: BIGINT
+        description: "Preserved active Silver candidate_count as BIGINT; defaults to zero only when unavailable."
+        data_tests:
+          - not_null
+      - name: financial_metric_row_count
+        data_type: BIGINT
+        description: "All financial rows matching the active CIK, accession, source document and checksum; zero if absent."
+        data_tests:
+          - not_null
+      - name: reported_metric_row_count
+        data_type: BIGINT
+        description: "Matched financial rows with value_origin reported; zero if absent."
+        data_tests:
+          - not_null
+      - name: derived_metric_row_count
+        data_type: BIGINT
+        description: "Matched financial rows with value_origin derived; zero if absent."
+        data_tests:
+          - not_null
+      - name: distinct_metric_count
+        data_type: BIGINT
+        description: "Distinct metric codes across matched reported and derived rows."
+        data_tests:
+          - not_null
+      - name: present_critical_metric_count
+        data_type: BIGINT
+        description: "Distinct required metrics covered by reported annual/quarter income or instant balances on report_date; at most five."
+        data_tests:
+          - not_null
+      - name: missing_critical_metric_codes
+        data_type: VARCHAR[]
+        description: "Non-null critical codes absent from the form-specific profile, in ascending lexical order; derived and YTD income do not substitute."
+        data_tests:
+          - not_null
+      - name: quality_issue_count
+        data_type: BIGINT
+        description: "All existing issue occurrences for CIK and accession, retaining duplicates and aggregating separately from metrics."
+        data_tests:
+          - not_null
+      - name: error_issue_count
+        data_type: BIGINT
+        description: "Existing ERROR issue occurrences for CIK and accession."
+        data_tests:
+          - not_null
+      - name: warning_issue_count
+        data_type: BIGINT
+        description: "Existing WARNING issue occurrences; warnings alone do not reduce Gold quality."
+        data_tests:
+          - not_null
+      - name: gold_quality_status
+        data_type: VARCHAR
+        description: "FAILED for metadata/form/no-metric failures, PARTIAL for missing critical metrics or ERROR issues, otherwise COMPLETE; independent of Silver status."
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ["FAILED", "PARTIAL", "COMPLETE"]
+      - name: gold_quality_reason
+        data_type: VARCHAR
+        description: "First applicable ordered rule: missing metadata, missing report date, unsupported form, no metrics, missing critical metrics, metric errors, critical metrics present."
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ["MISSING_FILING_METADATA", "MISSING_REPORT_DATE", "UNSUPPORTED_FORM", "NO_SELECTED_METRICS", "MISSING_CRITICAL_METRICS", "METRIC_ERRORS", "CRITICAL_METRICS_PRESENT"]
+      - name: quality_rule_version
+        data_type: VARCHAR
+        description: "Summary policy version 1; does not change publication, company-run or catalog statuses."
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ["1"]
+
 seeds:
   - name: metric_concept_map
     description: Approved revenue, income, balance-sheet and cash-flow concept mappings; one row per metric, namespace prefix, concept and period kind. Priority is evidence for later selection.
