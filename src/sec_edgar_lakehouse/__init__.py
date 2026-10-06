@@ -7,6 +7,12 @@ from sec_edgar_lakehouse.company_filings import (
     discover_company_filings,
     select_company_filings,
 )
+from sec_edgar_lakehouse.company_metadata import (
+    CompanyFiscalMetadataResult,
+    CompanyMetadataLoadError,
+    CompanyMetadataLoadResult,
+    load_company_run_metadata,
+)
 from sec_edgar_lakehouse.company_pipeline import (
     CompanyPipelineError,
     CompanyPipelineResult,
@@ -112,6 +118,9 @@ __all__ = [
     "CompanyFilingProcessResult",
     "CompanyFilingsDiscovery",
     "CompanyFilingsDiscoveryError",
+    "CompanyFiscalMetadataResult",
+    "CompanyMetadataLoadError",
+    "CompanyMetadataLoadResult",
     "CompanyPipelineError",
     "CompanyPipelineResult",
     "CompanyProcessingError",
@@ -165,6 +174,7 @@ __all__ = [
     "extract_filing_facts",
     "extract_filing_fiscal_metadata",
     "ingest_filing",
+    "load_company_run_metadata",
     "load_filing_fiscal_metadata",
     "load_filing_metadata",
     "process_company_filings",
