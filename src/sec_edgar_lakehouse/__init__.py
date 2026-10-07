@@ -29,6 +29,7 @@ from sec_edgar_lakehouse.company_run import (
     CompanyRunResult,
     execute_company_pipeline_run,
 )
+from sec_edgar_lakehouse.dbt_build import DbtBuildError, DbtBuildResult, run_dbt_build
 from sec_edgar_lakehouse.filing_discovery import (
     CompleteSubmissionFile,
     DiscoveryError,
@@ -128,6 +129,8 @@ __all__ = [
     "CompanyRunError",
     "CompanyRunResult",
     "CompleteSubmissionFile",
+    "DbtBuildError",
+    "DbtBuildResult",
     "DiscoveryError",
     "DownloadError",
     "DownloadFailure",
@@ -182,6 +185,7 @@ __all__ = [
     "publish_silver_extraction",
     "refresh_silver_catalog",
     "run_company_pipeline",
+    "run_dbt_build",
     "select_company_filings",
     "store_downloaded_file",
     "write_silver_parquet",
