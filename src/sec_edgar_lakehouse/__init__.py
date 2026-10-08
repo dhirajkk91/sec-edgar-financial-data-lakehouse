@@ -35,6 +35,11 @@ from sec_edgar_lakehouse.end_to_end_pipeline import (
     EndToEndPipelineResult,
     run_end_to_end_pipeline,
 )
+from sec_edgar_lakehouse.end_to_end_run import (
+    EndToEndRunError,
+    EndToEndRunResult,
+    execute_end_to_end_pipeline_run,
+)
 from sec_edgar_lakehouse.filing_discovery import (
     CompleteSubmissionFile,
     DiscoveryError,
@@ -142,6 +147,8 @@ __all__ = [
     "DownloadedFile",
     "EndToEndPipelineError",
     "EndToEndPipelineResult",
+    "EndToEndRunError",
+    "EndToEndRunResult",
     "FilingDataFile",
     "FilingDiscovery",
     "FilingDocument",
@@ -181,6 +188,7 @@ __all__ = [
     "discover_filing",
     "download_filing_file",
     "execute_company_pipeline_run",
+    "execute_end_to_end_pipeline_run",
     "extract_filing_facts",
     "extract_filing_fiscal_metadata",
     "ingest_filing",
