@@ -18,6 +18,10 @@ dependencies = [
 module-name = "sec_edgar_lakehouse"
 
 [dependency-groups]
+dashboard = [
+    "streamlit>=1.65,<2",
+]
+
 dev = [
     "mypy>=2.3.1",
     "pytest>=9.1.1",
