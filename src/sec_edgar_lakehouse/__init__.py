@@ -29,6 +29,12 @@ from sec_edgar_lakehouse.company_run import (
     CompanyRunResult,
     execute_company_pipeline_run,
 )
+from sec_edgar_lakehouse.dashboard_read import (
+    DashboardReadError,
+    DashboardSnapshot,
+    DashboardTable,
+    load_dashboard_snapshot,
+)
 from sec_edgar_lakehouse.dbt_build import DbtBuildError, DbtBuildResult, run_dbt_build
 from sec_edgar_lakehouse.end_to_end_pipeline import (
     EndToEndPipelineError,
@@ -139,6 +145,9 @@ __all__ = [
     "CompanyRunError",
     "CompanyRunResult",
     "CompleteSubmissionFile",
+    "DashboardReadError",
+    "DashboardSnapshot",
+    "DashboardTable",
     "DbtBuildError",
     "DbtBuildResult",
     "DiscoveryError",
@@ -193,6 +202,7 @@ __all__ = [
     "extract_filing_fiscal_metadata",
     "ingest_filing",
     "load_company_run_metadata",
+    "load_dashboard_snapshot",
     "load_filing_fiscal_metadata",
     "load_filing_metadata",
     "process_company_filings",
