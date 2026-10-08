@@ -8,7 +8,7 @@ Those pieces have been tested separately. The remaining gap is the handoff betwe
 
 This design introduces one Python entry point that connects the existing stages. Its job is to decide what can run next and explain what happened. Downloads, extraction, metadata validation, and financial calculations stay with the components that already own them.
 
-This is the proposed design for the next integration increment. The existing company-pipeline and Gold documents continue to describe their own layers.
+The existing company-pipeline and Gold documents continue to describe their own layers. The final run wrapper and command described below preserve this core workflow and status policy.
 
 ## The first increment
 
@@ -20,7 +20,7 @@ It adds three things:
 - Explicit conditions for starting metadata loading and dbt.
 - A final execution status that retains the earlier results and available evidence.
 
-A command-line entry point and a persisted end-to-end summary can follow in a separate increment. This first slice does not add either of them. Keeping that boundary small lets us verify the workflow before adding another record format.
+The separate `execute_end_to_end_pipeline_run()` API now calls the core coordinator once and publishes a finalized summary. Its frozen, slotted `EndToEndRunResult` retains the shared run ID, unchanged coordinator status, exact coordinator result object, final record path, and any wrapper preflight error. The command-line entry point calls this execution wrapper.
 
 ## Workflow
 
@@ -59,6 +59,7 @@ Each stage runs at most once per invocation. There is no outer retry loop around
 | `load_company_run_metadata()` | One filing-metadata load, followed by fiscal-metadata loading for usable selected filings. Existing loaders verify and store the evidence. |
 | `run_dbt_build()` | One subprocess build against the explicit DuckDB database, with retained logs and verified dbt artifacts. |
 | `run_end_to_end_pipeline()` | Argument handoff, stage eligibility, expected failure handling, and the combined execution result. |
+| `execute_end_to_end_pipeline_run()` | Safe summary identity, one coordinator call, and atomic publication of final evidence references and diagnostics. |
 | dbt models | Financial selection, period classification, supported derivations, financial marts, and data-quality relations. |
 
 The wrapper does not copy financial rules into Python or repeat the existing checksum, XML, publication, or database validations.
@@ -143,10 +144,65 @@ All local data and run evidence remain under the ignored `data/` directory. Thes
 | `data/query/sec_edgar.duckdb` | Catalog metadata, external Silver views, stored filing/fiscal metadata, and dbt-managed Gold relations. |
 | `data/runs/company/cik=<cik>/run_id=<run-id>/` | Immutable `run.json` and exact `submissions.json` when discovery evidence is available. |
 | `data/runs/dbt/run_id=<run-id>/` | A fresh build's `stdout.log`, `stderr.log`, and dbt `target/` and `logs/` artifacts when produced. |
+| `data/runs/end-to-end/cik=<cik>/run_id=<run-id>.json` | One finalized end-to-end summary referencing company evidence and available dbt artifacts. |
 
 The company record and dbt invocation ID serve different purposes. The result connects them by retaining the company run ID and the exact build result. They do not need to share an identifier.
 
-The first integration slice returns this connection in memory. It does not promise a durable combined summary or an in-progress recovery record. A later CLI/evidence increment can persist references to the existing evidence without changing it or copying the source facts.
+The core coordinator returns this connection in memory. The execution wrapper persists its final summary without changing the existing evidence or copying source facts. It is not an in-progress checkpoint or crash-recovery record.
+
+## Final record schema and publication
+
+The shared `processing_run_id` uses 1–128 ASCII letters, digits, hyphens or underscores. Final records live at `<end_to_end_run_directory>/cik=<normalized-cik>/run_id=<run-id>.json`. The wrapper validates identity, path types, selection serialization, the minimum 0.5-second request interval, and a finite positive dbt timeout before execution. The final root and CIK directory are prepared before the coordinator runs. Managed root, CIK-directory and destination symlinks are rejected; system aliases above the managed root are allowed. An existing destination, including a dangling symlink, prevents execution.
+
+Schema version `"1"` has exactly these top-level fields:
+
+```text
+schema_version, run_id, cik, status, started_at, completed_at,
+selection, database_path, company, metadata, dbt, error
+```
+
+Timestamps use timezone-aware UTC ISO strings; dates use ISO dates. Paths are strings. Unavailable information is explicitly null, and ordered collections are JSON arrays. The blocks use explicit projections:
+
+| Block | Fields |
+| --- | --- |
+| `selection` | `forms` (sorted, deduplicated, case preserved), `filed_on_or_after`, `filed_on_or_before`, `limit`, `request_interval_seconds`, `dbt_timeout_seconds` |
+| `company` | `status`, `error`, `run_record_path`, `run_record_sha256`, `error_stage`, `error_message`, `processing`, `catalog` |
+| `company.processing` | `status`, `company_name`, `selected_count`, `complete_count`, `partial_count`, `skipped_count`, `failed_count`, `not_attempted_count`, `usable_count` |
+| `company.catalog` | `status`, `error`, `active_filing_count`, `failure_count`, `facts_count`, `fact_dimensions_count`, `rejected_facts_count` |
+| `metadata` | `status`, `error`, `skip_reason`, `filing_metadata_error`, `filing_metadata`, `fiscal_results` |
+| `metadata.filing_metadata` | `status`, `source_run_id`, `active_filing_count`, `inserted_count`, `already_existing_count`, `missing_count`, `conflict_count`, `issues` |
+| Filing issue | `cik`, `accession_number`, `reason_code`, `message` |
+| Fiscal result | `cik`, `accession_number`, `outcome`, `status`, `error_stage`, `error_message`, `load_result` |
+| Fiscal `load_result` | `selected_document_name`, `selected_document_sha256`, `extraction_version`, `metadata_run_id`, `submissions_sha256`, `fiscal_year_focus`, `fiscal_period_focus`, `document_period_end_date`, `issues` |
+| Fiscal issue | `field_name`, `reason_code`, `message`, `source_occurrence_ids` (original order) |
+| `dbt` | `status`, `error`, `skip_reason`, `project_directory`, `profiles_directory`, `requested_artifact_directory`, `artifact_directory`, `started_at`, `completed_at`, `return_code`, `invocation_id`, `node_status_counts`, `build_error`, `stdout_path`, `stderr_path`, `manifest_path`, `run_results_path` |
+
+`node_status_counts` is an array of `[status, count]` pairs in the runner's alphabetical order. Project/profile locations and the requested artifact location are canonical; the actual artifact directory comes from the returned build result or raised dbt error. A skipped dbt stage keeps actual artifact and build fields null.
+
+Stage `error` fields contain raised API exception messages. Returned failures keep their separate existing error details, including company `error_stage`/`error_message`, metadata `filing_metadata_error` and fiscal errors, and dbt `build_error`. A returned coordinator result has a null top-level `error`. A caught `EndToEndPipelineError` produces overall `FAILED`, null `company`/`metadata`/`dbt` blocks, and `error: {"stage": "PREFLIGHT", "message": "..."}`. Unexpected programming exceptions propagate.
+
+The company record must be an existing regular, non-symlink file before its exact bytes are hashed. Detailed filing-processing outcomes stay in that record. The summary retains metadata provenance and issue descriptors, but omits fiscal occurrences, raw XBRL, contexts and financial facts. Diagnostic messages redact the configured SEC User-Agent and email addresses using the existing sanitization approach; source evidence stays unchanged. The User-Agent and environment are never stored in the summary.
+
+Publication writes UTF-8 JSON with `allow_nan=False` into a unique temporary file in the final record directory, flushes and fsyncs it, closes it, reparses and compares it with the intended structure, rechecks destination availability, and promotes it with `os.replace`. Failure cleanup removes only that attempt's temporary file. `EndToEndRunError` carries the available coordinator result and intended final path after a persistence failure. Published data and earlier evidence remain in place. This retains the existing single-writer boundary without locks, concurrent-writer guarantees, rollback or automatic retries.
+
+## Command and exit codes
+
+```bash
+uv run --locked --group dbt python -m sec_edgar_lakehouse.end_to_end_pipeline_run \
+  --cik 320193 --forms 10-K 10-Q \
+  --bronze-directory /absolute/path/to/bronze/sec/filings \
+  --silver-directory /absolute/path/to/silver/sec/filings \
+  --database /absolute/path/to/query/sec_edgar.duckdb \
+  --run-directory /absolute/path/to/runs/company \
+  --end-to-end-run-directory /absolute/path/to/runs/end-to-end \
+  --dbt-project-directory /absolute/path/to/transform \
+  --dbt-profiles-directory /absolute/path/to/transform \
+  --dbt-artifact-directory /existing/parent/fresh-artifacts
+```
+
+All displayed arguments are required. `--run-directory` remains the company evidence root. Optional flags are `--run-id` (UUID hex when omitted), strict `--filed-on-or-after`/`--filed-on-or-before` ISO dates, `--limit`, `--request-interval-seconds` (default 0.5), and `--dbt-timeout-seconds` (default 600). The User-Agent comes only from `SEC_USER_AGENT`; a missing or blank value returns 1 before execution. There is no User-Agent flag or interactive prompt.
+
+Exit codes are 0 for `COMPLETE`, 2 for `PARTIAL`, and 1 for `FAILED`, invalid invocation or persistence failure. Output reports run/stage statuses, available processing counts, metadata outcomes, dbt invocation/node counts, and final/company/dbt evidence paths, with sanitized failure messages and skip reasons. A persistence failure labels the final path as intended rather than claiming publication succeeded. dbt execution status does not assert an absence of financial quality issues. Close the DuckDB UI during execution so metadata loading and dbt can write without its database connection remaining open.
 
 ## Publication, failure, and reruns
 
@@ -185,6 +241,6 @@ The increment is ready when an eligible invocation reaches Gold without manual h
 
 ## What comes later
 
-The next slice can add a thin CLI and a final end-to-end evidence record. A dashboard, broader company acceptance, deployment, and scheduling remain separate work. Version 1 does not add Airflow, Spark, Kafka, cloud storage, or a warehouse migration as part of this integration.
+A dashboard, broader company acceptance, deployment, and scheduling remain separate work. Version 1 does not add Airflow, Spark, Kafka, cloud storage, or a warehouse migration as part of this integration.
 
 The useful outcome here is a repeatable local pipeline with clear boundaries. Additional infrastructure can follow a measured need without changing the financial rules just to accommodate another tool.
