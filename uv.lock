@@ -1082,6 +1082,7 @@ dependencies = [
     { name = "beautifulsoup4" },
     { name = "duckdb" },
     { name = "httpx" },
+    { name = "pytz" },
 ]
 
 [package.dev-dependencies]
@@ -1100,6 +1101,7 @@ requires-dist = [
     { name = "beautifulsoup4", specifier = ">=4.15.0" },
     { name = "duckdb", specifier = ">=1.5,<1.6" },
     { name = "httpx", specifier = ">=0.28.1" },
+    { name = "pytz", specifier = ">=2026.4" },
 ]
 
 [package.metadata.requires-dev]
