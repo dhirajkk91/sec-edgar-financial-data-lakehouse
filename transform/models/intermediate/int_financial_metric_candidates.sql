@@ -1,3 +1,5 @@
+-- Find mapped financial candidates among active, non-nil Silver facts.
+-- Each row is a metric/source-occurrence pair; selection happens in the next models.
 with facts as (
     select
         cik,

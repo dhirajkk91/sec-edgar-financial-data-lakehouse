@@ -1,3 +1,4 @@
+-- Return fiscal rows whose fields, issue arrays and COMPLETE/PARTIAL status disagree.
 with parsed as (
     select
         *,

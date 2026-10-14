@@ -1,3 +1,5 @@
+-- Explain why revenue could not be selected.
+-- A row describes a filing-level gap or a conflict for one exact reported period.
 with eligible as (
     select
         c.*,
@@ -6,7 +8,7 @@ with eligible as (
         m.report_date,
         m.metadata_run_id,
         m.submissions_sha256
-    from {{ ref('int_financial_metric_candidates') }} as c
+    from {{ ref('int_financial_metric_candidate_accuracy') }} as c
     inner join {{ ref('stg_silver_filing_metadata') }} as m
         on c.cik = m.cik and c.accession_number = m.accession_number
     where c.metric_code = 'revenue'
@@ -38,6 +40,13 @@ with eligible as (
         count(*) as supporting_occurrence_count,
         list(source_occurrence_id order by concept_priority, source_ordinal, source_occurrence_id)
             as supporting_occurrence_ids,
+        -- One unusable occurrence blocks its whole otherwise eligible period group.
+        count(*) filter (where accuracy_is_usable = false) as invalid_accuracy_count,
+        string_agg(
+            'occurrence ' || to_json(source_occurrence_id)::varchar || ': '
+                || accuracy_issue_code || ': ' || accuracy_issue_details,
+            '; ' order by concept_priority, source_ordinal, source_occurrence_id
+        ) filter (where accuracy_is_usable = false) as invalid_accuracy_details,
         count(distinct value_decimal) as value_count,
         -- Count null as a separate accuracy value without inventing a sentinel string.
         count(distinct decimals) + case when count(decimals) < count(*) then 1 else 0 end
@@ -96,7 +105,8 @@ with eligible as (
         cik,
         accession_number,
         metric_code,
-        case when value_count > 1 then 'REVENUE_VALUE_CONFLICT'
+        case when invalid_accuracy_count > 0 then 'INVALID_ACCURACY'
+            when value_count > 1 then 'REVENUE_VALUE_CONFLICT'
             else 'REVENUE_ACCURACY_UNRESOLVED'
         end as issue_code,
         'ERROR'::varchar as severity,
@@ -105,12 +115,14 @@ with eligible as (
         period_end,
         supporting_occurrence_ids as source_occurrence_ids,
         'Reported period ' || period_start::varchar || ' through ' || period_end::varchar || ': '
-            || case when value_count > 1
+            || case when invalid_accuracy_count > 0
+                then 'unusable accuracy in eligible occurrences: ' || invalid_accuracy_details
+                when value_count > 1
                 then 'eligible revenue occurrences disagree on the exact Decimal value; concept priority cannot resolve this conflict.'
                 else 'eligible revenue values agree, but decimals or precision attributes differ (including nulls); rounding intervals are unresolved.'
             end as details
     from period_agreement
-    where value_count > 1 or decimals_count > 1 or precision_count > 1
+    where invalid_accuracy_count > 0 or value_count > 1 or decimals_count > 1 or precision_count > 1
 )
 select
     cik, accession_number, metric_code, issue_code, severity, report_date,

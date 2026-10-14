@@ -1,3 +1,5 @@
+-- Select reported assets, liabilities and cash at the verified report date.
+-- Each row is one company/accession/metric/instant, with its agreeing source IDs.
 with eligible as (
     select
         c.*,
@@ -6,7 +8,7 @@ with eligible as (
         m.report_date,
         m.metadata_run_id,
         m.submissions_sha256
-    from {{ ref('int_financial_metric_candidates') }} as c
+    from {{ ref('int_financial_metric_candidate_accuracy') }} as c
     inner join {{ ref('stg_silver_filing_metadata') }} as m
         on c.cik = m.cik and c.accession_number = m.accession_number
     where c.metric_code in ('total_assets', 'total_liabilities', 'cash_and_equivalents')
@@ -35,6 +37,8 @@ with eligible as (
         count(*) as supporting_occurrence_count,
         list(source_occurrence_id order by concept_priority, source_ordinal, source_occurrence_id)
             as supporting_occurrence_ids,
+        -- One unusable occurrence blocks its whole otherwise eligible period group.
+        count(*) filter (where accuracy_is_usable = false) as invalid_accuracy_count,
         count(distinct value_decimal) as value_count,
         -- Count null as a separate accuracy value without inventing a sentinel string.
         count(distinct decimals) + case when count(decimals) < count(*) then 1 else 0 end
@@ -44,7 +48,7 @@ with eligible as (
     from eligible
     group by cik, accession_number, metric_code, report_date, period_instant
 ), agreeing_occurrences as (
-    -- Agreement across all mapped concepts must hold before priority can select a row.
+    -- All mapped concepts must agree first; priority cannot settle a value conflict.
     select
         e.*,
         a.supporting_occurrence_count,
@@ -55,7 +59,8 @@ with eligible as (
         and e.accession_number = a.accession_number
         and e.metric_code = a.metric_code
         and e.period_instant = a.period_instant
-    where a.value_count = 1 and a.decimals_count = 1 and a.precision_count = 1
+    where a.invalid_accuracy_count = 0
+        and a.value_count = 1 and a.decimals_count = 1 and a.precision_count = 1
 ), ranked as (
     select
         *,
@@ -102,7 +107,7 @@ select
     metadata_run_id,
     submissions_sha256,
     'reported_instant'::varchar as period_label,
-    '1'::varchar as selection_rule_version,
+    '2'::varchar as selection_rule_version,
     case when supporting_occurrence_count = 1
         then 'SINGLE_ELIGIBLE_OCCURRENCE'
         else 'AGREEING_ELIGIBLE_OCCURRENCES'

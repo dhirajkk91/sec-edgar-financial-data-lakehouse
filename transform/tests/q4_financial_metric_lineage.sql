@@ -1,3 +1,4 @@
+-- Check annual and Q3 inputs, their ordered evidence and the exact Q4 subtraction.
 select d.cik, d.accession_number, d.metric_code
 from {{ ref('int_derived_q4_financial_metrics') }} as d
 left join {{ ref('int_reported_financial_periods') }} as c

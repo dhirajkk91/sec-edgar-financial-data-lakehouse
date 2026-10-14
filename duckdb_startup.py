@@ -1,4 +1,6 @@
-"""Open the SEC lakehouse database in DuckDB's browser UI."""
+"""
+This opens DuckDB's browser SQL UI for the default local database.
+"""
 
 from pathlib import Path
 from threading import Event
@@ -7,10 +9,14 @@ import duckdb
 
 
 def main() -> None:
+    """
+    Opens the existing database and keep its SQL UI running until interrupted.
+    """
     # Find the data beside this script, even if the terminal is in another folder.
     project_directory = Path(__file__).resolve().parent
     database_path = project_directory / "data" / "query" / "sec_edgar.duckdb"
 
+    # Do not let DuckDB create an empty database just because the expected file is missing.
     if not database_path.is_file():
         raise SystemExit(
             f"Database not found: {database_path}\n"

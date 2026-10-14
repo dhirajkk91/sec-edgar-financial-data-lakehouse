@@ -1,3 +1,4 @@
+-- Return selections whose supporting IDs do not agree on filing, period, value and accuracy.
 with selected as (
     select * from {{ ref('int_reported_revenue') }}
 ), invalid_lists as (

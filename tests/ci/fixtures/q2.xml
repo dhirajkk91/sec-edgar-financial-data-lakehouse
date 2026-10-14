@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Fictional CI data. Q1 is intentionally absent; Q2 cash has unusable accuracy. -->
+<xbrli:xbrl xmlns:xbrli="http://www.xbrl.org/2003/instance"
+ xmlns:us-gaap="http://fasb.org/us-gaap/2025" xmlns:dei="http://xbrl.sec.gov/dei/2025"
+ xmlns:iso4217="http://www.xbrl.org/2003/iso4217">
+  <xbrli:context id="ytd"><xbrli:entity><xbrli:identifier scheme="https://www.sec.gov/CIK">0000000042</xbrli:identifier></xbrli:entity>
+    <xbrli:period><xbrli:startDate>2025-01-01</xbrli:startDate><xbrli:endDate>2025-06-30</xbrli:endDate></xbrli:period></xbrli:context>
+  <xbrli:context id="quarter"><xbrli:entity><xbrli:identifier scheme="https://www.sec.gov/CIK">0000000042</xbrli:identifier></xbrli:entity>
+    <xbrli:period><xbrli:startDate>2025-04-01</xbrli:startDate><xbrli:endDate>2025-06-30</xbrli:endDate></xbrli:period></xbrli:context>
+  <xbrli:context id="instant"><xbrli:entity><xbrli:identifier scheme="https://www.sec.gov/CIK">0000000042</xbrli:identifier></xbrli:entity>
+    <xbrli:period><xbrli:instant>2025-06-30</xbrli:instant></xbrli:period></xbrli:context>
+  <xbrli:unit id="USD"><xbrli:measure>iso4217:USD</xbrli:measure></xbrli:unit>
+  <xbrli:unit id="EPS"><xbrli:divide><xbrli:unitNumerator><xbrli:measure>iso4217:USD</xbrli:measure></xbrli:unitNumerator><xbrli:unitDenominator><xbrli:measure>xbrli:shares</xbrli:measure></xbrli:unitDenominator></xbrli:divide></xbrli:unit>
+  <dei:DocumentFiscalYearFocus contextRef="ytd">2025</dei:DocumentFiscalYearFocus>
+  <dei:DocumentFiscalPeriodFocus contextRef="ytd">Q2</dei:DocumentFiscalPeriodFocus>
+  <dei:DocumentPeriodEndDate contextRef="ytd">2025-06-30</dei:DocumentPeriodEndDate>
+  <us-gaap:RevenueFromContractWithCustomerExcludingAssessedTax contextRef="quarter" unitRef="USD" decimals="INF">200</us-gaap:RevenueFromContractWithCustomerExcludingAssessedTax>
+  <us-gaap:Revenues contextRef="quarter" unitRef="USD" decimals="INF">200</us-gaap:Revenues>
+  <us-gaap:NetIncomeLoss contextRef="quarter" unitRef="USD" decimals="INF">20</us-gaap:NetIncomeLoss>
+  <us-gaap:EarningsPerShareDiluted contextRef="quarter" unitRef="EPS" decimals="INF">1.230000000000000001</us-gaap:EarningsPerShareDiluted>
+  <us-gaap:EarningsPerShareDiluted contextRef="quarter" unitRef="EPS" decimals="INF">1.230000000000000001</us-gaap:EarningsPerShareDiluted>
+  <us-gaap:RevenueFromContractWithCustomerExcludingAssessedTax contextRef="ytd" unitRef="USD" decimals="INF">400</us-gaap:RevenueFromContractWithCustomerExcludingAssessedTax>
+  <us-gaap:Revenues contextRef="ytd" unitRef="USD" decimals="INF">400</us-gaap:Revenues>
+  <us-gaap:NetIncomeLoss contextRef="ytd" unitRef="USD" decimals="INF">40</us-gaap:NetIncomeLoss>
+  <us-gaap:Assets contextRef="instant" unitRef="USD" decimals="INF">1000</us-gaap:Assets>
+  <us-gaap:Liabilities contextRef="instant" unitRef="USD" decimals="INF">400</us-gaap:Liabilities>
+  <us-gaap:CashAndCashEquivalentsAtCarryingValue contextRef="instant" unitRef="USD" decimals="INF">100</us-gaap:CashAndCashEquivalentsAtCarryingValue>
+  <us-gaap:CashAndCashEquivalentsAtCarryingValue contextRef="instant" unitRef="USD" decimals="bad">100</us-gaap:CashAndCashEquivalentsAtCarryingValue>
+  <us-gaap:NetCashProvidedByUsedInOperatingActivities contextRef="ytd" unitRef="USD" decimals="INF">100</us-gaap:NetCashProvidedByUsedInOperatingActivities>
+  <us-gaap:PaymentsToAcquirePropertyPlantAndEquipment contextRef="ytd" unitRef="USD" decimals="INF">20</us-gaap:PaymentsToAcquirePropertyPlantAndEquipment>
+</xbrli:xbrl>

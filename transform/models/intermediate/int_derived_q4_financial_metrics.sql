@@ -1,3 +1,5 @@
+-- Derive Q4 revenue, income and cash-flow values as annual minus Q3 year-to-date.
+-- Each row is one filing/metric quarter; EPS is not part of this subtraction.
 with targets as (
     select
         r.cik, r.accession_number, r.metric_code, r.form, r.filing_date, r.report_date,
@@ -59,7 +61,7 @@ inner join {{ ref('int_reported_financial_periods') }} as p
     and p.accession_number <> t.accession_number
     and p.fiscal_period_focus = 'Q3'
     and p.period_classification = 'year_to_date'
--- The issue view counts every predecessor and owns the failure precedence.
+-- The issue model checks all Q3 inputs; only targets with no issue reach subtraction.
 left join {{ ref('int_q4_financial_metric_derivation_issues') }} as i
     on i.cik = t.cik and i.accession_number = t.accession_number
     and i.metric_code = t.metric_code and i.current_source_occurrence_id = t.source_occurrence_id

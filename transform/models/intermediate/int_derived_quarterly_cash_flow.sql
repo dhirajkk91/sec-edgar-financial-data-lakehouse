@@ -1,3 +1,5 @@
+-- Derive Q2/Q3 cash flow as current year-to-date minus the previous cumulative value.
+-- Each row is one filing/metric quarter and keeps both inputs and their source IDs.
 with targets as (
     select
         r.cik, r.accession_number, r.metric_code, r.form, r.filing_date, r.report_date,
@@ -63,7 +65,7 @@ inner join {{ ref('int_reported_financial_periods') }} as p
         or (t.fiscal_period_focus = 'Q3' and p.fiscal_period_focus = 'Q2'
             and p.period_classification = 'year_to_date')
     )
--- The issue view counts every predecessor and owns the failure precedence.
+-- The issue model checks all previous inputs; only targets with no issue reach subtraction.
 left join {{ ref('int_quarterly_cash_flow_derivation_issues') }} as i
     on i.cik = t.cik and i.accession_number = t.accession_number
     and i.metric_code = t.metric_code and i.current_source_occurrence_id = t.source_occurrence_id

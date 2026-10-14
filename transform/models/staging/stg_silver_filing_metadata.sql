@@ -1,3 +1,4 @@
+-- Keep stored filing dates and forms for active company/accession pairs only.
 select
     m.cik,
     m.accession_number,

@@ -1,246 +1,58 @@
-# End-to-end company pipeline — V1
+# End-to-end run: getting from a company selection to Gold
 
-## Why this layer exists
-
-The project now has the pieces needed to get from an SEC filing to queryable financial metrics. A company run discovers and processes filings, publishes Bronze and Silver, refreshes the DuckDB catalog, and preserves its source evidence. Separate loaders add filing and fiscal metadata. A dbt runner builds Gold and keeps the execution artifacts.
-
-Those pieces have been tested separately. The remaining gap is the handoff between them. Running each one manually makes it easy to use the wrong database, forget metadata loading, or rebuild Gold after a failed catalog refresh.
-
-This design introduces one Python entry point that connects the existing stages. Its job is to decide what can run next and explain what happened. Downloads, extraction, metadata validation, and financial calculations stay with the components that already own them.
-
-The existing company-pipeline and Gold documents continue to describe their own layers. The final run wrapper and command described below preserve this core workflow and status policy.
-
-## The first increment
-
-The first implementation is a reusable API, `run_end_to_end_pipeline()`. It processes one company and returns an immutable result containing the individual stage outcomes.
-
-It adds three things:
-
-- A consistent order for the existing stages.
-- Explicit conditions for starting metadata loading and dbt.
-- A final execution status that retains the earlier results and available evidence.
-
-The separate `execute_end_to_end_pipeline_run()` API now calls the core coordinator once and publishes a finalized summary. Its frozen, slotted `EndToEndRunResult` retains the shared run ID, unchanged coordinator status, exact coordinator result object, final record path, and any wrapper preflight error. The command-line entry point calls this execution wrapper.
-
-## Workflow
-
-```mermaid
-flowchart TD
-    company["Company run and source evidence"] --> catalog{"Usable selected filings and verified catalog?"}
-    catalog -->|Yes| metadata["Load filing and fiscal metadata"]
-    catalog -->|No| skipped["Skip downstream stages"]
-    metadata --> ready{"At least one successful fiscal load?"}
-    ready -->|Yes| dbt["Run one dbt build"]
-    ready -->|No| skipped
-    dbt --> result["Return all stage outcomes"]
-    skipped --> result
-
-    classDef source fill:#dbeafe,stroke:#2563eb,color:#172554;
-    classDef metadataStage fill:#ccfbf1,stroke:#0f766e,color:#134e4a;
-    classDef goldStage fill:#ede9fe,stroke:#7c3aed,color:#3b0764;
-    classDef decision fill:#fef3c7,stroke:#b45309,color:#78350f;
-    classDef outcome fill:#f1f5f9,stroke:#64748b,color:#0f172a;
-    class company source;
-    class metadata metadataStage;
-    class dbt goldStage;
-    class catalog,ready decision;
-    class skipped,result outcome;
-```
-
-The metadata gate also requires the metadata coordinator to return `COMPLETE` or `PARTIAL`. A successful fiscal load means `INSERTED` or `ALREADY_EXISTS`, with extraction status `COMPLETE` or `PARTIAL`. A partial extraction can retain useful fields and evidence even when another field is unresolved.
-
-Each stage runs at most once per invocation. There is no outer retry loop around the whole pipeline.
-
-## Responsibilities
-
-| Component | Responsibility |
-| --- | --- |
-| `execute_company_pipeline_run()` | Company discovery and selection, sequential Bronze/Silver processing, one catalog refresh when eligible, and immutable company-run evidence. |
-| `load_company_run_metadata()` | One filing-metadata load, followed by fiscal-metadata loading for usable selected filings. Existing loaders verify and store the evidence. |
-| `run_dbt_build()` | One subprocess build against the explicit DuckDB database, with retained logs and verified dbt artifacts. |
-| `run_end_to_end_pipeline()` | Argument handoff, stage eligibility, expected failure handling, and the combined execution result. |
-| `execute_end_to_end_pipeline_run()` | Safe summary identity, one coordinator call, and atomic publication of final evidence references and diagnostics. |
-| dbt models | Financial selection, period classification, supported derivations, financial marts, and data-quality relations. |
-
-The wrapper does not copy financial rules into Python or repeat the existing checksum, XML, publication, or database validations.
-
-## Inputs and database identity
-
-The entry point keeps the existing company-run inputs: CIK, exact forms, optional filing-date boundaries and limit, User-Agent, source locations, run ID, optional HTTP client, and request interval.
-
-It also receives the dbt project directory, profiles directory, a fresh artifact directory, and a build timeout. These locations are explicit so execution does not depend on the terminal's current directory.
-
-The same canonical database path passes through catalog refresh, metadata loading, and dbt. The dbt runner supplies that path to its subprocess through `SEC_EDGAR_DUCKDB_PATH` without changing the parent process environment.
-
-Wrapper-owned arguments are checked before starting company processing. That includes path types, project/profile configuration files, a finite positive timeout, and an unused artifact destination with an existing parent. Validation does not create the dbt artifact directory.
-
-The database does not have to exist before the company stage. A first successful catalog refresh can create it. The dbt runner requires an existing database when its own stage starts.
-
-The optional dbt installation remains a runtime requirement for a build. Importing the lakehouse package does not require dbt. Existing components remain responsible for validating their own inputs and managing an injected HTTP client's ownership.
-
-## When a stage can run
-
-### Company run
-
-The company stage runs once using the existing API. It retains deterministic selection, shared request pacing, bounded request retries, and the current handling of SEC terminal conditions.
-
-An empty selection is a successful no-op. Metadata loading and dbt are skipped, even if the database already contains data from an older run.
-
-### Metadata loading
-
-Metadata loading starts only when the returned company run contains a pipeline result, at least one usable selected filing, and a catalog refresh with status `COMPLETE` or `PARTIAL`.
-
-Usable filing outcomes remain `COMPLETE`, `PARTIAL`, and `SKIPPED`. A verified existing filing is useful input, even when this invocation did not publish another version.
-
-A failed catalog refresh blocks metadata and dbt. The existence of an older database snapshot does not authorize downstream execution for this run.
-
-The metadata coordinator loads filing metadata for the company's active catalog filings. It then loads fiscal metadata for the usable selected filings in processing order. Missing or conflicting filing metadata blocks the affected fiscal load. Other eligible filings can continue under the existing coordinator policy.
-
-### Gold build
-
-The dbt stage starts only after a metadata result of `COMPLETE` or `PARTIAL`, with at least one successful fiscal load. `FAILED` or `SKIPPED` metadata blocks the build.
-
-A partial metadata result can still produce useful Gold rows and visible quality issues. The wrapper keeps that partial status rather than treating a successful dbt build as proof that the earlier gap disappeared.
-
-The build runs the existing dbt project once. It does not introduce a model-selection filter, new financial calculations, or a second catalog refresh.
-
-## Execution status and financial quality
-
-The combined result uses `COMPLETE`, `PARTIAL`, and `FAILED`. Individual metadata and dbt stages can also be `SKIPPED`, with a reason.
-
-| Situation | Combined status | Downstream behavior |
-| --- | --- | --- |
-| Company run completes with no selected filings | `COMPLETE` | Metadata and dbt are skipped. |
-| Company, metadata, and dbt all complete | `COMPLETE` | All stages ran successfully. |
-| Company or metadata is partial, and dbt completes | `PARTIAL` | Useful results are retained with their earlier issues. |
-| Usable selected Silver exists, but catalog refresh fails | `PARTIAL` | Metadata and dbt are skipped. |
-| Usable selected Silver exists, but metadata fails or has no successful fiscal load | `PARTIAL` | dbt is skipped. |
-| Usable selected Silver exists, but dbt fails | `PARTIAL` | Earlier outputs and available build evidence are retained. |
-| Selected filings produce no usable Silver, or discovery fails | `FAILED` | Metadata and dbt are skipped. |
-| Company-run evidence cannot be finalized and no company result is returned | `FAILED` | Downstream execution stops. Earlier data outputs may still exist. |
-
-`PARTIAL` describes retained useful progress, not a successful Gold delivery. A caller checking whether Gold built successfully reads the dbt stage status as well as the combined status.
-
-These are execution outcomes. Financial quality remains in `gold.dim_filings` and `gold.metric_quality_issues`. A successful build can expose a filing with incomplete financial information. It can also expose a complete filing with supplemental warnings. The wrapper does not calculate or overwrite those business-quality statuses.
-
-## Result and error handling
-
-The result retains the original `CompanyRunResult`, `CompanyMetadataLoadResult`, and `DbtBuildResult` objects when available. It also exposes the combined status, stage statuses, skip reasons, and expected execution errors. A missing result stays absent rather than being replaced by a made-up success object.
-
-Invalid wrapper inputs raise a dedicated input error before execution. Expected stage failures are associated with the stage that failed. An exception from company-run evidence publication stops the workflow. Expected metadata or dbt launch/filesystem failures preserve the earlier stage results and any artifact path supplied by the failing component.
-
-A nonzero dbt exit, timeout, or invalid execution artifacts remain a failed dbt result under the existing runner contract. Unexpected programming exceptions propagate so they remain visible during development.
-
-The wrapper leaves `run.json` unchanged. Its company status describes company processing and catalog refresh, not the later metadata and Gold stages.
-
-## Evidence and local storage
-
-All local data and run evidence remain under the ignored `data/` directory. These are example locations, not hard-coded API requirements.
-
-| Location | Contents |
-| --- | --- |
-| `data/bronze/sec/filings/` | Published SEC source files, discovery evidence, and Bronze manifests. |
-| `data/silver/sec/filings/` | Versioned Parquet, publication metadata, active pointers, and Silver run records. |
-| `data/query/sec_edgar.duckdb` | Catalog metadata, external Silver views, stored filing/fiscal metadata, and dbt-managed Gold relations. |
-| `data/runs/company/cik=<cik>/run_id=<run-id>/` | Immutable `run.json` and exact `submissions.json` when discovery evidence is available. |
-| `data/runs/dbt/run_id=<run-id>/` | A fresh build's `stdout.log`, `stderr.log`, and dbt `target/` and `logs/` artifacts when produced. |
-| `data/runs/end-to-end/cik=<cik>/run_id=<run-id>.json` | One finalized end-to-end summary referencing company evidence and available dbt artifacts. |
-
-The company record and dbt invocation ID serve different purposes. The result connects them by retaining the company run ID and the exact build result. They do not need to share an identifier.
-
-The core coordinator returns this connection in memory. The execution wrapper persists its final summary without changing the existing evidence or copying source facts. It is not an in-progress checkpoint or crash-recovery record.
-
-## Final record schema and publication
-
-The shared `processing_run_id` uses 1–128 ASCII letters, digits, hyphens or underscores. Final records live at `<end_to_end_run_directory>/cik=<normalized-cik>/run_id=<run-id>.json`. The wrapper validates identity, path types, selection serialization, the minimum 0.5-second request interval, and a finite positive dbt timeout before execution. The final root and CIK directory are prepared before the coordinator runs. Managed root, CIK-directory and destination symlinks are rejected; system aliases above the managed root are allowed. An existing destination, including a dangling symlink, prevents execution.
-
-Schema version `"1"` has exactly these top-level fields:
+The company runner gets filings into Bronze and Silver and refreshes the catalog. The end-to-end runner adds verified filing and fiscal metadata, runs dbt once, and saves a final summary that points back to the stage evidence. It is the local entry point for a usable Gold dataset, not another place where financial rules are implemented.
 
 ```text
-schema_version, run_id, cik, status, started_at, completed_at,
-selection, database_path, company, metadata, dbt, error
+Company discovery → Bronze/Silver → one catalog refresh
+                                  │ usable selected filing + catalog result
+                                  ▼
+                         filing/fiscal metadata
+                                  │ at least one usable fiscal load
+                                  ▼
+                              one dbt build
+                                  │
+                                  ▼
+                         final execution summary
 ```
 
-Timestamps use timezone-aware UTC ISO strings; dates use ISO dates. Paths are strings. Unavailable information is explicitly null, and ordered collections are JSON arrays. The blocks use explicit projections:
+The coordinator passes the same DuckDB path to catalog refresh, metadata storage, and dbt. It checks dbt project/profile paths and requires a fresh artifact directory before it starts company work. The first catalog refresh may create the database. Each stage runs at most once per invocation; SEC request retries stay in the request layer.
 
-| Block | Fields |
-| --- | --- |
-| `selection` | `forms` (sorted, deduplicated, case preserved), `filed_on_or_after`, `filed_on_or_before`, `limit`, `request_interval_seconds`, `dbt_timeout_seconds` |
-| `company` | `status`, `error`, `run_record_path`, `run_record_sha256`, `error_stage`, `error_message`, `processing`, `catalog` |
-| `company.processing` | `status`, `company_name`, `selected_count`, `complete_count`, `partial_count`, `skipped_count`, `failed_count`, `not_attempted_count`, `usable_count` |
-| `company.catalog` | `status`, `error`, `active_filing_count`, `failure_count`, `facts_count`, `fact_dimensions_count`, `rejected_facts_count` |
-| `metadata` | `status`, `error`, `skip_reason`, `filing_metadata_error`, `filing_metadata`, `fiscal_results` |
-| `metadata.filing_metadata` | `status`, `source_run_id`, `active_filing_count`, `inserted_count`, `already_existing_count`, `missing_count`, `conflict_count`, `issues` |
-| Filing issue | `cik`, `accession_number`, `reason_code`, `message` |
-| Fiscal result | `cik`, `accession_number`, `outcome`, `status`, `error_stage`, `error_message`, `load_result` |
-| Fiscal `load_result` | `selected_document_name`, `selected_document_sha256`, `extraction_version`, `metadata_run_id`, `submissions_sha256`, `fiscal_year_focus`, `fiscal_period_focus`, `document_period_end_date`, `issues` |
-| Fiscal issue | `field_name`, `reason_code`, `message`, `source_occurrence_ids` (original order) |
-| `dbt` | `status`, `error`, `skip_reason`, `project_directory`, `profiles_directory`, `requested_artifact_directory`, `artifact_directory`, `started_at`, `completed_at`, `return_code`, `invocation_id`, `node_status_counts`, `build_error`, `stdout_path`, `stderr_path`, `manifest_path`, `run_results_path` |
+The explicit path handoff avoids a quiet but serious mistake: refreshing one database and building Gold against a different default profile path. The runner sets the database for the dbt subprocess without changing the parent's environment. It does not try to coordinate concurrent writers or replay the entire run after a failure.
 
-`node_status_counts` is an array of `[status, count]` pairs in the runner's alphabetical order. Project/profile locations and the requested artifact location are canonical; the actual artifact directory comes from the returned build result or raised dbt error. A skipped dbt stage keeps actual artifact and build fields null.
+## Stage gates
 
-Stage `error` fields contain raised API exception messages. Returned failures keep their separate existing error details, including company `error_stage`/`error_message`, metadata `filing_metadata_error` and fiscal errors, and dbt `build_error`. A returned coordinator result has a null top-level `error`. A caught `EndToEndPipelineError` produces overall `FAILED`, null `company`/`metadata`/`dbt` blocks, and `error: {"stage": "PREFLIGHT", "message": "..."}`. Unexpected programming exceptions propagate.
+Metadata loading starts when the company run has at least one usable selected filing and this run's catalog refresh returned `COMPLETE` or `PARTIAL`. An old database file alone is not enough. `silver.filing_metadata` stores form, filing date, report date, and primary document from the saved SEC submissions response, together with its run ID and checksum. The loader verifies that response again and checks all active catalog filings for the CIK, not just those selected by this run's limit. It counts an identical row as already existing and reports missing or conflicting fields without replacing the first provenance. A conflict for one accession blocks that accession's fiscal load while other usable filings can continue.
 
-The company record must be an existing regular, non-symlink file before its exact bytes are hashed. Detailed filing-processing outcomes stay in that record. The summary retains metadata provenance and issue descriptors, but omits fiscal occurrences, raw XBRL, contexts and financial facts. Diagnostic messages redact the configured SEC User-Agent and email addresses using the existing sanitization approach; source evidence stays unchanged. The User-Agent and environment are never stored in the summary.
+`silver.filing_fiscal_metadata` reads `DocumentFiscalYearFocus`, `DocumentFiscalPeriodFocus`, and `DocumentPeriodEndDate` from the verified XBRL instance for usable **selected** filings. A usable DEI item must come from the filing's issuer, have an undimensioned duration context ending on the verified report date, and agree with the form where applicable. Repeated values are fine when they agree; conflicting values leave that field unresolved. Extraction keeps every recognized occurrence and its issues even when the result is `PARTIAL`.
 
-Publication writes UTF-8 JSON with `allow_nan=False` into a unique temporary file in the final record directory, flushes and fsyncs it, closes it, reparses and compares it with the intended structure, rechecks destination availability, and promotes it with `os.replace`. Failure cleanup removes only that attempt's temporary file. `EndToEndRunError` carries the available coordinator result and intended final path after a persistence failure. Published data and earlier evidence remain in place. This retains the existing single-writer boundary without locks, concurrent-writer guarantees, rollback or automatic retries.
+The fiscal row's key includes the filing, active document name and checksum, and extraction version. Before insertion or reuse, the loader rechecks the active source and filing-metadata provenance inside its transaction; an identical rerun keeps the original row, including ordered evidence. Extraction version `2` rejects malformed context content. Gold uses version `2` for an active document when present and falls back to historical version `1` otherwise. These checks keep stale or mismatched fiscal focus out of Gold's period classification.
 
-## Command and exit codes
+The dbt build starts only when metadata is `COMPLETE` or `PARTIAL` and at least one fiscal load succeeded (`INSERTED` or `ALREADY_EXISTS`, with `COMPLETE` or `PARTIAL` extraction). It uses the explicit database and a new artifact directory. An empty company selection is a successful no-op that skips metadata and dbt. If an upstream gate fails, the summary records why downstream stages were skipped.
 
-```bash
-uv run --locked --group dbt python -m sec_edgar_lakehouse.end_to_end_pipeline_run \
-  --cik 320193 --forms 10-K 10-Q \
-  --bronze-directory /absolute/path/to/bronze/sec/filings \
-  --silver-directory /absolute/path/to/silver/sec/filings \
-  --database /absolute/path/to/query/sec_edgar.duckdb \
-  --run-directory /absolute/path/to/runs/company \
-  --end-to-end-run-directory /absolute/path/to/runs/end-to-end \
-  --dbt-project-directory /absolute/path/to/transform \
-  --dbt-profiles-directory /absolute/path/to/transform \
-  --dbt-artifact-directory /existing/parent/fresh-artifacts
+Execution uses `COMPLETE`, `PARTIAL`, or `FAILED`, with `SKIPPED` available on individual downstream stages. `PARTIAL` can mean useful earlier stages were retained even though Gold did not build; check the dbt stage before treating a run as Gold delivery. This is separate from financial quality: `gold.dim_filings` and `gold.metric_quality_issues` can report warnings after a successful dbt build.
+
+| What happened | Final execution result | Why |
+| --- | --- | --- |
+| No filings matched | `COMPLETE`, metadata/dbt `SKIPPED` | A recorded no-op is not a failed pipeline. |
+| No usable selected Silver | `FAILED`, downstream `SKIPPED` | There is no new selected data to build from. |
+| Usable Silver but catalog refresh failed | `PARTIAL`, downstream `SKIPPED` | Published source work remains, but the current catalog handoff was not verified. |
+| Metadata or dbt failed after earlier useful work | `PARTIAL` | The earlier outputs and diagnostics remain; Gold delivery needs its own stage check. |
+| All stages completed, but Gold has warnings | `COMPLETE` execution | The warnings describe financial coverage, not an execution failure. |
+
+## Evidence and failure boundaries
+
+The company record keeps its exact submissions response and per-filing/catalog outcomes. The final end-to-end JSON includes stage statuses, skip reasons, the path and SHA-256 of that company record, and dbt artifact references. The dbt attempt keeps stdout, stderr, logs, `manifest.json`, and `run_results.json` when produced. New run IDs and artifact directories keep prior completed attempts intact.
+
+The build runner checks its manifest and results artifacts and keeps the dbt invocation ID, so a summary can be matched to the build that actually ran. The final wrapper hashes the **saved** company record rather than reserializing an in-memory result. If final-summary writing fails, it reports that failure with the earlier stage results where available; it does not claim a completed summary or delete already published data.
+
+```text
+<company-run root>/cik=<CIK>/run_id=<run-id>/{submissions.json,run.json}
+<end-to-end root>/cik=<CIK>/run_id=<run-id>.json
+<dbt-artifact root>/.../{stdout.log,stderr.log,target/,logs/}
 ```
 
-All displayed arguments are required. `--run-directory` remains the company evidence root. Optional flags are `--run-id` (UUID hex when omitted), strict `--filed-on-or-after`/`--filed-on-or-before` ISO dates, `--limit`, `--request-interval-seconds` (default 0.5), and `--dbt-timeout-seconds` (default 600). The User-Agent comes only from `SEC_USER_AGENT`; a missing or blank value returns 1 before execution. There is no User-Agent flag or interactive prompt.
+The CLI reads `SEC_USER_AGENT` from the environment and prints the final paths. Its module path is `sec_edgar_lakehouse.pipeline.end_to_end_pipeline_run`; see the [README](../../README.md) for a complete command.
 
-Exit codes are 0 for `COMPLETE`, 2 for `PARTIAL`, and 1 for `FAILED`, invalid invocation or persistence failure. Output reports run/stage statuses, available processing counts, metadata outcomes, dbt invocation/node counts, and final/company/dbt evidence paths, with sanitized failure messages and skip reasons. A persistence failure labels the final path as intended rather than claiming publication succeeded. dbt execution status does not assert an absence of financial quality issues. Close the DuckDB UI during execution so metadata loading and dbt can write without its database connection remaining open.
+There is no transaction spanning SEC responses, files, metadata tables, and dbt. Bronze exposes a verified canonical filing; Silver switches an active pointer after version checks; catalog refresh commits its tables/views together; and metadata loads use DuckDB transactions. A later failure does not roll these back. The final JSON is written through a temporary file and records whichever stages finished. A failed dbt build can leave some Gold relations replaced before a later model or test fails, so its artifacts and status need their own check. Connections are closed before dbt opens the database, and the local operating rule is one writer with dashboard/SQL readers closed during pipeline writes.
 
-## Publication, failure, and reruns
-
-There is no single transaction covering SEC requests, source files, Parquet, metadata tables, and dbt. Each component keeps its existing publication or transaction boundary.
-
-Bronze and Silver can remain published if a later stage fails. Metadata transactions that completed also remain stored. A failed dbt build may have replaced some Gold relations before another model or test failed. Version 1 does not provide atomic Gold publication or restore an earlier complete Gold snapshot.
-
-Execution stays local and sequential with one writer. Python database connections are closed before the dbt subprocess opens the database. The DuckDB UI is closed while a pipeline run writes to that database. This design adds no locks or concurrent-writer guarantees.
-
-A rerun uses a new company run ID and a fresh dbt artifact directory. The existing components decide what can be reused:
-
-- Verified equivalent Bronze and Silver data can be reused without duplicate canonical facts.
-- Matching metadata returns `ALREADY_EXISTS` and preserves its original provenance.
-- dbt runs again for an eligible rerun, producing new execution evidence.
-- Original company records and earlier dbt artifacts remain unchanged.
-
-Retries of individual SEC requests stay in the existing request layer. The wrapper does not automatically replay a failed end-to-end invocation or delete retained failure evidence.
-
-## Scope of the Gold build
-
-The company stage selects filings for one company. Catalog refresh and dbt have a wider scope: the catalog exposes verified active Silver versions across its root, and the project builds Gold from that catalog.
-
-The wrapper therefore does not claim that a build contains only the current selection. Previously loaded filings remain available. Metadata loading does not automatically backfill fiscal metadata for every company in the database. Existing Gold models and issue views expose missing information where their rules apply.
-
-This also leaves accession-level history intact. The wrapper does not choose a latest filing, reconcile amendments, or remove repeated periods across different accessions. Those are separate business decisions for a later trend or dashboard layer.
-
-## Verification for this increment
-
-Focused coordinator tests cover call order, argument forwarding, one call per eligible stage, empty selection, blocked downstream stages, partial results, expected failures, and propagation of unexpected exceptions. They also confirm that the original result objects are preserved and a first run can create the catalog database.
-
-The existing components already test request handling, parsing, metadata integrity, financial rules, and dbt artifacts. The coordinator tests exercise the handoffs rather than repeating those suites.
-
-Local acceptance uses a bounded selection and explicit paths. It checks the company record, metadata outcomes, dbt invocation evidence, and the three final Gold relations: `fct_financial_metrics`, `dim_filings`, and `metric_quality_issues`. A second run verifies safe source reuse and unchanged prior evidence. Acceptance row counts come from the loaded data rather than an Apple-specific assertion embedded in the coordinator.
-
-The increment is ready when an eligible invocation reaches Gold without manual handoffs, an ineligible invocation skips the right stages, and every expected failure retains an honest outcome and available evidence.
-
-## What comes later
-
-A dashboard, broader company acceptance, deployment, and scheduling remain separate work. Version 1 does not add Airflow, Spark, Kafka, cloud storage, or a warehouse migration as part of this integration.
-
-The useful outcome here is a repeatable local pipeline with clear boundaries. Additional infrastructure can follow a measured need without changing the financial rules just to accommodate another tool.
+A company invocation selects one company's filings, but catalog refresh and dbt operate on **all** verified active filings in the shared roots/database. Loading Microsoft after Apple should leave Apple's records present. This runner does not backfill missing fiscal metadata for every older company, resolve amendments, or choose a latest filing for cross-company analysis. The [Gold design](gold-financial-metrics-V1.md) explains the rules that actually turn active facts into metrics.

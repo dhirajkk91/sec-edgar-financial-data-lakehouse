@@ -1,3 +1,4 @@
+-- Every active filing needs exactly one summary row, even when its financial selection is empty.
 with summary_counts as (
     select cik, accession_number, count(*) as row_count
     from {{ ref('dim_filings') }}

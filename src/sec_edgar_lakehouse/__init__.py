@@ -1,52 +1,18 @@
-"""Domain types for the SEC EDGAR financial data lakehouse."""
+"""The package's public types and entry points are collected here.
 
-from sec_edgar_lakehouse.company_filings import (
+Bronze keeps the original SEC downloads. Silver turns a checked XBRL
+document into facts, and Gold selects financial values from those facts.
+The dashboard reads the finished Gold tables.
+"""
+
+from sec_edgar_lakehouse.bronze.company_filings import (
     CompanyFiling,
     CompanyFilingsDiscovery,
     CompanyFilingsDiscoveryError,
     discover_company_filings,
     select_company_filings,
 )
-from sec_edgar_lakehouse.company_metadata import (
-    CompanyFiscalMetadataResult,
-    CompanyMetadataLoadError,
-    CompanyMetadataLoadResult,
-    load_company_run_metadata,
-)
-from sec_edgar_lakehouse.company_pipeline import (
-    CompanyPipelineError,
-    CompanyPipelineResult,
-    run_company_pipeline,
-)
-from sec_edgar_lakehouse.company_processing import (
-    CompanyFilingProcessResult,
-    CompanyProcessingError,
-    CompanyProcessingResult,
-    process_company_filings,
-)
-from sec_edgar_lakehouse.company_run import (
-    CompanyRunError,
-    CompanyRunResult,
-    execute_company_pipeline_run,
-)
-from sec_edgar_lakehouse.dashboard_read import (
-    DashboardReadError,
-    DashboardSnapshot,
-    DashboardTable,
-    load_dashboard_snapshot,
-)
-from sec_edgar_lakehouse.dbt_build import DbtBuildError, DbtBuildResult, run_dbt_build
-from sec_edgar_lakehouse.end_to_end_pipeline import (
-    EndToEndPipelineError,
-    EndToEndPipelineResult,
-    run_end_to_end_pipeline,
-)
-from sec_edgar_lakehouse.end_to_end_run import (
-    EndToEndRunError,
-    EndToEndRunResult,
-    execute_end_to_end_pipeline_run,
-)
-from sec_edgar_lakehouse.filing_discovery import (
+from sec_edgar_lakehouse.bronze.filing_discovery import (
     CompleteSubmissionFile,
     DiscoveryError,
     FilingDataFile,
@@ -54,12 +20,52 @@ from sec_edgar_lakehouse.filing_discovery import (
     FilingDocument,
     discover_filing,
 )
-from sec_edgar_lakehouse.filing_download import (
+from sec_edgar_lakehouse.bronze.filing_download import (
     DownloadedFile,
     DownloadError,
     download_filing_file,
 )
-from sec_edgar_lakehouse.filing_fiscal_metadata import (
+from sec_edgar_lakehouse.bronze.filing_ingestion import (
+    DownloadFailure,
+    IngestionResult,
+    ingest_filing,
+)
+from sec_edgar_lakehouse.bronze.filing_inventory import (
+    ArtifactSection,
+    FilingInventory,
+    InventoryEntry,
+    InventoryError,
+    build_filing_inventory,
+)
+from sec_edgar_lakehouse.bronze.filing_publication import (
+    PublicationError,
+    PublishedFiling,
+    publish_filing,
+)
+from sec_edgar_lakehouse.bronze.filing_storage import (
+    StorageError,
+    StoredFile,
+    store_downloaded_file,
+)
+from sec_edgar_lakehouse.catalog.silver_catalog import (
+    SilverCatalogError,
+    SilverCatalogResult,
+    refresh_silver_catalog,
+)
+from sec_edgar_lakehouse.dashboard.dashboard_read import (
+    DashboardReadError,
+    DashboardSnapshot,
+    DashboardTable,
+    load_dashboard_snapshot,
+)
+from sec_edgar_lakehouse.filing_reference import FilingReference
+from sec_edgar_lakehouse.metadata.company_metadata import (
+    CompanyFiscalMetadataResult,
+    CompanyMetadataLoadError,
+    CompanyMetadataLoadResult,
+    load_company_run_metadata,
+)
+from sec_edgar_lakehouse.metadata.filing_fiscal_metadata import (
     FilingFiscalMetadata,
     FiscalMetadataExtractionError,
     FiscalMetadataInputError,
@@ -67,62 +73,65 @@ from sec_edgar_lakehouse.filing_fiscal_metadata import (
     FiscalMetadataOccurrence,
     extract_filing_fiscal_metadata,
 )
-from sec_edgar_lakehouse.filing_fiscal_metadata_storage import (
+from sec_edgar_lakehouse.metadata.filing_fiscal_metadata_storage import (
     FilingFiscalMetadataLoadResult,
     FiscalMetadataLoadError,
     load_filing_fiscal_metadata,
 )
-from sec_edgar_lakehouse.filing_ingestion import (
-    DownloadFailure,
-    IngestionResult,
-    ingest_filing,
-)
-from sec_edgar_lakehouse.filing_inventory import (
-    ArtifactSection,
-    FilingInventory,
-    InventoryEntry,
-    InventoryError,
-    build_filing_inventory,
-)
-from sec_edgar_lakehouse.filing_metadata import (
+from sec_edgar_lakehouse.metadata.filing_metadata import (
     FilingMetadataError,
     FilingMetadataIssue,
     FilingMetadataLoadResult,
     load_filing_metadata,
 )
-from sec_edgar_lakehouse.filing_publication import (
-    PublicationError,
-    PublishedFiling,
-    publish_filing,
+from sec_edgar_lakehouse.pipeline.company_pipeline import (
+    CompanyPipelineError,
+    CompanyPipelineResult,
+    run_company_pipeline,
 )
-from sec_edgar_lakehouse.filing_reference import FilingReference
-from sec_edgar_lakehouse.filing_storage import (
-    StorageError,
-    StoredFile,
-    store_downloaded_file,
+from sec_edgar_lakehouse.pipeline.company_processing import (
+    CompanyFilingProcessResult,
+    CompanyProcessingError,
+    CompanyProcessingResult,
+    process_company_filings,
 )
-from sec_edgar_lakehouse.silver_catalog import (
-    SilverCatalogError,
-    SilverCatalogResult,
-    refresh_silver_catalog,
+from sec_edgar_lakehouse.pipeline.company_run import (
+    CompanyRunError,
+    CompanyRunResult,
+    execute_company_pipeline_run,
 )
-from sec_edgar_lakehouse.silver_extraction import (
+from sec_edgar_lakehouse.pipeline.dbt_build import (
+    DbtBuildError,
+    DbtBuildResult,
+    run_dbt_build,
+)
+from sec_edgar_lakehouse.pipeline.end_to_end_pipeline import (
+    EndToEndPipelineError,
+    EndToEndPipelineResult,
+    run_end_to_end_pipeline,
+)
+from sec_edgar_lakehouse.pipeline.end_to_end_run import (
+    EndToEndRunError,
+    EndToEndRunResult,
+    execute_end_to_end_pipeline_run,
+)
+from sec_edgar_lakehouse.silver.silver_extraction import (
     SilverExtractionError,
     SilverInputError,
     extract_filing_facts,
 )
-from sec_edgar_lakehouse.silver_models import (
+from sec_edgar_lakehouse.silver.silver_models import (
     RejectedOccurrence,
     SilverDimension,
     SilverExtraction,
     SilverFact,
 )
-from sec_edgar_lakehouse.silver_parquet import (
+from sec_edgar_lakehouse.silver.silver_parquet import (
     SilverParquetFiles,
     SilverWriteError,
     write_silver_parquet,
 )
-from sec_edgar_lakehouse.silver_publication import (
+from sec_edgar_lakehouse.silver.silver_publication import (
     SilverPublicationError,
     SilverPublicationResult,
     publish_silver_extraction,

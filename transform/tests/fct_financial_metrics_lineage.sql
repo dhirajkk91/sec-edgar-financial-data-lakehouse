@@ -1,3 +1,4 @@
+-- Return mart rows whose fields or ordered source evidence differ from their reported/derived inputs.
 with derived_inputs as (
     select
         cik, accession_number, metric_code, form,

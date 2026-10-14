@@ -1,3 +1,4 @@
+-- Every supporting item must match the selected filing, metric, instant, value and accuracy.
 with selected as (
     select * from {{ ref('int_reported_balance_sheet_metrics') }}
 ), invalid_lists as (

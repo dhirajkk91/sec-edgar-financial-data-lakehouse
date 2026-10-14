@@ -1,3 +1,5 @@
+-- Explain why an annual value cannot produce a Q4 value.
+-- Keep one issue per target source occurrence and the possible Q3 inputs.
 with targets as (
     select
         r.cik, r.accession_number, r.metric_code,
@@ -16,7 +18,7 @@ with targets as (
                 and q.metric_code = r.metric_code and q.period_classification = 'quarter'
         )
 ), candidates as (
-    -- Count fiscal-role candidates before checking units or cumulative boundaries.
+    -- Count all possible Q3 inputs first. A bad unit must not hide a competing input.
     select
         t.cik, t.accession_number, t.metric_code, t.source_occurrence_id,
         p.accession_number as previous_accession_number,

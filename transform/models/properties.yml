@@ -108,6 +108,32 @@ models:
       - name: submissions_sha256
         data_tests: [not_null]
 
+  - name: int_financial_metric_candidate_accuracy
+    description: Every mapped candidate with unchanged raw evidence and a targeted XBRL accuracy check; unusable occurrences remain visible.
+    columns:
+      - name: source_occurrence_id
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('int_financial_metric_candidates')
+                field: source_occurrence_id
+      - name: decimals
+        description: Original nullable attribute text; validation does not trim or canonicalize stored evidence.
+      - name: precision
+        description: Original nullable attribute text; zero precision is valid syntax but unknown accuracy.
+      - name: accuracy_is_usable
+        description: Non-null usability result; exactly one valid attribute and precision other than zero are required.
+        data_tests: [not_null]
+      - name: accuracy_issue_code
+        description: Null for usable accuracy; otherwise the first applicable reason in policy order.
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: [MISSING_ACCURACY, MULTIPLE_ACCURACY_ATTRIBUTES, INVALID_DECIMALS, INVALID_PRECISION, UNKNOWN_PRECISION]
+      - name: accuracy_issue_details
+        description: Readable reason and unchanged raw attributes; null when accuracy is usable.
+
   - name: int_reported_revenue
     description: One agreed reported revenue value per CIK, accession, metric and exact duration; all supporting occurrences remain traceable.
     columns:
@@ -144,7 +170,7 @@ models:
           - not_null
           - accepted_values:
               arguments:
-                values: ['1']
+                values: ['2']
       - name: form
         description: Verified form; original and amended accessions stay separate.
         data_tests: [not_null]
@@ -184,7 +210,7 @@ models:
           - not_null
           - accepted_values:
               arguments:
-                values: [MISSING_FILING_METADATA, UNSUPPORTED_FORM, MISSING_REPORT_DATE, NO_ELIGIBLE_REVENUE, REVENUE_VALUE_CONFLICT, REVENUE_ACCURACY_UNRESOLVED]
+                values: [MISSING_FILING_METADATA, UNSUPPORTED_FORM, MISSING_REPORT_DATE, NO_ELIGIBLE_REVENUE, INVALID_ACCURACY, REVENUE_VALUE_CONFLICT, REVENUE_ACCURACY_UNRESOLVED]
       - name: severity
         data_tests:
           - not_null
@@ -239,7 +265,7 @@ models:
           - not_null
           - accepted_values:
               arguments:
-                values: ['1']
+                values: ['2']
       - name: form
         description: Verified form; original and amended accessions stay separate.
         data_tests: [not_null]
@@ -283,7 +309,7 @@ models:
           - not_null
           - accepted_values:
               arguments:
-                values: [MISSING_FILING_METADATA, UNSUPPORTED_FORM, MISSING_REPORT_DATE, NO_ELIGIBLE_METRIC, METRIC_VALUE_CONFLICT, METRIC_ACCURACY_UNRESOLVED]
+                values: [MISSING_FILING_METADATA, UNSUPPORTED_FORM, MISSING_REPORT_DATE, NO_ELIGIBLE_METRIC, INVALID_ACCURACY, METRIC_VALUE_CONFLICT, METRIC_ACCURACY_UNRESOLVED]
       - name: severity
         data_tests:
           - not_null
@@ -338,7 +364,7 @@ models:
           - not_null
           - accepted_values:
               arguments:
-                values: ['1']
+                values: ['2']
       - name: form
         description: Verified form; original and amended accessions stay separate.
         data_tests: [not_null]
@@ -381,7 +407,7 @@ models:
           - not_null
           - accepted_values:
               arguments:
-                values: [MISSING_FILING_METADATA, UNSUPPORTED_FORM, MISSING_REPORT_DATE, NO_ELIGIBLE_METRIC, METRIC_VALUE_CONFLICT, METRIC_ACCURACY_UNRESOLVED]
+                values: [MISSING_FILING_METADATA, UNSUPPORTED_FORM, MISSING_REPORT_DATE, NO_ELIGIBLE_METRIC, INVALID_ACCURACY, METRIC_VALUE_CONFLICT, METRIC_ACCURACY_UNRESOLVED]
       - name: severity
         data_tests:
           - not_null
@@ -436,7 +462,7 @@ models:
           - not_null
           - accepted_values:
               arguments:
-                values: ['1']
+                values: ['2']
       - name: form
         description: Verified form; original and amended accessions stay separate.
         data_tests: [not_null]
@@ -480,7 +506,7 @@ models:
           - not_null
           - accepted_values:
               arguments:
-                values: [MISSING_FILING_METADATA, UNSUPPORTED_FORM, MISSING_REPORT_DATE, NO_ELIGIBLE_METRIC, METRIC_VALUE_CONFLICT, METRIC_ACCURACY_UNRESOLVED]
+                values: [MISSING_FILING_METADATA, UNSUPPORTED_FORM, MISSING_REPORT_DATE, NO_ELIGIBLE_METRIC, INVALID_ACCURACY, METRIC_VALUE_CONFLICT, METRIC_ACCURACY_UNRESOLVED]
       - name: severity
         description: Metadata or report-date absence is ERROR; unsupported forms and supplemental metric problems are WARNING.
         data_tests:
@@ -502,8 +528,8 @@ models:
 
 
   - name: stg_silver_filing_fiscal_metadata
-    description: Version 1 fiscal DEI evidence for the exact active source; complete and partial results
-      remain inspectable.
+    description: Fiscal DEI evidence for the exact active source; prefer extraction version 2,
+      retain version 1 when no newer extraction exists. Complete and partial results remain inspectable.
     columns:
     - name: cik
       data_tests:
@@ -524,6 +550,7 @@ models:
           arguments:
             values:
             - '1'
+            - '2'
     - name: form
       data_tests:
       - not_null
@@ -598,7 +625,7 @@ models:
         data_tests:
           - accepted_values:
               arguments:
-                values: ['1']
+                values: ['1', '2']
       - name: fiscal_metadata_run_id
         data_type: VARCHAR
       - name: fiscal_submissions_sha256

@@ -1,3 +1,4 @@
+-- Check both source inputs and the exact subtraction, including the same-company/fiscal-year match.
 select d.cik, d.accession_number, d.metric_code
 from {{ ref('int_derived_quarterly_cash_flow') }} as d
 left join {{ ref('int_reported_financial_periods') }} as c

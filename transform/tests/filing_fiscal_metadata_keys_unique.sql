@@ -1,3 +1,4 @@
+-- Storage allows old source versions; the active view must still have only one row per filing.
 with storage_duplicates as (
     select cik, accession_number
     from {{ source('silver', 'filing_fiscal_metadata') }}

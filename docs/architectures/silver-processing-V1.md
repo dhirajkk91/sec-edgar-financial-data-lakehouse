@@ -1,130 +1,51 @@
-# SEC EDGAR Silver Processing — Version 1
+# Silver: facts before financial decisions
 
-Silver reads the extracted XBRL instance from a published Bronze filing and turns its numeric facts into data we can query. Each fact keeps the details needed to understand it: what was reported, for whom, for which period, in which unit, and where it came from. Gold will later decide which facts to compare and how to calculate business metrics.
+Silver reads the extracted XBRL instance from a published Bronze filing. It keeps numeric fact **occurrences**, not one chosen value per concept. The same revenue concept can appear for a quarter, year to date, a comparative year, or a segment; even identical-looking occurrences stay separate here. Gold makes the later business selection.
 
-## Outcome and scope
+## Input and identity
 
-Version 1 processes one filing at a time. It produces accepted facts, their dimensions, rejected facts, and a record of the processing attempt. The output supports SQL queries and lets a reader trace a row back to the source document.
+Before parsing, Silver checks the canonical Bronze path, manifest status, discovery record, and the single verified extracted-instance XML. It reopens that file and matches its size and SHA-256 to the manifest. A staged or changed file cannot become Silver input just because its filename looks right.
 
-The published Apple 10-K used for the Bronze check is our first real input. The parser also needs to handle periods and contexts found in 10-Q filings. We will check that behavior with a 10-Q fixture and, later, a controlled live filing. The input is the extracted XBRL instance XML. Silver does not parse financial facts from the filing HTML or complete submission text file.
+A `source_occurrence_id` is deterministic from the issuer CIK, accession, document name and checksum, and the item's position under the XML root. It does not depend on the processing run ID. That lets a rerun point to the same source occurrence without collapsing separate facts. The parser also keeps the XBRL concept, context, entity, unit, dimensions, period boundaries, raw value, and reported `decimals`/`precision` attributes.
 
-This version runs locally with one writer. Filing discovery, scheduling, cloud deployment, full taxonomy validation, and choosing the preferred business metric for a company come later.
+Position is counted before deciding whether a root item is an accepted numeric fact. That matters when a parser revision starts recognizing a previously missed item: later source IDs should still point to the same positions. The concept namespace is kept with the local name so a company extension named `Assets` does not silently become US-GAAP `Assets`. Namespace scope is retained while parsing units and typed dimensions, where a prefix may be redefined inside the XML.
 
-## Bronze handoff
+The parser treats a root-level item as a numeric candidate when it has a `unitRef`, `decimals`, or `precision` attribute, even if that attribute is empty. It also recognizes a small set of known US-GAAP and DEI numeric concepts by **namespace and name**, so a missing `unitRef` on one of those facts becomes an explicit rejection. Numeric-looking text or a familiar name in a company extension is not enough to guess that an otherwise unidentified item is numeric. This is a bounded recognition policy, not a full taxonomy resolver.
 
-The caller provides a published filing directory and its Bronze manifest. Silver checks the input before it starts extracting facts:
+Missing units and other fact-level problems become rejected occurrences when the remaining document can be read safely. Broken shared structure, malformed XML, DTD/entity declarations, or an unidentifiable partial parse fail the extraction. The XML parser enforces DTD rejection after decoding, so UTF-8 and UTF-16 inputs follow the same rule; it makes no external requests.
 
-1. The directory must be the canonical path for the manifest's CIK and accession number. The manifest must have status `COMPLETE` or `PARTIAL`, with `source_complete: true` and `parser_ready: true`. A failed staging directory is never a Silver input.
-2. In `metadata/discovery.json`, find exactly one Data Files entry described as `EXTRACTED XBRL INSTANCE DOCUMENT` with an `.xml` filename. Match it to a `VERIFIED` entry in the supplied Bronze manifest's `sec-derived` section. The discovery record and manifest must identify the same filing.
-3. Reopen the selected file inside `sec-derived/`. It must be a regular file in the expected directory, with no symlink in its path. Its size and SHA-256 must match the Bronze manifest.
+That difference between a rejected **item** and a failed **filing** is intentional. A bad `contextRef` on one identifiable fact should not erase the other facts; a broken context table or interrupted parse could make all later results unreliable, so Silver publishes nothing new. Each candidate ends up either accepted or rejected, and a dimension row must point to an accepted fact.
 
-If any check fails, Silver stops before publishing an output. Bronze's `parser_ready` flag tells us the XML was present and well formed at publication time. Silver still checks the bytes it reads and whether the XBRL structures make sense. A `COMPLETE` Bronze filing can therefore have a `PARTIAL` or `FAILED` Silver result.
+## Output and publication
 
-Bronze Version 1 keeps one canonical directory per accession and refuses to overwrite it. Silver can distinguish source checksums, but it cannot process a changed document under an existing accession until Bronze has a way to publish that source version.
-
-## Fact grain and identity
-
-One row in `facts` represents one numeric fact occurrence in the extracted instance. The same concept may appear for this quarter, the year to date, a previous year, or a business segment. Even two occurrences with the same concept, period, and value stay separate until we have an explicit rule for comparing them.
-
-Give each candidate fact an ordinal based on its position among the XML instance root's children. Count positions before deciding whether this parser accepts the item. Use the CIK, accession number, document name, document SHA-256, and ordinal to create a deterministic `source_occurrence_id`. The processing run ID does not form part of that identity. Parser and output schema versions identify how the source occurrence was processed.
-
-If a later filing reports a different value for an earlier period, Silver keeps both occurrences. Gold can choose which reported version an analysis uses and show where it came from.
-
-Version 1 treats direct item elements with a `unitRef` as numeric candidates and checks their `contextRef`. An identifiable bad candidate goes into the rejection count. This rule gives us a workable first parser, but it is not full XBRL taxonomy validation. If the document contains a structure that prevents us from identifying all the candidates in scope, the filing fails instead of being marked `COMPLETE`.
-
-## Silver datasets
-
-| Dataset | One row means | Why it exists |
-| --- | --- | --- |
-| `facts` | One accepted numeric occurrence | Query the reported value with its source, concept, period, unit, and entity. |
-| `fact_dimensions` | One dimension on one accepted fact | Keep segment and other breakdowns without adding fixed columns for every possible axis. |
-| `rejected_facts` | One identifiable candidate we could not accept | Show the raw value and references we could read, plus a reason for exclusion. |
-| `processing_runs` | One attempt, including a failure or skip | Explain what ran, against which input and parser version, and what happened. |
-
-The first `facts` schema uses these names:
-
-| Group | Columns |
+| Output | Grain and purpose |
 | --- | --- |
-| Source | `source_occurrence_id`, `cik`, `accession_number`, `source_document_name`, `source_sha256`, `source_ordinal`, `processing_run_id`, `parser_version`, `schema_version` |
-| Value | `concept_namespace`, `concept_local_name`, `raw_value`, `value_decimal`, `is_nil`, `decimals`, `precision` |
-| Unit and context | `unit_ref`, `unit_expression`, `unit_xml`, `context_ref`, `context_xml`, `entity_scheme`, `entity_identifier` |
-| Period | `period_kind` (`INSTANT` or `DURATION`), `period_start`, `period_end`, `period_instant` |
+| `facts.parquet` | One accepted numeric occurrence, with source, context, period, unit, and exact value. |
+| `fact_dimensions.parquet` | One dimension on one accepted occurrence. |
+| `rejected_facts.parquet` | One identifiable candidate excluded with a reason and whatever raw evidence was readable. |
+| `runs/run_id=<id>.json` | One attempt, including failed and skipped attempts. |
 
-A duration uses start and end dates. An instant uses one date. Silver stores the period the fact actually reports. It does not label every fact in a 10-Q as a standalone quarter.
+Values are converted through Python `Decimal` and stored as `DECIMAL(38,18)`. A source value that cannot fit exactly is rejected, never rounded or passed through a float. Nil is null, not zero. A fact with no parsed dimensions is not automatically a consolidated company total.
 
-`fact_dimensions` contains `source_occurrence_id`, `axis_namespace`, `axis_name`, `member_kind`, `member_value`, `typed_member_xml`, and `context_location`. A fact may have no dimension rows or several. The context reference and context XML remain in `facts`. Having no parsed dimension row, by itself, does not prove a fact is the consolidated company total. If we cannot interpret dimensional content safely, reject the affected fact and record why.
+For example, a 10-Q may contain revenue of 130 for its latest three months, 230 for six months year to date, and 40 for one segment. Silver keeps all three with their actual contexts. Adding them together, or choosing 230 just because it appears later in the XML, would answer a different question. Gold uses filing metadata, period, unit, dimensions, and agreement before it selects a reported metric.
 
-`rejected_facts` keeps the source identity, the attributes we could read, a stable `reason_code`, and a readable `reason`. `processing_runs` records the run ID, input identity, parser and schema versions, UTC start and end times, outcome, accepted and rejected counts, published version when there is one, and any failure reason.
-
-Keep `raw_value` as reported. For arithmetic, use an exact decimal conversion and store `value_decimal` as `DECIMAL(38,18)` in the first Parquet schema. If a value cannot fit exactly, reject that occurrence and preserve the original text in `rejected_facts`. Do not round it or convert through a binary float. An explicitly nil fact has `is_nil: true` and a null value, not zero. Keep its valid context and unit. Retain reported accuracy attributes such as `decimals` and `precision` without claiming greater accuracy.
-
-For example, these three reported facts all belong in Silver:
-
-| Occurrence | Concept | Reported period | Scope | Value |
-| --- | --- | --- | --- | ---: |
-| A | Revenue | Three months ended June 30 | Company-wide | 130 |
-| B | Revenue | Six months ended June 30 | Company-wide | 230 |
-| C | Revenue | Six months ended June 30 | Segment A | 40 |
-
-The values are illustrative. A and B cover overlapping time. C may be part of B. Adding these rows would not give a meaningful total. Gold will select compatible facts before calculating a metric.
-
-## Validation and outcomes
-
-Start by checking the instance root and building the context and unit lookups. Then check each candidate's context, entity, period, unit, dimensions, and value. If a missing context affects one identifiable fact, reject that fact. If the shared structure is too broken to tell which facts are affected, fail the filing. Never guess a missing period, unit, or segment.
-
-| Result | Meaning | What Silver publishes |
-| --- | --- | --- |
-| `COMPLETE` | All candidates in scope were accepted, including at least one non-nil numeric fact. | Facts and processing evidence. |
-| `PARTIAL` | At least one non-nil numeric fact was accepted, but identifiable candidates were rejected. | Accepted facts, dimensions, rejections, and processing evidence together. |
-| `FAILED` | The input, shared structure, or publication failed, or there was no accepted non-nil numeric fact. | No new active dataset. An earlier active version stays in place. |
-| `SKIPPED` | The same input, parser version, and schema version already have a published output. | No new financial rows. Record the new attempt. |
-
-`COMPLETE` measures extraction coverage. It does not promise that Gold has the revenue or cash flow fact needed for a particular chart. Likewise, a `PARTIAL` filing may still support some analyses. Gold will check metric coverage separately and will not turn missing values into zero.
-
-Suppose 1,000 candidates include one revenue occurrence whose `contextRef` cannot be resolved. If the other 999 can be read safely, publish them as `PARTIAL` and record the missing context ID with the rejected occurrence. If an unexpected parser error interrupts the document and we cannot establish what was processed, fail the attempt. Do not publish the prefix collected before the error.
-
-Before publication, reconcile `candidate_count = accepted_count + rejected_count`. Every rejected fact needs a reason, and every dimension row must point to an accepted fact. The original XML remains in Bronze.
-
-## Storage and publication
-
-Use Parquet for `facts`, `fact_dimensions`, and `rejected_facts`. DuckDB writes and queries these files. Store each `processing_runs` attempt as a structured JSON file that DuckDB can also read. That lets us record a failed or skipped attempt without rewriting an already published Parquet set. Empty row-level datasets still get a Parquet file with the declared schema.
+Silver reconciles candidate, accepted, and rejected counts and checks every dimension link. It writes the three Parquet files into a staged version, verifies schema, rows, links, sizes, and checksums, then publishes the version and updates `active.json`. The active pointer changes only after the version has passed verification. Readers follow that pointer, not every directory under `versions/`.
 
 ```text
-data/silver/sec/filings/
-└── cik=<10-digit-cik>/
-    └── accession=<accession-number>/
-        ├── active.json
-        ├── runs/
-        │   └── run_id=<run-id>.json
-        └── versions/
-            └── document=<instance-filename>/
-                └── source_sha256=<instance-sha256>/
-                    └── parser=<parser-version>/
-                        └── schema=<output-schema-version>/
-                            ├── facts.parquet
-                            ├── fact_dimensions.parquet
-                            ├── rejected_facts.parquet
-                            └── publication.json
+<silver root>/cik=<CIK>/accession=<accession>/
+├── active.json
+├── runs/run_id=<run-id>.json
+└── versions/document=<XML>/source_sha256=<hash>/parser=<version>/schema=<version>/
+    ├── facts.parquet
+    ├── fact_dimensions.parquet
+    ├── rejected_facts.parquet
+    └── publication.json
 ```
 
-`publication.json` identifies the Bronze manifest and input document. It records the parser and schema versions, Silver status, row counts, and the size and SHA-256 of each output file. Before publishing, reopen the Parquet files and check their schemas, counts, links, sizes, and hashes.
+`COMPLETE` means all identified candidates were accepted and at least one non-nil numeric fact exists. `PARTIAL` means useful facts were published with identifiable rejections. `FAILED` publishes no new active version; an earlier active pointer remains in place. `SKIPPED` records a new attempt when the same source, parser, and schema version already have verified output. A matching inactive version is not silently made active, except for the publication workflow's documented recovery of a failed activation.
 
-Here this writes a version into a temporary directory on the same local filesystem. Once verified, moves the whole version into place. Then replaces `active.json` with a pointer to that version. Readers resolve the pointer first and query only its files. Reading every file under `versions/` would mix current and historical outputs. Keep earlier versions so a parser correction can be inspected. A failed attempt leaves the existing active pointer alone.
+The version key excludes the run ID. A rerun checks an existing version's files and publication evidence before reuse, then writes a separate attempt record. If a prior run moved a verified version into place but failed before activation, recovery can activate that same version after checking the earlier failure evidence. An arbitrary inactive historical version is not promoted just because its name matches. If writing the run record fails **after** the pointer changed, the activation is not rolled back; the failure is reported with the pointer left as it actually is.
 
-An equivalent successful rerun uses the published output for the same filing, document name, source SHA-256, parser version, and schema version. It adds no fact rows. A failed attempt remains retryable. If that matching version exists but is no longer active, report it instead of silently switching back. A parser or schema change creates a new version even when the source bytes are unchanged.
+The current parser is revision `3`, with row schema `1`. Revision 2 began recognizing certain known US-GAAP and DEI numeric concepts without `unitRef`; revision 3 also rejects nested identifier/date elements and unexpected text in context wrappers. Parser-1 and parser-2 versions remain historical evidence, and the catalog supports all three revisions. Reprocess a filing to publish its corrected parser-3 version. This is local, single-writer publication, not a transaction across filesystems or a guarantee against power loss.
 
-Version 1 has one writer per filing. The local directory move and pointer replacement define when an output becomes visible to local readers. They are not a distributed transaction or a guarantee against power loss. Cloud object storage will need its own publication design.
-
-## Version 1 acceptance
-
-Tests and controlled runs should show that:
-
-- A published, parser-ready Bronze filing produces SQL-queryable facts with source identity, entity, period, unit, and dimension information.
-- Annual and comparative facts from a 10-K remain separate. A 10-Q fixture keeps three-month and year-to-date revenue as separate facts.
-- A company-wide fact and a segment fact for the same concept and period stay separate. Unreadable dimensions never become a company-wide label.
-- An isolated bad fact produces `PARTIAL` with reconciled counts and a useful rejection reason.
-- A broken shared structure, input bytes that differ from Bronze evidence, zero accepted non-nil facts, or a failed output check leaves the previous active version untouched.
-- An equivalent rerun adds no financial rows. A parser change creates a separate version.
-- SQL reads the active version for a filing. An interrupted attempt cannot expose an incomplete new version.
-
-Use small XML fixtures for periods, dimensions, rejection cases, and reruns. Also run the parser once against the published Apple filing. Passing these checks does not establish support for every XBRL taxonomy or extension.
+The [two-company acceptance run](../validation/multi-company-acceptance-V1.md) checked active pointers, version files, and occurrence ownership across 4,265 accepted facts. Its Microsoft rerun kept the earlier active versions and pointers byte-for-byte unchanged.
