@@ -1,3 +1,5 @@
+-- Read active Silver facts as stored: one row per numeric source occurrence.
+-- Equal values stay separate, and Decimal values and unit expressions stay unchanged.
 select
     source_occurrence_id,
     cik,

@@ -1,0 +1,316 @@
+"""The SEC filing index tells us which documents belong to a filing.
+
+This reads the submitted documents, complete text package and optional
+XBRL listings. It keeps the index response too; the downloader handles
+the listed files after this step.
+"""
+
+import re
+from dataclasses import dataclass, field
+from datetime import UTC, datetime
+from urllib.parse import unquote
+
+import httpx
+from bs4 import BeautifulSoup
+
+from sec_edgar_lakehouse.bronze.filing_download import _content_length_error
+from sec_edgar_lakehouse.bronze.filing_request import (
+    RequestFailure,
+    RequestPacer,
+    request_index_or_document,
+)
+from sec_edgar_lakehouse.filing_reference import FilingReference
+
+
+class DiscoveryError(Exception):
+    """The filing index could not be fetched or its documents could not be read."""
+
+    def __init__(
+        self, message: str, *, attempts: int = 0, stop_run: bool = False
+    ) -> None:
+        """Keep attempt and stop details so the company runner can distinguish a bad filing from a SEC block."""
+        if attempts and "attempt" not in message:
+            message = f"{message} (after {attempts} network attempt{'s' if attempts != 1 else ''})"
+        super().__init__(message)
+        self.attempts = attempts
+        self.stop_run = stop_run
+
+
+@dataclass(frozen=True, slots=True)
+class FilingDocument:
+    """One submitted document listed in Document Format Files."""
+
+    sequence: str | None
+    description: str | None
+    document_name: str
+    document_type: str | None
+
+
+@dataclass(frozen=True, slots=True)
+class CompleteSubmissionFile:
+    """The complete-submission text file listed for a filing."""
+
+    document_name: str
+
+
+@dataclass(frozen=True, slots=True)
+class FilingDataFile:
+    """One entry listed in the filing's Data Files table."""
+
+    sequence: str | None
+    description: str | None
+    document_name: str
+    document_type: str | None
+
+
+@dataclass(frozen=True, slots=True)
+class FilingDiscovery:
+    """The files listed by the SEC and the original index response that listed them."""
+
+    submitted_documents: tuple[FilingDocument, ...]
+    complete_submission: CompleteSubmissionFile
+    data_files: tuple[FilingDataFile, ...]
+    index_url: str
+    retrieved_at: datetime
+    index_content: bytes = field(repr=False)
+
+
+def discover_filing(
+    reference: FilingReference,
+    *,
+    user_agent: str,
+    client: httpx.Client | None = None,
+    _pacer: RequestPacer | None = None,
+) -> FilingDiscovery:
+    """Read the filing index and return its file listings and original response.
+
+    The User-Agent needs an application name and contact email. A client
+    supplied by the caller stays open; otherwise this call closes its client.
+    DiscoveryError keeps the request failure details when the index cannot be used.
+    """
+    _validate_user_agent(user_agent)
+    # The accession prefix can belong to a filing agent, so use the filing CIK
+    # for the archive directory.
+    url = (
+        "https://www.sec.gov/Archives/edgar/data/"
+        f"{reference.cik_unpadded}/{reference.accession_compact}/"
+        f"{reference.accession_number}-index.html"
+    )
+    if client is None:
+        with httpx.Client() as owned_client:
+            html, attempts = _fetch_index(owned_client, url, user_agent, _pacer)
+    else:
+        html, attempts = _fetch_index(client, url, user_agent, _pacer)
+    try:
+        return _parse_discovery(html, index_url=url, retrieved_at=datetime.now(UTC))
+    except DiscoveryError as exc:
+        raise DiscoveryError(
+            str(exc), attempts=attempts, stop_run=exc.stop_run
+        ) from exc
+
+
+def _validate_user_agent(user_agent: str) -> None:
+    """The SEC request header must identify the application and include a contact email."""
+    if (
+        not isinstance(user_agent, str)
+        or not user_agent.isascii()
+        or any(ord(char) < 32 or ord(char) == 127 for char in user_agent)
+    ):
+        raise DiscoveryError(
+            "User-Agent must contain an application identity and contact email"
+        )
+    email = re.search(r"\b[^\s<>@]+@[^\s<>@]+\.[a-zA-Z]{2,}\b", user_agent)
+    identity = user_agent[: email.start()] + user_agent[email.end() :] if email else ""
+    if email is None or not re.search(r"[a-zA-Z]", identity):
+        raise DiscoveryError(
+            "User-Agent must contain an application identity and contact email"
+        )
+
+
+def _fetch_index(
+    client: httpx.Client, url: str, user_agent: str, pacer: RequestPacer | None
+) -> tuple[bytes, int]:
+    """Give index-download errors their own label while keeping the shared request rules."""
+    return _fetch_content(client, url, user_agent, pacer, subject="Filing index")
+
+
+def _fetch_content(
+    client: httpx.Client,
+    url: str,
+    user_agent: str,
+    pacer: RequestPacer | None,
+    *,
+    subject: str,
+) -> tuple[bytes, int]:
+    """Fetch nonempty bytes, keeping request attempts and SEC stop conditions on errors."""
+    try:
+        requested = request_index_or_document(client, url, user_agent, pacer=pacer)
+    except RequestFailure as exc:
+        raise DiscoveryError(
+            f"{subject} request failed after {exc.attempts} "
+            f"attempt{'s' if exc.attempts != 1 else ''}: {exc}: {url}",
+            attempts=exc.attempts,
+            stop_run=exc.stop_run,
+        ) from exc
+    response = requested.response
+    if not response.content:
+        raise DiscoveryError(
+            f"{subject} response was empty: {url}", attempts=requested.attempts
+        )
+    if length_error := _content_length_error(response):
+        raise DiscoveryError(f"{length_error}: {url}", attempts=requested.attempts)
+    return response.content, requested.attempts
+
+
+def _parse_discovery(
+    html: bytes, *, index_url: str, retrieved_at: datetime
+) -> FilingDiscovery:
+    """Read the document table and require exactly one complete submission package."""
+    soup = BeautifulSoup(html, "html.parser")
+    table = soup.find("table", attrs={"summary": "Document Format Files"})
+    if table is None:
+        raise DiscoveryError("Filing index is missing the Document Format Files table")
+    if table.find("td") is None:
+        raise DiscoveryError("Document Format Files table contains no document rows")
+
+    columns = [cell.get_text(strip=True).lower() for cell in table.find_all("th")]
+    if "document" not in columns:
+        raise DiscoveryError(
+            "Document Format Files table is missing its Document column"
+        )
+
+    rows = []
+    complete_submission_rows = []
+    for row in table.find_all("tr"):
+        cells = row.find_all("td", recursive=False)
+        if not cells:
+            continue
+        rows.append((row, cells))
+        # SEC sometimes gives the package row a colspan; treat it separately.
+        if any(
+            cell.get_text(" ", strip=True).lower() == "complete submission text file"
+            for cell in cells
+        ):
+            complete_submission_rows.append(row)
+
+    if not complete_submission_rows:
+        raise DiscoveryError(
+            "Document Format Files table is missing the complete submission text file"
+        )
+    if len(complete_submission_rows) > 1:
+        raise DiscoveryError(
+            "Document Format Files table has multiple complete submission text files"
+        )
+
+    complete_submission_row = complete_submission_rows[0]
+    complete_submission_link = complete_submission_row.find("a")
+    if complete_submission_link is None:
+        raise DiscoveryError("Complete submission text file row is missing its link")
+    complete_submission_name = complete_submission_link.get_text(strip=True)
+    if not complete_submission_name:
+        raise DiscoveryError("Complete submission text file link has no filename")
+    _validate_filename(complete_submission_name, subject="complete submission")
+    if not complete_submission_name.lower().endswith(".txt"):
+        raise DiscoveryError("Complete submission filename must end in .txt")
+
+    # Keep SEC row order; the displayed sequence number is metadata, not a sorting rule.
+    documents: list[FilingDocument] = []
+    for row, cells in rows:
+        if row is complete_submission_row:
+            continue
+
+        values = dict(zip(columns, cells, strict=False))
+        document_cell = values.get("document")
+        if document_cell is None:
+            raise DiscoveryError(
+                "Document Format Files row is missing a document filename"
+            )
+        link = document_cell.find("a")
+        # The link text is the filename even when its href opens the Inline XBRL viewer.
+        name = (link if link is not None else document_cell).get_text(strip=True)
+        if not name:
+            raise DiscoveryError(
+                "Document Format Files row is missing a document filename"
+            )
+        _validate_filename(name, subject="document")
+
+        text_values = {
+            key: cell.get_text(" ", strip=True) or None for key, cell in values.items()
+        }
+        documents.append(
+            FilingDocument(
+                sequence=text_values.get("seq"),
+                description=text_values.get("description"),
+                document_name=name,
+                document_type=text_values.get("type"),
+            )
+        )
+    if not documents:
+        raise DiscoveryError("Document Format Files table contains no document rows")
+    return FilingDiscovery(
+        submitted_documents=tuple(documents),
+        complete_submission=CompleteSubmissionFile(complete_submission_name),
+        data_files=_parse_data_files(soup),
+        index_url=index_url,
+        retrieved_at=retrieved_at,
+        index_content=html,
+    )
+
+
+def _parse_data_files(soup: BeautifulSoup) -> tuple[FilingDataFile, ...]:
+    """Read the optional XBRL table; a present but broken table is still an error."""
+    table = soup.find("table", attrs={"summary": "Data Files"})
+    # Not every SEC filing has XBRL data, so this table is optional.
+    if table is None:
+        return ()
+    if table.find("td") is None:
+        raise DiscoveryError("Data Files table contains no data rows")
+
+    columns = [cell.get_text(strip=True).lower() for cell in table.find_all("th")]
+    if "document" not in columns:
+        raise DiscoveryError("Data Files table is missing its Document column")
+
+    data_files: list[FilingDataFile] = []
+    for row in table.find_all("tr"):
+        cells = row.find_all("td", recursive=False)
+        if not cells:
+            continue
+
+        values = dict(zip(columns, cells, strict=False))
+        document_cell = values.get("document")
+        if document_cell is None:
+            raise DiscoveryError("Data Files row is missing its document cell")
+        link = document_cell.find("a")
+        if link is None:
+            raise DiscoveryError("Data Files row is missing its document link")
+        # SEC links can point through a viewer; the visible text is the filename.
+        name = link.get_text(strip=True)
+        if not name:
+            raise DiscoveryError("Data Files row is missing a document filename")
+        _validate_filename(name, subject="data file")
+
+        text_values = {
+            key: cell.get_text(" ", strip=True) or None for key, cell in values.items()
+        }
+        data_files.append(
+            FilingDataFile(
+                sequence=text_values.get("seq"),
+                description=text_values.get("description"),
+                document_name=name,
+                document_type=text_values.get("type"),
+            )
+        )
+
+    return tuple(data_files)
+
+
+def _validate_filename(name: str, *, subject: str) -> None:
+    """Check decoded link text too, so an encoded slash cannot become a local path."""
+    decoded_name = unquote(name)
+    if (
+        decoded_name in {".", ".."}
+        or "/" in decoded_name
+        or "\\" in decoded_name
+        or any(ord(char) < 32 or ord(char) == 127 for char in decoded_name)
+    ):
+        raise DiscoveryError(f"Unsafe {subject} filename: {name!r}")

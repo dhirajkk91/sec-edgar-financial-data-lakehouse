@@ -1,4 +1,6 @@
--- Preserve input rows and exact Decimal values; financial policy belongs upstream.
+-- Bring reported and derived values into one table, keeping both kinds clearly labeled.
+-- Each row is one company/accession/metric/exact period; the source inputs stay attached.
+-- Keep values and rows as supplied; earlier models decide the financial rules.
 select
     r.cik,
     r.accession_number,

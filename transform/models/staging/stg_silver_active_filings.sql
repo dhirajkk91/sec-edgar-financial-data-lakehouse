@@ -1,3 +1,4 @@
+-- One row per active filing: which checked Silver version the catalog is using.
 select
     cik,
     accession_number,

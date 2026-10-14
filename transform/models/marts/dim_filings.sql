@@ -1,5 +1,7 @@
+-- Summarize each active company/accession, including filings with no selected metrics.
+-- Gold quality describes financial coverage and issues, not whether the pipeline ran successfully.
 with metric_rows as (
-    -- Match the active source before aggregation; stale source metrics never enter counts or coverage.
+    -- Count only metrics from the active document/checksum, not an older saved source.
     select
         f.cik, f.accession_number, f.metric_code, f.value_origin,
         coalesce(
@@ -34,7 +36,7 @@ with metric_rows as (
     from metric_rows
     group by cik, accession_number
 ), issue_counts as (
-    -- Preserve issue occurrences, including duplicates; aggregate independently of financial rows.
+    -- Count issues separately so joining financial rows cannot multiply them. Keep duplicates.
     select
         cik, accession_number,
         count(*)::bigint as quality_issue_count,
@@ -86,7 +88,7 @@ with metric_rows as (
     from {{ ref('stg_silver_active_filings') }} as a
     left join {{ ref('stg_silver_filing_metadata') }} as m
         on a.cik = m.cik and a.accession_number = m.accession_number
-    -- The staging view already owns supported fiscal extraction-version filtering.
+    -- Staging has already filtered to the supported fiscal extraction version.
     left join {{ ref('stg_silver_filing_fiscal_metadata') }} as f
         on f.cik = a.cik and f.accession_number = a.accession_number
         and f.source_document_name = a.source_document_name and f.source_sha256 = a.source_sha256

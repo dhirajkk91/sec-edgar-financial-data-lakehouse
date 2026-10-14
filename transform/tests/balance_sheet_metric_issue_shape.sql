@@ -1,6 +1,8 @@
 select cik, accession_number, metric_code, issue_code
 from {{ ref('int_balance_sheet_metric_selection_issues') }}
-where severity is distinct from (case when issue_code = 'UNSUPPORTED_FORM' then 'WARNING' else 'ERROR' end)
+where severity is distinct from (case when issue_code = 'UNSUPPORTED_FORM'
+    or (issue_code = 'INVALID_ACCURACY' and metric_code = 'cash_and_equivalents')
+    then 'WARNING' else 'ERROR' end)
     or list_unique(source_occurrence_ids) <> array_length(source_occurrence_ids)
     or list_count(source_occurrence_ids) <> array_length(source_occurrence_ids)
     or length(details) = 0
@@ -16,3 +18,7 @@ where severity is distinct from (case when issue_code = 'UNSUPPORTED_FORM' then 
     )
     or (issue_code in ('MISSING_FILING_METADATA', 'MISSING_REPORT_DATE') and report_date is not null)
     or (issue_code = 'NO_ELIGIBLE_METRIC' and report_date is null)
+
+    or (issue_code = 'INVALID_ACCURACY' and (
+        period_instant is null or report_date is null or period_instant is distinct from report_date
+        or array_length(source_occurrence_ids) < 1))

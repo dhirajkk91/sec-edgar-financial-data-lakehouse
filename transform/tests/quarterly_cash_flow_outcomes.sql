@@ -1,3 +1,5 @@
+-- Every Q2/Q3 target must produce exactly one derived value or one issue, never disappear.
+-- Issue evidence must list all possible previous inputs in the expected order.
 with targets as (
     select
         r.cik, r.accession_number, r.metric_code, r.source_occurrence_id,

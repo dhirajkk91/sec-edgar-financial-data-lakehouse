@@ -1,3 +1,4 @@
+-- Check for missing and extra rows in both directions; EXCEPT ALL also catches changed duplicate counts.
 with expected as (
     select
         cik, accession_number, metric_code,

@@ -1,3 +1,4 @@
+-- Return labels that disagree with the saved fiscal evidence or supported date ranges.
 with periods as (
     select
         p.*,

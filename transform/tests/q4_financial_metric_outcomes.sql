@@ -1,3 +1,5 @@
+-- Every annual target must produce exactly one Q4 value or one issue, never both.
+-- Issue evidence must list all possible Q3 inputs in the expected order.
 with targets as (
     select
         r.cik, r.accession_number, r.metric_code, r.source_occurrence_id,

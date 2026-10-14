@@ -1,3 +1,4 @@
+-- Every supporting item must match the selected filing, metric, period, value and accuracy.
 with selected as (
     select * from {{ ref('int_reported_cash_flow_metrics') }}
 ), invalid_lists as (

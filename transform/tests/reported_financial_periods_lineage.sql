@@ -1,3 +1,4 @@
+-- Classification may add labels and reasons, but must keep every selected input row unchanged.
 with selected as (
     select
         metric_code, concept_priority, cik, accession_number,

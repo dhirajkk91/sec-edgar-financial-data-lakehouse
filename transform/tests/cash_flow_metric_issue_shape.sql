@@ -15,3 +15,7 @@ where severity is distinct from (case when issue_code in ('MISSING_FILING_METADA
         and (report_date is null or period_end is distinct from report_date or period_start > period_end))
     or (issue_code = 'NO_ELIGIBLE_METRIC' and report_date is null)
     or (issue_code in ('MISSING_FILING_METADATA', 'MISSING_REPORT_DATE') and report_date is not null)
+
+    or (issue_code = 'INVALID_ACCURACY' and (
+        period_start is null or period_end is null or report_date is null or period_end is distinct from report_date
+        or array_length(source_occurrence_ids) < 1))

@@ -1,4 +1,8 @@
-"""Value object identifying a single SEC filing."""
+"""A filing needs both a company ID and an accession number wherever it goes.
+
+This small shared type keeps those IDs consistent in URLs, folders and
+financial evidence. A new processing run is still the same filing.
+"""
 
 import re
 from dataclasses import dataclass
@@ -7,6 +11,7 @@ _ACCESSION_NUMBER_PATTERN = re.compile(r"[0-9]{10}-[0-9]{2}-[0-9]{6}\Z")
 
 
 def _normalize_cik(cik: str) -> str:
+    """Pad a company CIK to ten digits; reject zero and non-ASCII digits."""
     if not isinstance(cik, str):
         raise TypeError("CIK must be a string")
     if not 1 <= len(cik) <= 10:
@@ -20,12 +25,18 @@ def _normalize_cik(cik: str) -> str:
 
 @dataclass(frozen=True, slots=True)
 class FilingReference:
-    """An immutable, normalized reference to one SEC filing."""
+    """The SEC company ID (CIK) and filing ID (accession number) for one filing.
+
+    This stays the same across reruns. The accession prefix may name a filing
+    agent, so it cannot stand in for the company CIK. Dates do not identify a
+    filing, and an amendment has its own accession.
+    """
 
     cik: str
     accession_number: str
 
     def __post_init__(self) -> None:
+        """Use one padded company ID in memory and require the SEC accession spelling."""
         if not isinstance(self.cik, str):
             raise TypeError("CIK must be a string")
         if not isinstance(self.accession_number, str):
@@ -40,16 +51,17 @@ class FilingReference:
                 "using ASCII digits"
             )
 
+        # The dataclass is frozen; this construction-time assignment sets its one stored CIK spelling.
         object.__setattr__(self, "cik", normalized_cik)
 
     @property
     def cik_unpadded(self) -> str:
-        """Return the CIK without leading zeros."""
+        """SEC archive URLs use this spelling of the company ID."""
 
         return self.cik.lstrip("0")
 
     @property
     def accession_compact(self) -> str:
-        """Return the accession number without hyphens."""
+        """SEC archive directories use the accession without its hyphens."""
 
         return self.accession_number.replace("-", "")

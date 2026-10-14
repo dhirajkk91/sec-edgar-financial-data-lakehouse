@@ -1,0 +1,119 @@
+name: Offline CI
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  UV_VERSION: "0.12.15"
+  DBT_SEND_ANONYMOUS_USAGE_STATS: "false"
+
+jobs:
+  python-checks:
+    name: Python checks (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
+        with:
+          python-version-file: .python-version
+      - name: Install uv and locked test dependencies
+        run: |
+          python -m pip install "uv==${UV_VERSION}"
+          uv sync --locked --group dev --group dbt --group dashboard
+          test ! -e data
+          mkdir -p "${RUNNER_TEMP}/python-results"
+      - name: Ruff lint
+        run: uv run --no-sync ruff check .
+      - name: Ruff format
+        run: uv run --no-sync ruff format --check .
+      - name: Mypy
+        run: uv run --no-sync mypy src tests
+      - name: Full Python suite (offline)
+        run: env -u SEC_USER_AGENT uv run --no-sync pytest --junitxml="${RUNNER_TEMP}/python-results/junit.xml"
+      - name: Upload Python diagnostics
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: python-${{ matrix.os }}
+          path: ${{ runner.temp }}/python-results/
+          if-no-files-found: warn
+          retention-days: 7
+
+  offline-dbt:
+    name: Offline dbt validation
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
+        with:
+          python-version-file: .python-version
+      - name: Install uv and locked dbt dependencies
+        run: |
+          python -m pip install "uv==${UV_VERSION}"
+          uv sync --locked --group dev --group dbt --group dashboard
+          test ! -e data
+      - name: Publish synthetic Silver and build Gold once
+        run: env -u SEC_USER_AGENT uv run --no-sync python scripts/ci/validate_offline_dbt.py --work-dir "${RUNNER_TEMP}/offline-dbt"
+      - name: Upload dbt diagnostics
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: offline-dbt
+          path: |
+            ${{ runner.temp }}/offline-dbt/*summary.json
+            ${{ runner.temp }}/offline-dbt/debug/
+            ${{ runner.temp }}/offline-dbt/build/stdout.log
+            ${{ runner.temp }}/offline-dbt/build/stderr.log
+            ${{ runner.temp }}/offline-dbt/build/target/manifest.json
+            ${{ runner.temp }}/offline-dbt/build/target/run_results.json
+            ${{ runner.temp }}/offline-dbt/build/logs/
+          if-no-files-found: warn
+          retention-days: 7
+
+  built-wheel:
+    name: Built-wheel validation
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
+        with:
+          python-version-file: .python-version
+      - name: Install pinned uv
+        run: python -m pip install "uv==${UV_VERSION}"
+      - name: Validate distributions and core-only install
+        run: env -u SEC_USER_AGENT python scripts/ci/validate_wheel.py --work-dir "${RUNNER_TEMP}/wheel-validation"
+      - name: Upload wheel diagnostics
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: built-wheel
+          path: |
+            ${{ runner.temp }}/wheel-validation/*summary.json
+            ${{ runner.temp }}/wheel-validation/*.log
+            ${{ runner.temp }}/wheel-validation/runtime-requirements.txt
+          if-no-files-found: warn
+          retention-days: 7

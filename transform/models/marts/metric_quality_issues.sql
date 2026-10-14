@@ -1,4 +1,6 @@
--- Preserve every upstream issue occurrence; classification alone receives the critical-metric severity.
+-- Bring selection, period and derivation issues into one view for the dashboard.
+-- Each row is an upstream issue occurrence; repeated issues are kept, not merged.
+-- Keep upstream severity. Only period issues get severity from the critical-metric list here.
 select
     r.cik,
     r.accession_number,

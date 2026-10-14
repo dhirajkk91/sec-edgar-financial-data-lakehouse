@@ -1,3 +1,4 @@
+-- One row per dimension attached to a source occurrence, not one row per fact.
 select
     source_occurrence_id,
     axis_namespace,

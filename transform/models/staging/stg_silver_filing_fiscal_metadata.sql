@@ -1,3 +1,4 @@
+-- Use the newest supported extraction for each active document; old evidence stays stored.
 select
     m.cik,
     m.accession_number,
@@ -20,4 +21,8 @@ inner join {{ ref('stg_silver_active_filings') }} as a
     and m.accession_number = a.accession_number
     and m.source_document_name = a.source_document_name
     and m.source_sha256 = a.source_sha256
-where m.extraction_version = '1'
+where m.extraction_version in ('1', '2')
+qualify row_number() over (
+    partition by m.cik, m.accession_number
+    order by m.extraction_version desc
+) = 1

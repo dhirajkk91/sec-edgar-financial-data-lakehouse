@@ -5,7 +5,7 @@ unit_tests:
       unit IDs; priority precedes ordinal and ID.
     given:
       - &agreeing_instants_signed_values_and_lineage_candidates
-        input: ref('int_financial_metric_candidates')
+        input: ref('int_financial_metric_candidate_accuracy')
         rows:
           - &balance_occurrence
             metric_code: total_assets
@@ -37,6 +37,9 @@ unit_tests:
             dimension_count: 0
             has_dimensions: false
             duration_days: null
+            accuracy_is_usable: true
+            accuracy_issue_code: null
+            accuracy_issue_details: null
             is_usd: true
           - <<: *balance_occurrence
             source_occurrence_id: assets-b
@@ -102,7 +105,7 @@ unit_tests:
         duration_days: null
         is_usd: true
         period_label: reported_instant
-        selection_rule_version: '1'
+        selection_rule_version: '2'
         selection_reason: AGREEING_ELIGIBLE_OCCURRENCES
         supporting_occurrence_count: 4
         supporting_occurrence_ids:
@@ -122,7 +125,7 @@ unit_tests:
         duration_days: null
         is_usd: true
         period_label: reported_instant
-        selection_rule_version: '1'
+        selection_rule_version: '2'
         selection_reason: SINGLE_ELIGIBLE_OCCURRENCE
         supporting_occurrence_count: 1
         supporting_occurrence_ids:
@@ -139,7 +142,7 @@ unit_tests:
         duration_days: null
         is_usd: true
         period_label: reported_instant
-        selection_rule_version: '1'
+        selection_rule_version: '2'
         selection_reason: SINGLE_ELIGIBLE_OCCURRENCE
         supporting_occurrence_count: 1
         supporting_occurrence_ids:
@@ -166,7 +169,7 @@ unit_tests:
       only that metric and accession.
     given:
       - &exact_conflicts_and_null_aware_accuracy_candidates
-        input: ref('int_financial_metric_candidates')
+        input: ref('int_financial_metric_candidate_accuracy')
         rows:
           - <<: *balance_occurrence
             source_occurrence_id: value-a
@@ -180,6 +183,7 @@ unit_tests:
             decimals: '0'
             concept_priority: 2
           - <<: *balance_occurrence
+            precision: 'INF'
             source_occurrence_id: decimal-null
             metric_code: total_liabilities
             concept_local_name: Liabilities
@@ -198,6 +202,7 @@ unit_tests:
             concept_local_name: Assets
             accession_number: 0000320193-25-000002
           - <<: *balance_occurrence
+            decimals: null
             source_occurrence_id: precision-text
             metric_code: total_assets
             concept_local_name: Assets
@@ -209,14 +214,14 @@ unit_tests:
             concept_local_name: Liabilities
             accession_number: 0000320193-25-000002
             decimals: null
-            precision: null
+            precision: 'INF'
           - <<: *balance_occurrence
             source_occurrence_id: liability-null-b
             metric_code: total_liabilities
             concept_local_name: Liabilities
             accession_number: 0000320193-25-000002
             decimals: null
-            precision: null
+            precision: 'INF'
           - <<: *balance_occurrence
             source_occurrence_id: cash-inf
             metric_code: cash_and_equivalents
@@ -248,7 +253,7 @@ unit_tests:
         duration_days: null
         is_usd: true
         period_label: reported_instant
-        selection_rule_version: '1'
+        selection_rule_version: '2'
         selection_reason: SINGLE_ELIGIBLE_OCCURRENCE
         supporting_occurrence_count: 1
         supporting_occurrence_ids:
@@ -265,7 +270,7 @@ unit_tests:
         duration_days: null
         is_usd: true
         period_label: reported_instant
-        selection_rule_version: '1'
+        selection_rule_version: '2'
         selection_reason: AGREEING_ELIGIBLE_OCCURRENCES
         supporting_occurrence_count: 2
         supporting_occurrence_ids:
@@ -331,7 +336,7 @@ unit_tests:
       cannot influence the current report-date result.
     given:
       - &instant_eligibility_excludes_only_candidates_candidates
-        input: ref('int_financial_metric_candidates')
+        input: ref('int_financial_metric_candidate_accuracy')
         rows:
           - <<: *balance_occurrence
             source_occurrence_id: assets-valid
@@ -462,7 +467,7 @@ unit_tests:
         duration_days: null
         is_usd: true
         period_label: reported_instant
-        selection_rule_version: '1'
+        selection_rule_version: '2'
         selection_reason: SINGLE_ELIGIBLE_OCCURRENCE
         supporting_occurrence_count: 1
         supporting_occurrence_ids:
@@ -479,7 +484,7 @@ unit_tests:
         duration_days: null
         is_usd: true
         period_label: reported_instant
-        selection_rule_version: '1'
+        selection_rule_version: '2'
         selection_reason: SINGLE_ELIGIBLE_OCCURRENCE
         supporting_occurrence_count: 1
         supporting_occurrence_ids:
@@ -496,7 +501,7 @@ unit_tests:
         duration_days: null
         is_usd: true
         period_label: reported_instant
-        selection_rule_version: '1'
+        selection_rule_version: '2'
         selection_reason: SINGLE_ELIGIBLE_OCCURRENCE
         supporting_occurrence_count: 1
         supporting_occurrence_ids:
@@ -519,7 +524,7 @@ unit_tests:
       independent lineage.
     given:
       - &missing_metrics_companies_and_amendments_candidates
-        input: ref('int_financial_metric_candidates')
+        input: ref('int_financial_metric_candidate_accuracy')
         rows:
           - <<: *balance_occurrence
             source_occurrence_id: original-liabilities
@@ -581,7 +586,7 @@ unit_tests:
         duration_days: null
         is_usd: true
         period_label: reported_instant
-        selection_rule_version: '1'
+        selection_rule_version: '2'
         selection_reason: SINGLE_ELIGIBLE_OCCURRENCE
         supporting_occurrence_count: 1
         supporting_occurrence_ids:
@@ -598,7 +603,7 @@ unit_tests:
         duration_days: null
         is_usd: true
         period_label: reported_instant
-        selection_rule_version: '1'
+        selection_rule_version: '2'
         selection_reason: SINGLE_ELIGIBLE_OCCURRENCE
         supporting_occurrence_count: 1
         supporting_occurrence_ids:
@@ -615,7 +620,7 @@ unit_tests:
         duration_days: null
         is_usd: true
         period_label: reported_instant
-        selection_rule_version: '1'
+        selection_rule_version: '2'
         selection_reason: SINGLE_ELIGIBLE_OCCURRENCE
         supporting_occurrence_count: 1
         supporting_occurrence_ids:
@@ -632,7 +637,7 @@ unit_tests:
         duration_days: null
         is_usd: true
         period_label: reported_instant
-        selection_rule_version: '1'
+        selection_rule_version: '2'
         selection_reason: SINGLE_ELIGIBLE_OCCURRENCE
         supporting_occurrence_count: 1
         supporting_occurrence_ids:
@@ -649,7 +654,7 @@ unit_tests:
         duration_days: null
         is_usd: true
         period_label: reported_instant
-        selection_rule_version: '1'
+        selection_rule_version: '2'
         selection_reason: SINGLE_ELIGIBLE_OCCURRENCE
         supporting_occurrence_count: 1
         supporting_occurrence_ids:
@@ -666,7 +671,7 @@ unit_tests:
         duration_days: null
         is_usd: true
         period_label: reported_instant
-        selection_rule_version: '1'
+        selection_rule_version: '2'
         selection_reason: SINGLE_ELIGIBLE_OCCURRENCE
         supporting_occurrence_count: 1
         supporting_occurrence_ids:
@@ -683,7 +688,7 @@ unit_tests:
         duration_days: null
         is_usd: true
         period_label: reported_instant
-        selection_rule_version: '1'
+        selection_rule_version: '2'
         selection_reason: SINGLE_ELIGIBLE_OCCURRENCE
         supporting_occurrence_count: 1
         supporting_occurrence_ids:
@@ -726,7 +731,7 @@ unit_tests:
       missing report date take precedence over absence.
     given:
       - &active_filings_without_candidates_and_precedence_candidates
-        input: ref('int_financial_metric_candidates')
+        input: ref('int_financial_metric_candidate_accuracy')
         rows: []
       - &active_filings_without_candidates_and_precedence_metadata
         input: ref('stg_silver_filing_metadata')
@@ -860,7 +865,7 @@ unit_tests:
   - name: typed_empty_int_reported_balance_sheet_metrics
     model: int_reported_balance_sheet_metrics
     given:
-    - input: ref('int_financial_metric_candidates')
+    - input: ref('int_financial_metric_candidate_accuracy')
       format: sql
       rows: |
         select
@@ -893,7 +898,10 @@ unit_tests:
             cast(null as BIGINT) as dimension_count,
             cast(null as BOOLEAN) as has_dimensions,
             cast(null as BIGINT) as duration_days,
-            cast(null as BOOLEAN) as is_usd
+            cast(null as BOOLEAN) as is_usd,
+            cast(true as BOOLEAN) as accuracy_is_usable,
+            cast(null as VARCHAR) as accuracy_issue_code,
+            cast(null as VARCHAR) as accuracy_issue_details
         where false
     - input: ref('stg_silver_filing_metadata')
       format: sql
@@ -918,7 +926,7 @@ unit_tests:
   - name: typed_empty_int_balance_sheet_metric_selection_issues
     model: int_balance_sheet_metric_selection_issues
     given:
-    - input: ref('int_financial_metric_candidates')
+    - input: ref('int_financial_metric_candidate_accuracy')
       format: sql
       rows: |
         select
@@ -951,7 +959,10 @@ unit_tests:
             cast(null as BIGINT) as dimension_count,
             cast(null as BOOLEAN) as has_dimensions,
             cast(null as BIGINT) as duration_days,
-            cast(null as BOOLEAN) as is_usd
+            cast(null as BOOLEAN) as is_usd,
+            cast(true as BOOLEAN) as accuracy_is_usable,
+            cast(null as VARCHAR) as accuracy_issue_code,
+            cast(null as VARCHAR) as accuracy_issue_details
         where false
     - input: ref('stg_silver_filing_metadata')
       format: sql

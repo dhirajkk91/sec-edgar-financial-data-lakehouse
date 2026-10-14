@@ -1,0 +1,2186 @@
+unit_tests:
+- name: accuracy_attribute_boundaries_preserve_raw_evidence
+  model: int_financial_metric_candidate_accuracy
+  given:
+  - input: ref('int_financial_metric_candidates')
+    format: sql
+    fixture: accuracy_attribute_candidates
+  expect:
+    format: sql
+    fixture: accuracy_attribute_expected
+- name: typed_empty_candidate_accuracy
+  model: int_financial_metric_candidate_accuracy
+  given:
+  - input: ref('int_financial_metric_candidates')
+    format: sql
+    fixture: accuracy_candidate_empty
+  expect:
+    rows: []
+- name: all_metric_accuracy_groups_validate_raw_attributes
+  model: int_financial_metric_candidate_accuracy
+  given:
+  - input: ref('int_financial_metric_candidates')
+    format: sql
+    fixture: accuracy_group_candidates
+  expect:
+    rows:
+    - source_occurrence_id: capital_expenditures-invalid-low
+      decimals: not-a-valid-accuracy
+      precision: null
+      accuracy_is_usable: false
+      accuracy_issue_code: INVALID_DECIMALS
+    - source_occurrence_id: capital_expenditures-other-period
+      decimals: '-6'
+      precision: null
+      accuracy_is_usable: true
+      accuracy_issue_code: null
+    - source_occurrence_id: capital_expenditures-valid-first
+      decimals: '-6'
+      precision: null
+      accuracy_is_usable: true
+      accuracy_issue_code: null
+    - source_occurrence_id: capital_expenditures-valid-later
+      decimals: '-6'
+      precision: null
+      accuracy_is_usable: true
+      accuracy_issue_code: null
+    - source_occurrence_id: capital_expenditures-excluded-dimension
+      decimals: bad
+      precision: null
+      accuracy_is_usable: false
+      accuracy_issue_code: INVALID_DECIMALS
+    - source_occurrence_id: capital_expenditures-independent
+      decimals: '-6'
+      precision: null
+      accuracy_is_usable: true
+      accuracy_issue_code: null
+    - source_occurrence_id: capital_expenditures-conflict-a
+      decimals: '-6'
+      precision: null
+      accuracy_is_usable: true
+      accuracy_issue_code: null
+    - source_occurrence_id: capital_expenditures-conflict-b
+      decimals: '0'
+      precision: null
+      accuracy_is_usable: true
+      accuracy_issue_code: null
+    - source_occurrence_id: capital_expenditures-accuracy-a
+      decimals: '-06'
+      precision: null
+      accuracy_is_usable: true
+      accuracy_issue_code: null
+    - source_occurrence_id: capital_expenditures-accuracy-b
+      decimals: '-6'
+      precision: null
+      accuracy_is_usable: true
+      accuracy_issue_code: null
+    - source_occurrence_id: capital_expenditures-unknown-a
+      decimals: null
+      precision: '-000'
+      accuracy_is_usable: false
+      accuracy_issue_code: UNKNOWN_PRECISION
+    - source_occurrence_id: capital_expenditures-unknown-b
+      decimals: '0'
+      precision: null
+      accuracy_is_usable: true
+      accuracy_issue_code: null
+    - source_occurrence_id: capital_expenditures-regression-a
+      decimals: not-a-valid-accuracy
+      precision: null
+      accuracy_is_usable: false
+      accuracy_issue_code: INVALID_DECIMALS
+    - source_occurrence_id: capital_expenditures-regression-b
+      decimals: not-a-valid-accuracy
+      precision: null
+      accuracy_is_usable: false
+      accuracy_issue_code: INVALID_DECIMALS
+    - source_occurrence_id: capital_expenditures-other-company
+      decimals: '-6'
+      precision: null
+      accuracy_is_usable: true
+      accuracy_issue_code: null
+    - source_occurrence_id: cash_and_equivalents-invalid-low
+      decimals: not-a-valid-accuracy
+      precision: null
+      accuracy_is_usable: false
+      accuracy_issue_code: INVALID_DECIMALS
+    - source_occurrence_id: cash_and_equivalents-valid-first
+      decimals: '-6'
+      precision: null
+      accuracy_is_usable: true
+      accuracy_issue_code: null
+    - source_occurrence_id: cash_and_equivalents-valid-later
+      decimals: '-6'
+      precision: null
+      accuracy_is_usable: true
+      accuracy_issue_code: null
+    - source_occurrence_id: cash_and_equivalents-excluded-dimension
+      decimals: bad
+      precision: null
+      accuracy_is_usable: false
+      accuracy_issue_code: INVALID_DECIMALS
+    - source_occurrence_id: cash_and_equivalents-independent
+      decimals: '-6'
+      precision: null
+      accuracy_is_usable: true
+      accuracy_issue_code: null
+    - source_occurrence_id: cash_and_equivalents-conflict-a
+      decimals: '-6'
+      precision: null
+      accuracy_is_usable: true
+      accuracy_issue_code: null
+    - source_occurrence_id: cash_and_equivalents-conflict-b
+      decimals: '0'
+      precision: null
+      accuracy_is_usable: true
+      accuracy_issue_code: null
+    - source_occurrence_id: cash_and_equivalents-accuracy-a
+      decimals: '-06'
+      precision: null
+      accuracy_is_usable: true
+      accuracy_issue_code: null
+    - source_occurrence_id: cash_and_equivalents-accuracy-b
+      decimals: '-6'
+      precision: null
+      accuracy_is_usable: true
+      accuracy_issue_code: null
+    - source_occurrence_id: cash_and_equivalents-unknown-a
+      decimals: null
+      precision: '-000'
+      accuracy_is_usable: false
+      accuracy_issue_code: UNKNOWN_PRECISION
+    - source_occurrence_id: cash_and_equivalents-unknown-b
+      decimals: '0'
+      precision: null
+      accuracy_is_usable: true
+      accuracy_issue_code: null
+    - source_occurrence_id: cash_and_equivalents-regression-a
+      decimals: not-a-valid-accuracy
+      precision: null
+      accuracy_is_usable: false
+      accuracy_issue_code: INVALID_DECIMALS
+    - source_occurrence_id: cash_and_equivalents-regression-b
+      decimals: not-a-valid-accuracy
+      precision: null
+      accuracy_is_usable: false
+      accuracy_issue_code: INVALID_DECIMALS
+    - source_occurrence_id: cash_and_equivalents-other-company
+      decimals: '-6'
+      precision: null
+      accuracy_is_usable: true
+      accuracy_issue_code: null
+    - source_occurrence_id: diluted_eps-invalid-low
+      decimals: not-a-valid-accuracy
+      precision: null
+      accuracy_is_usable: false
+      accuracy_issue_code: INVALID_DECIMALS
+    - source_occurrence_id: diluted_eps-other-period
+      decimals: '-6'
+      precision: null
+      accuracy_is_usable: true
+      accuracy_issue_code: null
+    - source_occurrence_id: diluted_eps-valid-first
+      decimals: '-6'
+      precision: null
+      accuracy_is_usable: true
+      accuracy_issue_code: null
+    - source_occurrence_id: diluted_eps-valid-later
+      decimals: '-6'
+      precision: null
+      accuracy_is_usable: true
+      accuracy_issue_code: null
+    - source_occurrence_id: diluted_eps-excluded-dimension
+      decimals: bad
+      precision: null
+      accuracy_is_usable: false
+      accuracy_issue_code: INVALID_DECIMALS
+    - source_occurrence_id: diluted_eps-independent
+      decimals: '-6'
+      precision: null
+      accuracy_is_usable: true
+      accuracy_issue_code: null
+    - source_occurrence_id: diluted_eps-conflict-a
+      decimals: '-6'
+      precision: null
+      accuracy_is_usable: true
+      accuracy_issue_code: null
+    - source_occurrence_id: diluted_eps-conflict-b
+      decimals: '0'
+      precision: null
+      accuracy_is_usable: true
+      accuracy_issue_code: null
+    - source_occurrence_id: diluted_eps-accuracy-a
+      decimals: '-06'
+      precision: null
+      accuracy_is_usable: true
+      accuracy_issue_code: null
+    - source_occurrence_id: diluted_eps-accuracy-b
+      decimals: '-6'
+      precision: null
+      accuracy_is_usable: true
+      accuracy_issue_code: null
+    - source_occurrence_id: diluted_eps-unknown-a
+      decimals: null
+      precision: '-000'
+      accuracy_is_usable: false
+      accuracy_issue_code: UNKNOWN_PRECISION
+    - source_occurrence_id: diluted_eps-unknown-b
+      decimals: '0'
+      precision: null
+      accuracy_is_usable: true
+      accuracy_issue_code: null
+    - source_occurrence_id: diluted_eps-regression-a
+      decimals: not-a-valid-accuracy
+      precision: null
+      accuracy_is_usable: false
+      accuracy_issue_code: INVALID_DECIMALS
+    - source_occurrence_id: diluted_eps-regression-b
+      decimals: not-a-valid-accuracy
+      precision: null
+      accuracy_is_usable: false
+      accuracy_issue_code: INVALID_DECIMALS
+    - source_occurrence_id: diluted_eps-other-company
+      decimals: '-6'
+      precision: null
+      accuracy_is_usable: true
+      accuracy_issue_code: null
+    - source_occurrence_id: net_income-invalid-low
+      decimals: not-a-valid-accuracy
+      precision: null
+      accuracy_is_usable: false
+      accuracy_issue_code: INVALID_DECIMALS
+    - source_occurrence_id: net_income-other-period
+      decimals: '-6'
+      precision: null
+      accuracy_is_usable: true
+      accuracy_issue_code: null
+    - source_occurrence_id: net_income-valid-first
+      decimals: '-6'
+      precision: null
+      accuracy_is_usable: true
+      accuracy_issue_code: null
+    - source_occurrence_id: net_income-valid-later
+      decimals: '-6'
+      precision: null
+      accuracy_is_usable: true
+      accuracy_issue_code: null
+    - source_occurrence_id: net_income-excluded-dimension
+      decimals: bad
+      precision: null
+      accuracy_is_usable: false
+      accuracy_issue_code: INVALID_DECIMALS
+    - source_occurrence_id: net_income-independent
+      decimals: '-6'
+      precision: null
+      accuracy_is_usable: true
+      accuracy_issue_code: null
+    - source_occurrence_id: net_income-conflict-a
+      decimals: '-6'
+      precision: null
+      accuracy_is_usable: true
+      accuracy_issue_code: null
+    - source_occurrence_id: net_income-conflict-b
+      decimals: '0'
+      precision: null
+      accuracy_is_usable: true
+      accuracy_issue_code: null
+    - source_occurrence_id: net_income-accuracy-a
+      decimals: '-06'
+      precision: null
+      accuracy_is_usable: true
+      accuracy_issue_code: null
+    - source_occurrence_id: net_income-accuracy-b
+      decimals: '-6'
+      precision: null
+      accuracy_is_usable: true
+      accuracy_issue_code: null
+    - source_occurrence_id: net_income-unknown-a
+      decimals: null
+      precision: '-000'
+      accuracy_is_usable: false
+      accuracy_issue_code: UNKNOWN_PRECISION
+    - source_occurrence_id: net_income-unknown-b
+      decimals: '0'
+      precision: null
+      accuracy_is_usable: true
+      accuracy_issue_code: null
+    - source_occurrence_id: net_income-regression-a
+      decimals: not-a-valid-accuracy
+      precision: null
+      accuracy_is_usable: false
+      accuracy_issue_code: INVALID_DECIMALS
+    - source_occurrence_id: net_income-regression-b
+      decimals: not-a-valid-accuracy
+      precision: null
+      accuracy_is_usable: false
+      accuracy_issue_code: INVALID_DECIMALS
+    - source_occurrence_id: net_income-other-company
+      decimals: '-6'
+      precision: null
+      accuracy_is_usable: true
+      accuracy_issue_code: null
+    - source_occurrence_id: operating_cash_flow-invalid-low
+      decimals: not-a-valid-accuracy
+      precision: null
+      accuracy_is_usable: false
+      accuracy_issue_code: INVALID_DECIMALS
+    - source_occurrence_id: operating_cash_flow-other-period
+      decimals: '-6'
+      precision: null
+      accuracy_is_usable: true
+      accuracy_issue_code: null
+    - source_occurrence_id: operating_cash_flow-valid-first
+      decimals: '-6'
+      precision: null
+      accuracy_is_usable: true
+      accuracy_issue_code: null
+    - source_occurrence_id: operating_cash_flow-valid-later
+      decimals: '-6'
+      precision: null
+      accuracy_is_usable: true
+      accuracy_issue_code: null
+    - source_occurrence_id: operating_cash_flow-excluded-dimension
+      decimals: bad
+      precision: null
+      accuracy_is_usable: false
+      accuracy_issue_code: INVALID_DECIMALS
+    - source_occurrence_id: operating_cash_flow-independent
+      decimals: '-6'
+      precision: null
+      accuracy_is_usable: true
+      accuracy_issue_code: null
+    - source_occurrence_id: operating_cash_flow-conflict-a
+      decimals: '-6'
+      precision: null
+      accuracy_is_usable: true
+      accuracy_issue_code: null
+    - source_occurrence_id: operating_cash_flow-conflict-b
+      decimals: '0'
+      precision: null
+      accuracy_is_usable: true
+      accuracy_issue_code: null
+    - source_occurrence_id: operating_cash_flow-accuracy-a
+      decimals: '-06'
+      precision: null
+      accuracy_is_usable: true
+      accuracy_issue_code: null
+    - source_occurrence_id: operating_cash_flow-accuracy-b
+      decimals: '-6'
+      precision: null
+      accuracy_is_usable: true
+      accuracy_issue_code: null
+    - source_occurrence_id: operating_cash_flow-unknown-a
+      decimals: null
+      precision: '-000'
+      accuracy_is_usable: false
+      accuracy_issue_code: UNKNOWN_PRECISION
+    - source_occurrence_id: operating_cash_flow-unknown-b
+      decimals: '0'
+      precision: null
+      accuracy_is_usable: true
+      accuracy_issue_code: null
+    - source_occurrence_id: operating_cash_flow-regression-a
+      decimals: not-a-valid-accuracy
+      precision: null
+      accuracy_is_usable: false
+      accuracy_issue_code: INVALID_DECIMALS
+    - source_occurrence_id: operating_cash_flow-regression-b
+      decimals: not-a-valid-accuracy
+      precision: null
+      accuracy_is_usable: false
+      accuracy_issue_code: INVALID_DECIMALS
+    - source_occurrence_id: operating_cash_flow-other-company
+      decimals: '-6'
+      precision: null
+      accuracy_is_usable: true
+      accuracy_issue_code: null
+    - source_occurrence_id: revenue-other-period
+      decimals: '-6'
+      precision: null
+      accuracy_is_usable: true
+      accuracy_issue_code: null
+    - source_occurrence_id: revenue-valid-first
+      decimals: '-6'
+      precision: null
+      accuracy_is_usable: true
+      accuracy_issue_code: null
+    - source_occurrence_id: revenue-valid-later
+      decimals: '-6'
+      precision: null
+      accuracy_is_usable: true
+      accuracy_issue_code: null
+    - source_occurrence_id: revenue-excluded-dimension
+      decimals: bad
+      precision: null
+      accuracy_is_usable: false
+      accuracy_issue_code: INVALID_DECIMALS
+    - source_occurrence_id: revenue-independent
+      decimals: '-6'
+      precision: null
+      accuracy_is_usable: true
+      accuracy_issue_code: null
+    - source_occurrence_id: revenue-conflict-a
+      decimals: '-6'
+      precision: null
+      accuracy_is_usable: true
+      accuracy_issue_code: null
+    - source_occurrence_id: revenue-conflict-b
+      decimals: '0'
+      precision: null
+      accuracy_is_usable: true
+      accuracy_issue_code: null
+    - source_occurrence_id: revenue-accuracy-a
+      decimals: '-06'
+      precision: null
+      accuracy_is_usable: true
+      accuracy_issue_code: null
+    - source_occurrence_id: revenue-accuracy-b
+      decimals: '-6'
+      precision: null
+      accuracy_is_usable: true
+      accuracy_issue_code: null
+    - source_occurrence_id: revenue-unknown-a
+      decimals: null
+      precision: '-000'
+      accuracy_is_usable: false
+      accuracy_issue_code: UNKNOWN_PRECISION
+    - source_occurrence_id: revenue-unknown-b
+      decimals: '0'
+      precision: null
+      accuracy_is_usable: true
+      accuracy_issue_code: null
+    - source_occurrence_id: revenue-regression-a
+      decimals: not-a-valid-accuracy
+      precision: null
+      accuracy_is_usable: false
+      accuracy_issue_code: INVALID_DECIMALS
+    - source_occurrence_id: revenue-regression-b
+      decimals: not-a-valid-accuracy
+      precision: null
+      accuracy_is_usable: false
+      accuracy_issue_code: INVALID_DECIMALS
+    - source_occurrence_id: revenue-other-company
+      decimals: '-6'
+      precision: null
+      accuracy_is_usable: true
+      accuracy_issue_code: null
+    - source_occurrence_id: revenue-invalid-low
+      decimals: not-a-valid-accuracy
+      precision: null
+      accuracy_is_usable: false
+      accuracy_issue_code: INVALID_DECIMALS
+    - source_occurrence_id: total_assets-invalid-low
+      decimals: not-a-valid-accuracy
+      precision: null
+      accuracy_is_usable: false
+      accuracy_issue_code: INVALID_DECIMALS
+    - source_occurrence_id: total_assets-valid-first
+      decimals: '-6'
+      precision: null
+      accuracy_is_usable: true
+      accuracy_issue_code: null
+    - source_occurrence_id: total_assets-valid-later
+      decimals: '-6'
+      precision: null
+      accuracy_is_usable: true
+      accuracy_issue_code: null
+    - source_occurrence_id: total_assets-excluded-dimension
+      decimals: bad
+      precision: null
+      accuracy_is_usable: false
+      accuracy_issue_code: INVALID_DECIMALS
+    - source_occurrence_id: total_assets-independent
+      decimals: '-6'
+      precision: null
+      accuracy_is_usable: true
+      accuracy_issue_code: null
+    - source_occurrence_id: total_assets-conflict-a
+      decimals: '-6'
+      precision: null
+      accuracy_is_usable: true
+      accuracy_issue_code: null
+    - source_occurrence_id: total_assets-conflict-b
+      decimals: '0'
+      precision: null
+      accuracy_is_usable: true
+      accuracy_issue_code: null
+    - source_occurrence_id: total_assets-accuracy-a
+      decimals: '-06'
+      precision: null
+      accuracy_is_usable: true
+      accuracy_issue_code: null
+    - source_occurrence_id: total_assets-accuracy-b
+      decimals: '-6'
+      precision: null
+      accuracy_is_usable: true
+      accuracy_issue_code: null
+    - source_occurrence_id: total_assets-unknown-a
+      decimals: null
+      precision: '-000'
+      accuracy_is_usable: false
+      accuracy_issue_code: UNKNOWN_PRECISION
+    - source_occurrence_id: total_assets-unknown-b
+      decimals: '0'
+      precision: null
+      accuracy_is_usable: true
+      accuracy_issue_code: null
+    - source_occurrence_id: total_assets-regression-a
+      decimals: not-a-valid-accuracy
+      precision: null
+      accuracy_is_usable: false
+      accuracy_issue_code: INVALID_DECIMALS
+    - source_occurrence_id: total_assets-regression-b
+      decimals: not-a-valid-accuracy
+      precision: null
+      accuracy_is_usable: false
+      accuracy_issue_code: INVALID_DECIMALS
+    - source_occurrence_id: total_assets-other-company
+      decimals: '-6'
+      precision: null
+      accuracy_is_usable: true
+      accuracy_issue_code: null
+    - source_occurrence_id: total_liabilities-invalid-low
+      decimals: not-a-valid-accuracy
+      precision: null
+      accuracy_is_usable: false
+      accuracy_issue_code: INVALID_DECIMALS
+    - source_occurrence_id: total_liabilities-valid-first
+      decimals: '-6'
+      precision: null
+      accuracy_is_usable: true
+      accuracy_issue_code: null
+    - source_occurrence_id: total_liabilities-valid-later
+      decimals: '-6'
+      precision: null
+      accuracy_is_usable: true
+      accuracy_issue_code: null
+    - source_occurrence_id: total_liabilities-excluded-dimension
+      decimals: bad
+      precision: null
+      accuracy_is_usable: false
+      accuracy_issue_code: INVALID_DECIMALS
+    - source_occurrence_id: total_liabilities-independent
+      decimals: '-6'
+      precision: null
+      accuracy_is_usable: true
+      accuracy_issue_code: null
+    - source_occurrence_id: total_liabilities-conflict-a
+      decimals: '-6'
+      precision: null
+      accuracy_is_usable: true
+      accuracy_issue_code: null
+    - source_occurrence_id: total_liabilities-conflict-b
+      decimals: '0'
+      precision: null
+      accuracy_is_usable: true
+      accuracy_issue_code: null
+    - source_occurrence_id: total_liabilities-accuracy-a
+      decimals: '-06'
+      precision: null
+      accuracy_is_usable: true
+      accuracy_issue_code: null
+    - source_occurrence_id: total_liabilities-accuracy-b
+      decimals: '-6'
+      precision: null
+      accuracy_is_usable: true
+      accuracy_issue_code: null
+    - source_occurrence_id: total_liabilities-unknown-a
+      decimals: null
+      precision: '-000'
+      accuracy_is_usable: false
+      accuracy_issue_code: UNKNOWN_PRECISION
+    - source_occurrence_id: total_liabilities-unknown-b
+      decimals: '0'
+      precision: null
+      accuracy_is_usable: true
+      accuracy_issue_code: null
+    - source_occurrence_id: total_liabilities-regression-a
+      decimals: not-a-valid-accuracy
+      precision: null
+      accuracy_is_usable: false
+      accuracy_issue_code: INVALID_DECIMALS
+    - source_occurrence_id: total_liabilities-regression-b
+      decimals: not-a-valid-accuracy
+      precision: null
+      accuracy_is_usable: false
+      accuracy_issue_code: INVALID_DECIMALS
+    - source_occurrence_id: total_liabilities-other-company
+      decimals: '-6'
+      precision: null
+      accuracy_is_usable: true
+      accuracy_issue_code: null
+- name: accuracy_group_gate_reported_revenue
+  model: int_reported_revenue
+  description: An invalid sibling blocks its exact group; independent groups and existing
+    conflicts keep their behavior.
+  given:
+  - input: ref('int_financial_metric_candidate_accuracy')
+    format: sql
+    fixture: accuracy_group_validated
+  - input: ref('stg_silver_filing_metadata')
+    format: sql
+    fixture: accuracy_group_filing_metadata
+  expect:
+    rows:
+    - metric_code: revenue
+      concept_priority: 1
+      cik: 0000320193
+      accession_number: 0000320193-25-000001
+      source_occurrence_id: revenue-other-period
+      source_document_name: filing.xml
+      source_sha256: checksum
+      source_ordinal: 1
+      processing_run_id: silver-run
+      parser_version: '1'
+      schema_version: '1'
+      concept_namespace: http://fasb.org/us-gaap/2025
+      concept_local_name: RevenueFromContractWithCustomerExcludingAssessedTax
+      raw_value: '42.000000000000000001'
+      value_decimal: '42.000000000000000001'
+      decimals: '-6'
+      precision: null
+      unit_ref: USD
+      unit_expression: '{http://www.xbrl.org/2003/iso4217}USD'
+      context_ref: context
+      entity_scheme: http://www.sec.gov/CIK
+      entity_identifier: '320193'
+      period_kind: duration
+      period_start: 2025-01-01
+      period_end: 2025-09-30
+      period_instant: null
+      dimension_count: 0
+      has_dimensions: false
+      duration_days: 273
+      is_usd: true
+      form: 10-Q
+      filing_date: 2025-11-01
+      report_date: 2025-09-30
+      metadata_run_id: metadata-run
+      submissions_sha256: snapshot-checksum
+      period_label: reported_duration
+      selection_rule_version: '2'
+      selection_reason: SINGLE_ELIGIBLE_OCCURRENCE
+      supporting_occurrence_count: 1
+      supporting_occurrence_ids:
+      - revenue-other-period
+    - metric_code: revenue
+      concept_priority: 1
+      cik: 0000320193
+      accession_number: 0000320193-25-000002
+      source_occurrence_id: revenue-independent
+      source_document_name: filing.xml
+      source_sha256: checksum
+      source_ordinal: 1
+      processing_run_id: silver-run
+      parser_version: '1'
+      schema_version: '1'
+      concept_namespace: http://fasb.org/us-gaap/2025
+      concept_local_name: RevenueFromContractWithCustomerExcludingAssessedTax
+      raw_value: '42.000000000000000001'
+      value_decimal: '42.000000000000000001'
+      decimals: '-6'
+      precision: null
+      unit_ref: USD
+      unit_expression: '{http://www.xbrl.org/2003/iso4217}USD'
+      context_ref: context
+      entity_scheme: http://www.sec.gov/CIK
+      entity_identifier: '320193'
+      period_kind: duration
+      period_start: 2025-07-01
+      period_end: 2025-09-30
+      period_instant: null
+      dimension_count: 0
+      has_dimensions: false
+      duration_days: 92
+      is_usd: true
+      form: 10-Q
+      filing_date: 2025-11-01
+      report_date: 2025-09-30
+      metadata_run_id: metadata-run
+      submissions_sha256: snapshot-checksum
+      period_label: reported_duration
+      selection_rule_version: '2'
+      selection_reason: SINGLE_ELIGIBLE_OCCURRENCE
+      supporting_occurrence_count: 1
+      supporting_occurrence_ids:
+      - revenue-independent
+    - metric_code: revenue
+      concept_priority: 1
+      cik: 0000789019
+      accession_number: 0000320193-25-000001
+      source_occurrence_id: revenue-other-company
+      source_document_name: filing.xml
+      source_sha256: checksum
+      source_ordinal: 1
+      processing_run_id: silver-run
+      parser_version: '1'
+      schema_version: '1'
+      concept_namespace: http://fasb.org/us-gaap/2025
+      concept_local_name: RevenueFromContractWithCustomerExcludingAssessedTax
+      raw_value: '42.000000000000000001'
+      value_decimal: '42.000000000000000001'
+      decimals: '-6'
+      precision: null
+      unit_ref: USD
+      unit_expression: '{http://www.xbrl.org/2003/iso4217}USD'
+      context_ref: context
+      entity_scheme: http://www.sec.gov/CIK
+      entity_identifier: '789019'
+      period_kind: duration
+      period_start: 2025-07-01
+      period_end: 2025-09-30
+      period_instant: null
+      dimension_count: 0
+      has_dimensions: false
+      duration_days: 92
+      is_usd: true
+      form: 10-Q
+      filing_date: 2025-11-01
+      report_date: 2025-09-30
+      metadata_run_id: metadata-run
+      submissions_sha256: snapshot-checksum
+      period_label: reported_duration
+      selection_rule_version: '2'
+      selection_reason: SINGLE_ELIGIBLE_OCCURRENCE
+      supporting_occurrence_count: 1
+      supporting_occurrence_ids:
+      - revenue-other-company
+- name: accuracy_group_gate_revenue_selection_issues
+  model: int_revenue_selection_issues
+  description: An invalid sibling blocks its exact group; independent groups and existing
+    conflicts keep their behavior.
+  given:
+  - input: ref('int_financial_metric_candidate_accuracy')
+    format: sql
+    fixture: accuracy_group_validated
+  - input: ref('stg_silver_filing_metadata')
+    format: sql
+    fixture: accuracy_group_filing_metadata
+  - input: ref('stg_silver_active_filings')
+    format: sql
+    fixture: accuracy_group_active_filings
+  expect:
+    rows:
+    - cik: 0000320193
+      accession_number: 0000320193-25-000001
+      metric_code: revenue
+      issue_code: INVALID_ACCURACY
+      severity: ERROR
+      report_date: 2025-09-30
+      period_start: 2025-07-01
+      period_end: 2025-09-30
+      source_occurrence_ids:
+      - revenue-valid-first
+      - revenue-valid-later
+      - revenue-invalid-low
+      details: 'Reported period 2025-07-01 through 2025-09-30: unusable accuracy in
+        eligible occurrences: occurrence "revenue-invalid-low": INVALID_DECIMALS:
+        Decimals must be an XML Schema integer or uppercase INF. Raw attributes: decimals="not-a-valid-accuracy",
+        precision=null.'
+    - cik: 0000320193
+      accession_number: 0000320193-25-000003
+      metric_code: revenue
+      issue_code: REVENUE_VALUE_CONFLICT
+      severity: ERROR
+      report_date: 2025-09-30
+      period_start: 2025-07-01
+      period_end: 2025-09-30
+      source_occurrence_ids:
+      - revenue-conflict-a
+      - revenue-conflict-b
+      details: 'Reported period 2025-07-01 through 2025-09-30: eligible revenue occurrences
+        disagree on the exact Decimal value; concept priority cannot resolve this
+        conflict.'
+    - cik: 0000320193
+      accession_number: 0000320193-25-000004
+      metric_code: revenue
+      issue_code: REVENUE_ACCURACY_UNRESOLVED
+      severity: ERROR
+      report_date: 2025-09-30
+      period_start: 2025-07-01
+      period_end: 2025-09-30
+      source_occurrence_ids:
+      - revenue-accuracy-a
+      - revenue-accuracy-b
+      details: 'Reported period 2025-07-01 through 2025-09-30: eligible revenue values
+        agree, but decimals or precision attributes differ (including nulls); rounding
+        intervals are unresolved.'
+    - cik: 0000320193
+      accession_number: 0000320193-25-000005
+      metric_code: revenue
+      issue_code: INVALID_ACCURACY
+      severity: ERROR
+      report_date: 2025-09-30
+      period_start: 2025-07-01
+      period_end: 2025-09-30
+      source_occurrence_ids:
+      - revenue-unknown-a
+      - revenue-unknown-b
+      details: 'Reported period 2025-07-01 through 2025-09-30: unusable accuracy in
+        eligible occurrences: occurrence "revenue-unknown-a": UNKNOWN_PRECISION: Zero
+        precision conveys unknown accuracy and cannot support trusted selection. Raw
+        attributes: decimals=null, precision="-000".'
+    - cik: 0000320193
+      accession_number: 0000320193-25-000009
+      metric_code: revenue
+      issue_code: INVALID_ACCURACY
+      severity: ERROR
+      report_date: 2025-09-30
+      period_start: 2025-07-01
+      period_end: 2025-09-30
+      source_occurrence_ids:
+      - revenue-regression-a
+      - revenue-regression-b
+      details: 'Reported period 2025-07-01 through 2025-09-30: unusable accuracy in
+        eligible occurrences: occurrence "revenue-regression-a": INVALID_DECIMALS:
+        Decimals must be an XML Schema integer or uppercase INF. Raw attributes: decimals="not-a-valid-accuracy",
+        precision=null.; occurrence "revenue-regression-b": INVALID_DECIMALS: Decimals
+        must be an XML Schema integer or uppercase INF. Raw attributes: decimals="not-a-valid-accuracy",
+        precision=null.'
+- name: accuracy_group_gate_reported_income_metrics
+  model: int_reported_income_metrics
+  description: An invalid sibling blocks its exact group; independent groups and existing
+    conflicts keep their behavior.
+  given:
+  - input: ref('int_financial_metric_candidate_accuracy')
+    format: sql
+    fixture: accuracy_group_validated
+  - input: ref('stg_silver_filing_metadata')
+    format: sql
+    fixture: accuracy_group_filing_metadata
+  expect:
+    rows:
+    - metric_code: diluted_eps
+      concept_priority: 1
+      cik: 0000320193
+      accession_number: 0000320193-25-000001
+      source_occurrence_id: diluted_eps-other-period
+      source_document_name: filing.xml
+      source_sha256: checksum
+      source_ordinal: 1
+      processing_run_id: silver-run
+      parser_version: '1'
+      schema_version: '1'
+      concept_namespace: http://fasb.org/us-gaap/2025
+      concept_local_name: EarningsPerShareDiluted
+      raw_value: '42.000000000000000001'
+      value_decimal: '42.000000000000000001'
+      decimals: '-6'
+      precision: null
+      unit_ref: USD
+      unit_expression: ({http://www.xbrl.org/2003/iso4217}USD) / ({http://www.xbrl.org/2003/instance}shares)
+      context_ref: context
+      entity_scheme: http://www.sec.gov/CIK
+      entity_identifier: '320193'
+      period_kind: duration
+      period_start: 2025-01-01
+      period_end: 2025-09-30
+      period_instant: null
+      dimension_count: 0
+      has_dimensions: false
+      duration_days: 273
+      is_usd: false
+      form: 10-Q
+      filing_date: 2025-11-01
+      report_date: 2025-09-30
+      metadata_run_id: metadata-run
+      submissions_sha256: snapshot-checksum
+      period_label: reported_duration
+      selection_rule_version: '2'
+      selection_reason: SINGLE_ELIGIBLE_OCCURRENCE
+      supporting_occurrence_count: 1
+      supporting_occurrence_ids:
+      - diluted_eps-other-period
+    - metric_code: diluted_eps
+      concept_priority: 1
+      cik: 0000320193
+      accession_number: 0000320193-25-000002
+      source_occurrence_id: diluted_eps-independent
+      source_document_name: filing.xml
+      source_sha256: checksum
+      source_ordinal: 1
+      processing_run_id: silver-run
+      parser_version: '1'
+      schema_version: '1'
+      concept_namespace: http://fasb.org/us-gaap/2025
+      concept_local_name: EarningsPerShareDiluted
+      raw_value: '42.000000000000000001'
+      value_decimal: '42.000000000000000001'
+      decimals: '-6'
+      precision: null
+      unit_ref: USD
+      unit_expression: ({http://www.xbrl.org/2003/iso4217}USD) / ({http://www.xbrl.org/2003/instance}shares)
+      context_ref: context
+      entity_scheme: http://www.sec.gov/CIK
+      entity_identifier: '320193'
+      period_kind: duration
+      period_start: 2025-07-01
+      period_end: 2025-09-30
+      period_instant: null
+      dimension_count: 0
+      has_dimensions: false
+      duration_days: 92
+      is_usd: false
+      form: 10-Q
+      filing_date: 2025-11-01
+      report_date: 2025-09-30
+      metadata_run_id: metadata-run
+      submissions_sha256: snapshot-checksum
+      period_label: reported_duration
+      selection_rule_version: '2'
+      selection_reason: SINGLE_ELIGIBLE_OCCURRENCE
+      supporting_occurrence_count: 1
+      supporting_occurrence_ids:
+      - diluted_eps-independent
+    - metric_code: diluted_eps
+      concept_priority: 1
+      cik: 0000789019
+      accession_number: 0000320193-25-000001
+      source_occurrence_id: diluted_eps-other-company
+      source_document_name: filing.xml
+      source_sha256: checksum
+      source_ordinal: 1
+      processing_run_id: silver-run
+      parser_version: '1'
+      schema_version: '1'
+      concept_namespace: http://fasb.org/us-gaap/2025
+      concept_local_name: EarningsPerShareDiluted
+      raw_value: '42.000000000000000001'
+      value_decimal: '42.000000000000000001'
+      decimals: '-6'
+      precision: null
+      unit_ref: USD
+      unit_expression: ({http://www.xbrl.org/2003/iso4217}USD) / ({http://www.xbrl.org/2003/instance}shares)
+      context_ref: context
+      entity_scheme: http://www.sec.gov/CIK
+      entity_identifier: '789019'
+      period_kind: duration
+      period_start: 2025-07-01
+      period_end: 2025-09-30
+      period_instant: null
+      dimension_count: 0
+      has_dimensions: false
+      duration_days: 92
+      is_usd: false
+      form: 10-Q
+      filing_date: 2025-11-01
+      report_date: 2025-09-30
+      metadata_run_id: metadata-run
+      submissions_sha256: snapshot-checksum
+      period_label: reported_duration
+      selection_rule_version: '2'
+      selection_reason: SINGLE_ELIGIBLE_OCCURRENCE
+      supporting_occurrence_count: 1
+      supporting_occurrence_ids:
+      - diluted_eps-other-company
+    - metric_code: net_income
+      concept_priority: 1
+      cik: 0000320193
+      accession_number: 0000320193-25-000001
+      source_occurrence_id: net_income-other-period
+      source_document_name: filing.xml
+      source_sha256: checksum
+      source_ordinal: 1
+      processing_run_id: silver-run
+      parser_version: '1'
+      schema_version: '1'
+      concept_namespace: http://fasb.org/us-gaap/2025
+      concept_local_name: NetIncomeLoss
+      raw_value: '42.000000000000000001'
+      value_decimal: '42.000000000000000001'
+      decimals: '-6'
+      precision: null
+      unit_ref: USD
+      unit_expression: '{http://www.xbrl.org/2003/iso4217}USD'
+      context_ref: context
+      entity_scheme: http://www.sec.gov/CIK
+      entity_identifier: '320193'
+      period_kind: duration
+      period_start: 2025-01-01
+      period_end: 2025-09-30
+      period_instant: null
+      dimension_count: 0
+      has_dimensions: false
+      duration_days: 273
+      is_usd: true
+      form: 10-Q
+      filing_date: 2025-11-01
+      report_date: 2025-09-30
+      metadata_run_id: metadata-run
+      submissions_sha256: snapshot-checksum
+      period_label: reported_duration
+      selection_rule_version: '2'
+      selection_reason: SINGLE_ELIGIBLE_OCCURRENCE
+      supporting_occurrence_count: 1
+      supporting_occurrence_ids:
+      - net_income-other-period
+    - metric_code: net_income
+      concept_priority: 1
+      cik: 0000320193
+      accession_number: 0000320193-25-000002
+      source_occurrence_id: net_income-independent
+      source_document_name: filing.xml
+      source_sha256: checksum
+      source_ordinal: 1
+      processing_run_id: silver-run
+      parser_version: '1'
+      schema_version: '1'
+      concept_namespace: http://fasb.org/us-gaap/2025
+      concept_local_name: NetIncomeLoss
+      raw_value: '42.000000000000000001'
+      value_decimal: '42.000000000000000001'
+      decimals: '-6'
+      precision: null
+      unit_ref: USD
+      unit_expression: '{http://www.xbrl.org/2003/iso4217}USD'
+      context_ref: context
+      entity_scheme: http://www.sec.gov/CIK
+      entity_identifier: '320193'
+      period_kind: duration
+      period_start: 2025-07-01
+      period_end: 2025-09-30
+      period_instant: null
+      dimension_count: 0
+      has_dimensions: false
+      duration_days: 92
+      is_usd: true
+      form: 10-Q
+      filing_date: 2025-11-01
+      report_date: 2025-09-30
+      metadata_run_id: metadata-run
+      submissions_sha256: snapshot-checksum
+      period_label: reported_duration
+      selection_rule_version: '2'
+      selection_reason: SINGLE_ELIGIBLE_OCCURRENCE
+      supporting_occurrence_count: 1
+      supporting_occurrence_ids:
+      - net_income-independent
+    - metric_code: net_income
+      concept_priority: 1
+      cik: 0000789019
+      accession_number: 0000320193-25-000001
+      source_occurrence_id: net_income-other-company
+      source_document_name: filing.xml
+      source_sha256: checksum
+      source_ordinal: 1
+      processing_run_id: silver-run
+      parser_version: '1'
+      schema_version: '1'
+      concept_namespace: http://fasb.org/us-gaap/2025
+      concept_local_name: NetIncomeLoss
+      raw_value: '42.000000000000000001'
+      value_decimal: '42.000000000000000001'
+      decimals: '-6'
+      precision: null
+      unit_ref: USD
+      unit_expression: '{http://www.xbrl.org/2003/iso4217}USD'
+      context_ref: context
+      entity_scheme: http://www.sec.gov/CIK
+      entity_identifier: '789019'
+      period_kind: duration
+      period_start: 2025-07-01
+      period_end: 2025-09-30
+      period_instant: null
+      dimension_count: 0
+      has_dimensions: false
+      duration_days: 92
+      is_usd: true
+      form: 10-Q
+      filing_date: 2025-11-01
+      report_date: 2025-09-30
+      metadata_run_id: metadata-run
+      submissions_sha256: snapshot-checksum
+      period_label: reported_duration
+      selection_rule_version: '2'
+      selection_reason: SINGLE_ELIGIBLE_OCCURRENCE
+      supporting_occurrence_count: 1
+      supporting_occurrence_ids:
+      - net_income-other-company
+- name: accuracy_group_gate_income_metric_selection_issues
+  model: int_income_metric_selection_issues
+  description: An invalid sibling blocks its exact group; independent groups and existing
+    conflicts keep their behavior.
+  given:
+  - input: ref('int_financial_metric_candidate_accuracy')
+    format: sql
+    fixture: accuracy_group_validated
+  - input: ref('stg_silver_filing_metadata')
+    format: sql
+    fixture: accuracy_group_filing_metadata
+  - input: ref('stg_silver_active_filings')
+    format: sql
+    fixture: accuracy_group_active_filings
+  expect:
+    rows:
+    - cik: 0000320193
+      accession_number: 0000320193-25-000001
+      metric_code: diluted_eps
+      issue_code: INVALID_ACCURACY
+      severity: ERROR
+      report_date: 2025-09-30
+      period_start: 2025-07-01
+      period_end: 2025-09-30
+      source_occurrence_ids:
+      - diluted_eps-valid-first
+      - diluted_eps-valid-later
+      - diluted_eps-invalid-low
+      details: 'Metric diluted_eps, reported period 2025-07-01 through 2025-09-30:
+        unusable accuracy in eligible occurrences: occurrence "diluted_eps-invalid-low":
+        INVALID_DECIMALS: Decimals must be an XML Schema integer or uppercase INF.
+        Raw attributes: decimals="not-a-valid-accuracy", precision=null.'
+    - cik: 0000320193
+      accession_number: 0000320193-25-000001
+      metric_code: net_income
+      issue_code: INVALID_ACCURACY
+      severity: ERROR
+      report_date: 2025-09-30
+      period_start: 2025-07-01
+      period_end: 2025-09-30
+      source_occurrence_ids:
+      - net_income-valid-first
+      - net_income-valid-later
+      - net_income-invalid-low
+      details: 'Metric net_income, reported period 2025-07-01 through 2025-09-30:
+        unusable accuracy in eligible occurrences: occurrence "net_income-invalid-low":
+        INVALID_DECIMALS: Decimals must be an XML Schema integer or uppercase INF.
+        Raw attributes: decimals="not-a-valid-accuracy", precision=null.'
+    - cik: 0000320193
+      accession_number: 0000320193-25-000003
+      metric_code: diluted_eps
+      issue_code: METRIC_VALUE_CONFLICT
+      severity: ERROR
+      report_date: 2025-09-30
+      period_start: 2025-07-01
+      period_end: 2025-09-30
+      source_occurrence_ids:
+      - diluted_eps-conflict-a
+      - diluted_eps-conflict-b
+      details: 'Metric diluted_eps, reported period 2025-07-01 through 2025-09-30:
+        eligible metric occurrences disagree on the exact Decimal value; concept priority
+        cannot resolve this conflict.'
+    - cik: 0000320193
+      accession_number: 0000320193-25-000003
+      metric_code: net_income
+      issue_code: METRIC_VALUE_CONFLICT
+      severity: ERROR
+      report_date: 2025-09-30
+      period_start: 2025-07-01
+      period_end: 2025-09-30
+      source_occurrence_ids:
+      - net_income-conflict-a
+      - net_income-conflict-b
+      details: 'Metric net_income, reported period 2025-07-01 through 2025-09-30:
+        eligible metric occurrences disagree on the exact Decimal value; concept priority
+        cannot resolve this conflict.'
+    - cik: 0000320193
+      accession_number: 0000320193-25-000004
+      metric_code: diluted_eps
+      issue_code: METRIC_ACCURACY_UNRESOLVED
+      severity: ERROR
+      report_date: 2025-09-30
+      period_start: 2025-07-01
+      period_end: 2025-09-30
+      source_occurrence_ids:
+      - diluted_eps-accuracy-a
+      - diluted_eps-accuracy-b
+      details: 'Metric diluted_eps, reported period 2025-07-01 through 2025-09-30:
+        eligible metric values agree, but decimals or precision attributes differ
+        (including nulls); rounding intervals are unresolved.'
+    - cik: 0000320193
+      accession_number: 0000320193-25-000004
+      metric_code: net_income
+      issue_code: METRIC_ACCURACY_UNRESOLVED
+      severity: ERROR
+      report_date: 2025-09-30
+      period_start: 2025-07-01
+      period_end: 2025-09-30
+      source_occurrence_ids:
+      - net_income-accuracy-a
+      - net_income-accuracy-b
+      details: 'Metric net_income, reported period 2025-07-01 through 2025-09-30:
+        eligible metric values agree, but decimals or precision attributes differ
+        (including nulls); rounding intervals are unresolved.'
+    - cik: 0000320193
+      accession_number: 0000320193-25-000005
+      metric_code: diluted_eps
+      issue_code: INVALID_ACCURACY
+      severity: ERROR
+      report_date: 2025-09-30
+      period_start: 2025-07-01
+      period_end: 2025-09-30
+      source_occurrence_ids:
+      - diluted_eps-unknown-a
+      - diluted_eps-unknown-b
+      details: 'Metric diluted_eps, reported period 2025-07-01 through 2025-09-30:
+        unusable accuracy in eligible occurrences: occurrence "diluted_eps-unknown-a":
+        UNKNOWN_PRECISION: Zero precision conveys unknown accuracy and cannot support
+        trusted selection. Raw attributes: decimals=null, precision="-000".'
+    - cik: 0000320193
+      accession_number: 0000320193-25-000005
+      metric_code: net_income
+      issue_code: INVALID_ACCURACY
+      severity: ERROR
+      report_date: 2025-09-30
+      period_start: 2025-07-01
+      period_end: 2025-09-30
+      source_occurrence_ids:
+      - net_income-unknown-a
+      - net_income-unknown-b
+      details: 'Metric net_income, reported period 2025-07-01 through 2025-09-30:
+        unusable accuracy in eligible occurrences: occurrence "net_income-unknown-a":
+        UNKNOWN_PRECISION: Zero precision conveys unknown accuracy and cannot support
+        trusted selection. Raw attributes: decimals=null, precision="-000".'
+    - cik: 0000320193
+      accession_number: 0000320193-25-000009
+      metric_code: diluted_eps
+      issue_code: INVALID_ACCURACY
+      severity: ERROR
+      report_date: 2025-09-30
+      period_start: 2025-07-01
+      period_end: 2025-09-30
+      source_occurrence_ids:
+      - diluted_eps-regression-a
+      - diluted_eps-regression-b
+      details: 'Metric diluted_eps, reported period 2025-07-01 through 2025-09-30:
+        unusable accuracy in eligible occurrences: occurrence "diluted_eps-regression-a":
+        INVALID_DECIMALS: Decimals must be an XML Schema integer or uppercase INF.
+        Raw attributes: decimals="not-a-valid-accuracy", precision=null.; occurrence
+        "diluted_eps-regression-b": INVALID_DECIMALS: Decimals must be an XML Schema
+        integer or uppercase INF. Raw attributes: decimals="not-a-valid-accuracy",
+        precision=null.'
+    - cik: 0000320193
+      accession_number: 0000320193-25-000009
+      metric_code: net_income
+      issue_code: INVALID_ACCURACY
+      severity: ERROR
+      report_date: 2025-09-30
+      period_start: 2025-07-01
+      period_end: 2025-09-30
+      source_occurrence_ids:
+      - net_income-regression-a
+      - net_income-regression-b
+      details: 'Metric net_income, reported period 2025-07-01 through 2025-09-30:
+        unusable accuracy in eligible occurrences: occurrence "net_income-regression-a":
+        INVALID_DECIMALS: Decimals must be an XML Schema integer or uppercase INF.
+        Raw attributes: decimals="not-a-valid-accuracy", precision=null.; occurrence
+        "net_income-regression-b": INVALID_DECIMALS: Decimals must be an XML Schema
+        integer or uppercase INF. Raw attributes: decimals="not-a-valid-accuracy",
+        precision=null.'
+- name: accuracy_group_gate_reported_balance_sheet_metrics
+  model: int_reported_balance_sheet_metrics
+  description: An invalid sibling blocks its exact group; independent groups and existing
+    conflicts keep their behavior.
+  given:
+  - input: ref('int_financial_metric_candidate_accuracy')
+    format: sql
+    fixture: accuracy_group_validated
+  - input: ref('stg_silver_filing_metadata')
+    format: sql
+    fixture: accuracy_group_filing_metadata
+  expect:
+    rows:
+    - metric_code: cash_and_equivalents
+      concept_priority: 1
+      cik: 0000320193
+      accession_number: 0000320193-25-000002
+      source_occurrence_id: cash_and_equivalents-independent
+      source_document_name: filing.xml
+      source_sha256: checksum
+      source_ordinal: 1
+      processing_run_id: silver-run
+      parser_version: '1'
+      schema_version: '1'
+      concept_namespace: http://fasb.org/us-gaap/2025
+      concept_local_name: CashAndCashEquivalentsAtCarryingValue
+      raw_value: '42.000000000000000001'
+      value_decimal: '42.000000000000000001'
+      decimals: '-6'
+      precision: null
+      unit_ref: USD
+      unit_expression: '{http://www.xbrl.org/2003/iso4217}USD'
+      context_ref: context
+      entity_scheme: http://www.sec.gov/CIK
+      entity_identifier: '320193'
+      period_kind: instant
+      period_start: null
+      period_end: null
+      period_instant: 2025-09-30
+      dimension_count: 0
+      has_dimensions: false
+      duration_days: null
+      is_usd: true
+      form: 10-Q
+      filing_date: 2025-11-01
+      report_date: 2025-09-30
+      metadata_run_id: metadata-run
+      submissions_sha256: snapshot-checksum
+      period_label: reported_instant
+      selection_rule_version: '2'
+      selection_reason: SINGLE_ELIGIBLE_OCCURRENCE
+      supporting_occurrence_count: 1
+      supporting_occurrence_ids:
+      - cash_and_equivalents-independent
+    - metric_code: cash_and_equivalents
+      concept_priority: 1
+      cik: 0000789019
+      accession_number: 0000320193-25-000001
+      source_occurrence_id: cash_and_equivalents-other-company
+      source_document_name: filing.xml
+      source_sha256: checksum
+      source_ordinal: 1
+      processing_run_id: silver-run
+      parser_version: '1'
+      schema_version: '1'
+      concept_namespace: http://fasb.org/us-gaap/2025
+      concept_local_name: CashAndCashEquivalentsAtCarryingValue
+      raw_value: '42.000000000000000001'
+      value_decimal: '42.000000000000000001'
+      decimals: '-6'
+      precision: null
+      unit_ref: USD
+      unit_expression: '{http://www.xbrl.org/2003/iso4217}USD'
+      context_ref: context
+      entity_scheme: http://www.sec.gov/CIK
+      entity_identifier: '789019'
+      period_kind: instant
+      period_start: null
+      period_end: null
+      period_instant: 2025-09-30
+      dimension_count: 0
+      has_dimensions: false
+      duration_days: null
+      is_usd: true
+      form: 10-Q
+      filing_date: 2025-11-01
+      report_date: 2025-09-30
+      metadata_run_id: metadata-run
+      submissions_sha256: snapshot-checksum
+      period_label: reported_instant
+      selection_rule_version: '2'
+      selection_reason: SINGLE_ELIGIBLE_OCCURRENCE
+      supporting_occurrence_count: 1
+      supporting_occurrence_ids:
+      - cash_and_equivalents-other-company
+    - metric_code: total_assets
+      concept_priority: 1
+      cik: 0000320193
+      accession_number: 0000320193-25-000002
+      source_occurrence_id: total_assets-independent
+      source_document_name: filing.xml
+      source_sha256: checksum
+      source_ordinal: 1
+      processing_run_id: silver-run
+      parser_version: '1'
+      schema_version: '1'
+      concept_namespace: http://fasb.org/us-gaap/2025
+      concept_local_name: Assets
+      raw_value: '42.000000000000000001'
+      value_decimal: '42.000000000000000001'
+      decimals: '-6'
+      precision: null
+      unit_ref: USD
+      unit_expression: '{http://www.xbrl.org/2003/iso4217}USD'
+      context_ref: context
+      entity_scheme: http://www.sec.gov/CIK
+      entity_identifier: '320193'
+      period_kind: instant
+      period_start: null
+      period_end: null
+      period_instant: 2025-09-30
+      dimension_count: 0
+      has_dimensions: false
+      duration_days: null
+      is_usd: true
+      form: 10-Q
+      filing_date: 2025-11-01
+      report_date: 2025-09-30
+      metadata_run_id: metadata-run
+      submissions_sha256: snapshot-checksum
+      period_label: reported_instant
+      selection_rule_version: '2'
+      selection_reason: SINGLE_ELIGIBLE_OCCURRENCE
+      supporting_occurrence_count: 1
+      supporting_occurrence_ids:
+      - total_assets-independent
+    - metric_code: total_assets
+      concept_priority: 1
+      cik: 0000789019
+      accession_number: 0000320193-25-000001
+      source_occurrence_id: total_assets-other-company
+      source_document_name: filing.xml
+      source_sha256: checksum
+      source_ordinal: 1
+      processing_run_id: silver-run
+      parser_version: '1'
+      schema_version: '1'
+      concept_namespace: http://fasb.org/us-gaap/2025
+      concept_local_name: Assets
+      raw_value: '42.000000000000000001'
+      value_decimal: '42.000000000000000001'
+      decimals: '-6'
+      precision: null
+      unit_ref: USD
+      unit_expression: '{http://www.xbrl.org/2003/iso4217}USD'
+      context_ref: context
+      entity_scheme: http://www.sec.gov/CIK
+      entity_identifier: '789019'
+      period_kind: instant
+      period_start: null
+      period_end: null
+      period_instant: 2025-09-30
+      dimension_count: 0
+      has_dimensions: false
+      duration_days: null
+      is_usd: true
+      form: 10-Q
+      filing_date: 2025-11-01
+      report_date: 2025-09-30
+      metadata_run_id: metadata-run
+      submissions_sha256: snapshot-checksum
+      period_label: reported_instant
+      selection_rule_version: '2'
+      selection_reason: SINGLE_ELIGIBLE_OCCURRENCE
+      supporting_occurrence_count: 1
+      supporting_occurrence_ids:
+      - total_assets-other-company
+    - metric_code: total_liabilities
+      concept_priority: 1
+      cik: 0000320193
+      accession_number: 0000320193-25-000002
+      source_occurrence_id: total_liabilities-independent
+      source_document_name: filing.xml
+      source_sha256: checksum
+      source_ordinal: 1
+      processing_run_id: silver-run
+      parser_version: '1'
+      schema_version: '1'
+      concept_namespace: http://fasb.org/us-gaap/2025
+      concept_local_name: Liabilities
+      raw_value: '42.000000000000000001'
+      value_decimal: '42.000000000000000001'
+      decimals: '-6'
+      precision: null
+      unit_ref: USD
+      unit_expression: '{http://www.xbrl.org/2003/iso4217}USD'
+      context_ref: context
+      entity_scheme: http://www.sec.gov/CIK
+      entity_identifier: '320193'
+      period_kind: instant
+      period_start: null
+      period_end: null
+      period_instant: 2025-09-30
+      dimension_count: 0
+      has_dimensions: false
+      duration_days: null
+      is_usd: true
+      form: 10-Q
+      filing_date: 2025-11-01
+      report_date: 2025-09-30
+      metadata_run_id: metadata-run
+      submissions_sha256: snapshot-checksum
+      period_label: reported_instant
+      selection_rule_version: '2'
+      selection_reason: SINGLE_ELIGIBLE_OCCURRENCE
+      supporting_occurrence_count: 1
+      supporting_occurrence_ids:
+      - total_liabilities-independent
+    - metric_code: total_liabilities
+      concept_priority: 1
+      cik: 0000789019
+      accession_number: 0000320193-25-000001
+      source_occurrence_id: total_liabilities-other-company
+      source_document_name: filing.xml
+      source_sha256: checksum
+      source_ordinal: 1
+      processing_run_id: silver-run
+      parser_version: '1'
+      schema_version: '1'
+      concept_namespace: http://fasb.org/us-gaap/2025
+      concept_local_name: Liabilities
+      raw_value: '42.000000000000000001'
+      value_decimal: '42.000000000000000001'
+      decimals: '-6'
+      precision: null
+      unit_ref: USD
+      unit_expression: '{http://www.xbrl.org/2003/iso4217}USD'
+      context_ref: context
+      entity_scheme: http://www.sec.gov/CIK
+      entity_identifier: '789019'
+      period_kind: instant
+      period_start: null
+      period_end: null
+      period_instant: 2025-09-30
+      dimension_count: 0
+      has_dimensions: false
+      duration_days: null
+      is_usd: true
+      form: 10-Q
+      filing_date: 2025-11-01
+      report_date: 2025-09-30
+      metadata_run_id: metadata-run
+      submissions_sha256: snapshot-checksum
+      period_label: reported_instant
+      selection_rule_version: '2'
+      selection_reason: SINGLE_ELIGIBLE_OCCURRENCE
+      supporting_occurrence_count: 1
+      supporting_occurrence_ids:
+      - total_liabilities-other-company
+- name: accuracy_group_gate_balance_sheet_metric_selection_issues
+  model: int_balance_sheet_metric_selection_issues
+  description: An invalid sibling blocks its exact group; independent groups and existing
+    conflicts keep their behavior.
+  given:
+  - input: ref('int_financial_metric_candidate_accuracy')
+    format: sql
+    fixture: accuracy_group_validated
+  - input: ref('stg_silver_filing_metadata')
+    format: sql
+    fixture: accuracy_group_filing_metadata
+  - input: ref('stg_silver_active_filings')
+    format: sql
+    fixture: accuracy_group_active_filings
+  expect:
+    rows:
+    - cik: 0000320193
+      accession_number: 0000320193-25-000001
+      metric_code: cash_and_equivalents
+      issue_code: INVALID_ACCURACY
+      severity: WARNING
+      report_date: 2025-09-30
+      period_instant: 2025-09-30
+      source_occurrence_ids:
+      - cash_and_equivalents-valid-first
+      - cash_and_equivalents-valid-later
+      - cash_and_equivalents-invalid-low
+      details: 'Metric cash_and_equivalents, reported instant 2025-09-30: unusable
+        accuracy in eligible occurrences: occurrence "cash_and_equivalents-invalid-low":
+        INVALID_DECIMALS: Decimals must be an XML Schema integer or uppercase INF.
+        Raw attributes: decimals="not-a-valid-accuracy", precision=null.'
+    - cik: 0000320193
+      accession_number: 0000320193-25-000001
+      metric_code: total_assets
+      issue_code: INVALID_ACCURACY
+      severity: ERROR
+      report_date: 2025-09-30
+      period_instant: 2025-09-30
+      source_occurrence_ids:
+      - total_assets-valid-first
+      - total_assets-valid-later
+      - total_assets-invalid-low
+      details: 'Metric total_assets, reported instant 2025-09-30: unusable accuracy
+        in eligible occurrences: occurrence "total_assets-invalid-low": INVALID_DECIMALS:
+        Decimals must be an XML Schema integer or uppercase INF. Raw attributes: decimals="not-a-valid-accuracy",
+        precision=null.'
+    - cik: 0000320193
+      accession_number: 0000320193-25-000001
+      metric_code: total_liabilities
+      issue_code: INVALID_ACCURACY
+      severity: ERROR
+      report_date: 2025-09-30
+      period_instant: 2025-09-30
+      source_occurrence_ids:
+      - total_liabilities-valid-first
+      - total_liabilities-valid-later
+      - total_liabilities-invalid-low
+      details: 'Metric total_liabilities, reported instant 2025-09-30: unusable accuracy
+        in eligible occurrences: occurrence "total_liabilities-invalid-low": INVALID_DECIMALS:
+        Decimals must be an XML Schema integer or uppercase INF. Raw attributes: decimals="not-a-valid-accuracy",
+        precision=null.'
+    - cik: 0000320193
+      accession_number: 0000320193-25-000003
+      metric_code: cash_and_equivalents
+      issue_code: METRIC_VALUE_CONFLICT
+      severity: ERROR
+      report_date: 2025-09-30
+      period_instant: 2025-09-30
+      source_occurrence_ids:
+      - cash_and_equivalents-conflict-a
+      - cash_and_equivalents-conflict-b
+      details: 'Metric cash_and_equivalents, reported instant 2025-09-30: eligible
+        metric occurrences disagree on the exact Decimal value; concept priority cannot
+        resolve this conflict.'
+    - cik: 0000320193
+      accession_number: 0000320193-25-000003
+      metric_code: total_assets
+      issue_code: METRIC_VALUE_CONFLICT
+      severity: ERROR
+      report_date: 2025-09-30
+      period_instant: 2025-09-30
+      source_occurrence_ids:
+      - total_assets-conflict-a
+      - total_assets-conflict-b
+      details: 'Metric total_assets, reported instant 2025-09-30: eligible metric
+        occurrences disagree on the exact Decimal value; concept priority cannot resolve
+        this conflict.'
+    - cik: 0000320193
+      accession_number: 0000320193-25-000003
+      metric_code: total_liabilities
+      issue_code: METRIC_VALUE_CONFLICT
+      severity: ERROR
+      report_date: 2025-09-30
+      period_instant: 2025-09-30
+      source_occurrence_ids:
+      - total_liabilities-conflict-a
+      - total_liabilities-conflict-b
+      details: 'Metric total_liabilities, reported instant 2025-09-30: eligible metric
+        occurrences disagree on the exact Decimal value; concept priority cannot resolve
+        this conflict.'
+    - cik: 0000320193
+      accession_number: 0000320193-25-000004
+      metric_code: cash_and_equivalents
+      issue_code: METRIC_ACCURACY_UNRESOLVED
+      severity: ERROR
+      report_date: 2025-09-30
+      period_instant: 2025-09-30
+      source_occurrence_ids:
+      - cash_and_equivalents-accuracy-a
+      - cash_and_equivalents-accuracy-b
+      details: 'Metric cash_and_equivalents, reported instant 2025-09-30: eligible
+        metric values agree, but decimals or precision attributes differ (including
+        nulls); rounding intervals are unresolved.'
+    - cik: 0000320193
+      accession_number: 0000320193-25-000004
+      metric_code: total_assets
+      issue_code: METRIC_ACCURACY_UNRESOLVED
+      severity: ERROR
+      report_date: 2025-09-30
+      period_instant: 2025-09-30
+      source_occurrence_ids:
+      - total_assets-accuracy-a
+      - total_assets-accuracy-b
+      details: 'Metric total_assets, reported instant 2025-09-30: eligible metric
+        values agree, but decimals or precision attributes differ (including nulls);
+        rounding intervals are unresolved.'
+    - cik: 0000320193
+      accession_number: 0000320193-25-000004
+      metric_code: total_liabilities
+      issue_code: METRIC_ACCURACY_UNRESOLVED
+      severity: ERROR
+      report_date: 2025-09-30
+      period_instant: 2025-09-30
+      source_occurrence_ids:
+      - total_liabilities-accuracy-a
+      - total_liabilities-accuracy-b
+      details: 'Metric total_liabilities, reported instant 2025-09-30: eligible metric
+        values agree, but decimals or precision attributes differ (including nulls);
+        rounding intervals are unresolved.'
+    - cik: 0000320193
+      accession_number: 0000320193-25-000005
+      metric_code: cash_and_equivalents
+      issue_code: INVALID_ACCURACY
+      severity: WARNING
+      report_date: 2025-09-30
+      period_instant: 2025-09-30
+      source_occurrence_ids:
+      - cash_and_equivalents-unknown-a
+      - cash_and_equivalents-unknown-b
+      details: 'Metric cash_and_equivalents, reported instant 2025-09-30: unusable
+        accuracy in eligible occurrences: occurrence "cash_and_equivalents-unknown-a":
+        UNKNOWN_PRECISION: Zero precision conveys unknown accuracy and cannot support
+        trusted selection. Raw attributes: decimals=null, precision="-000".'
+    - cik: 0000320193
+      accession_number: 0000320193-25-000005
+      metric_code: total_assets
+      issue_code: INVALID_ACCURACY
+      severity: ERROR
+      report_date: 2025-09-30
+      period_instant: 2025-09-30
+      source_occurrence_ids:
+      - total_assets-unknown-a
+      - total_assets-unknown-b
+      details: 'Metric total_assets, reported instant 2025-09-30: unusable accuracy
+        in eligible occurrences: occurrence "total_assets-unknown-a": UNKNOWN_PRECISION:
+        Zero precision conveys unknown accuracy and cannot support trusted selection.
+        Raw attributes: decimals=null, precision="-000".'
+    - cik: 0000320193
+      accession_number: 0000320193-25-000005
+      metric_code: total_liabilities
+      issue_code: INVALID_ACCURACY
+      severity: ERROR
+      report_date: 2025-09-30
+      period_instant: 2025-09-30
+      source_occurrence_ids:
+      - total_liabilities-unknown-a
+      - total_liabilities-unknown-b
+      details: 'Metric total_liabilities, reported instant 2025-09-30: unusable accuracy
+        in eligible occurrences: occurrence "total_liabilities-unknown-a": UNKNOWN_PRECISION:
+        Zero precision conveys unknown accuracy and cannot support trusted selection.
+        Raw attributes: decimals=null, precision="-000".'
+    - cik: 0000320193
+      accession_number: 0000320193-25-000009
+      metric_code: cash_and_equivalents
+      issue_code: INVALID_ACCURACY
+      severity: WARNING
+      report_date: 2025-09-30
+      period_instant: 2025-09-30
+      source_occurrence_ids:
+      - cash_and_equivalents-regression-a
+      - cash_and_equivalents-regression-b
+      details: 'Metric cash_and_equivalents, reported instant 2025-09-30: unusable
+        accuracy in eligible occurrences: occurrence "cash_and_equivalents-regression-a":
+        INVALID_DECIMALS: Decimals must be an XML Schema integer or uppercase INF.
+        Raw attributes: decimals="not-a-valid-accuracy", precision=null.; occurrence
+        "cash_and_equivalents-regression-b": INVALID_DECIMALS: Decimals must be an
+        XML Schema integer or uppercase INF. Raw attributes: decimals="not-a-valid-accuracy",
+        precision=null.'
+    - cik: 0000320193
+      accession_number: 0000320193-25-000009
+      metric_code: total_assets
+      issue_code: INVALID_ACCURACY
+      severity: ERROR
+      report_date: 2025-09-30
+      period_instant: 2025-09-30
+      source_occurrence_ids:
+      - total_assets-regression-a
+      - total_assets-regression-b
+      details: 'Metric total_assets, reported instant 2025-09-30: unusable accuracy
+        in eligible occurrences: occurrence "total_assets-regression-a": INVALID_DECIMALS:
+        Decimals must be an XML Schema integer or uppercase INF. Raw attributes: decimals="not-a-valid-accuracy",
+        precision=null.; occurrence "total_assets-regression-b": INVALID_DECIMALS:
+        Decimals must be an XML Schema integer or uppercase INF. Raw attributes: decimals="not-a-valid-accuracy",
+        precision=null.'
+    - cik: 0000320193
+      accession_number: 0000320193-25-000009
+      metric_code: total_liabilities
+      issue_code: INVALID_ACCURACY
+      severity: ERROR
+      report_date: 2025-09-30
+      period_instant: 2025-09-30
+      source_occurrence_ids:
+      - total_liabilities-regression-a
+      - total_liabilities-regression-b
+      details: 'Metric total_liabilities, reported instant 2025-09-30: unusable accuracy
+        in eligible occurrences: occurrence "total_liabilities-regression-a": INVALID_DECIMALS:
+        Decimals must be an XML Schema integer or uppercase INF. Raw attributes: decimals="not-a-valid-accuracy",
+        precision=null.; occurrence "total_liabilities-regression-b": INVALID_DECIMALS:
+        Decimals must be an XML Schema integer or uppercase INF. Raw attributes: decimals="not-a-valid-accuracy",
+        precision=null.'
+- name: accuracy_group_gate_reported_cash_flow_metrics
+  model: int_reported_cash_flow_metrics
+  description: An invalid sibling blocks its exact group; independent groups and existing
+    conflicts keep their behavior.
+  given:
+  - input: ref('int_financial_metric_candidate_accuracy')
+    format: sql
+    fixture: accuracy_group_validated
+  - input: ref('stg_silver_filing_metadata')
+    format: sql
+    fixture: accuracy_group_filing_metadata
+  expect:
+    rows:
+    - metric_code: capital_expenditures
+      concept_priority: 1
+      cik: 0000320193
+      accession_number: 0000320193-25-000001
+      source_occurrence_id: capital_expenditures-other-period
+      source_document_name: filing.xml
+      source_sha256: checksum
+      source_ordinal: 1
+      processing_run_id: silver-run
+      parser_version: '1'
+      schema_version: '1'
+      concept_namespace: http://fasb.org/us-gaap/2025
+      concept_local_name: PaymentsToAcquirePropertyPlantAndEquipment
+      raw_value: '42.000000000000000001'
+      value_decimal: '42.000000000000000001'
+      decimals: '-6'
+      precision: null
+      unit_ref: USD
+      unit_expression: '{http://www.xbrl.org/2003/iso4217}USD'
+      context_ref: context
+      entity_scheme: http://www.sec.gov/CIK
+      entity_identifier: '320193'
+      period_kind: duration
+      period_start: 2025-01-01
+      period_end: 2025-09-30
+      period_instant: null
+      dimension_count: 0
+      has_dimensions: false
+      duration_days: 273
+      is_usd: true
+      form: 10-Q
+      filing_date: 2025-11-01
+      report_date: 2025-09-30
+      metadata_run_id: metadata-run
+      submissions_sha256: snapshot-checksum
+      period_label: reported_duration
+      selection_rule_version: '2'
+      selection_reason: SINGLE_ELIGIBLE_OCCURRENCE
+      supporting_occurrence_count: 1
+      supporting_occurrence_ids:
+      - capital_expenditures-other-period
+    - metric_code: capital_expenditures
+      concept_priority: 1
+      cik: 0000320193
+      accession_number: 0000320193-25-000002
+      source_occurrence_id: capital_expenditures-independent
+      source_document_name: filing.xml
+      source_sha256: checksum
+      source_ordinal: 1
+      processing_run_id: silver-run
+      parser_version: '1'
+      schema_version: '1'
+      concept_namespace: http://fasb.org/us-gaap/2025
+      concept_local_name: PaymentsToAcquirePropertyPlantAndEquipment
+      raw_value: '42.000000000000000001'
+      value_decimal: '42.000000000000000001'
+      decimals: '-6'
+      precision: null
+      unit_ref: USD
+      unit_expression: '{http://www.xbrl.org/2003/iso4217}USD'
+      context_ref: context
+      entity_scheme: http://www.sec.gov/CIK
+      entity_identifier: '320193'
+      period_kind: duration
+      period_start: 2025-07-01
+      period_end: 2025-09-30
+      period_instant: null
+      dimension_count: 0
+      has_dimensions: false
+      duration_days: 92
+      is_usd: true
+      form: 10-Q
+      filing_date: 2025-11-01
+      report_date: 2025-09-30
+      metadata_run_id: metadata-run
+      submissions_sha256: snapshot-checksum
+      period_label: reported_duration
+      selection_rule_version: '2'
+      selection_reason: SINGLE_ELIGIBLE_OCCURRENCE
+      supporting_occurrence_count: 1
+      supporting_occurrence_ids:
+      - capital_expenditures-independent
+    - metric_code: capital_expenditures
+      concept_priority: 1
+      cik: 0000789019
+      accession_number: 0000320193-25-000001
+      source_occurrence_id: capital_expenditures-other-company
+      source_document_name: filing.xml
+      source_sha256: checksum
+      source_ordinal: 1
+      processing_run_id: silver-run
+      parser_version: '1'
+      schema_version: '1'
+      concept_namespace: http://fasb.org/us-gaap/2025
+      concept_local_name: PaymentsToAcquirePropertyPlantAndEquipment
+      raw_value: '42.000000000000000001'
+      value_decimal: '42.000000000000000001'
+      decimals: '-6'
+      precision: null
+      unit_ref: USD
+      unit_expression: '{http://www.xbrl.org/2003/iso4217}USD'
+      context_ref: context
+      entity_scheme: http://www.sec.gov/CIK
+      entity_identifier: '789019'
+      period_kind: duration
+      period_start: 2025-07-01
+      period_end: 2025-09-30
+      period_instant: null
+      dimension_count: 0
+      has_dimensions: false
+      duration_days: 92
+      is_usd: true
+      form: 10-Q
+      filing_date: 2025-11-01
+      report_date: 2025-09-30
+      metadata_run_id: metadata-run
+      submissions_sha256: snapshot-checksum
+      period_label: reported_duration
+      selection_rule_version: '2'
+      selection_reason: SINGLE_ELIGIBLE_OCCURRENCE
+      supporting_occurrence_count: 1
+      supporting_occurrence_ids:
+      - capital_expenditures-other-company
+    - metric_code: operating_cash_flow
+      concept_priority: 1
+      cik: 0000320193
+      accession_number: 0000320193-25-000001
+      source_occurrence_id: operating_cash_flow-other-period
+      source_document_name: filing.xml
+      source_sha256: checksum
+      source_ordinal: 1
+      processing_run_id: silver-run
+      parser_version: '1'
+      schema_version: '1'
+      concept_namespace: http://fasb.org/us-gaap/2025
+      concept_local_name: NetCashProvidedByUsedInOperatingActivities
+      raw_value: '42.000000000000000001'
+      value_decimal: '42.000000000000000001'
+      decimals: '-6'
+      precision: null
+      unit_ref: USD
+      unit_expression: '{http://www.xbrl.org/2003/iso4217}USD'
+      context_ref: context
+      entity_scheme: http://www.sec.gov/CIK
+      entity_identifier: '320193'
+      period_kind: duration
+      period_start: 2025-01-01
+      period_end: 2025-09-30
+      period_instant: null
+      dimension_count: 0
+      has_dimensions: false
+      duration_days: 273
+      is_usd: true
+      form: 10-Q
+      filing_date: 2025-11-01
+      report_date: 2025-09-30
+      metadata_run_id: metadata-run
+      submissions_sha256: snapshot-checksum
+      period_label: reported_duration
+      selection_rule_version: '2'
+      selection_reason: SINGLE_ELIGIBLE_OCCURRENCE
+      supporting_occurrence_count: 1
+      supporting_occurrence_ids:
+      - operating_cash_flow-other-period
+    - metric_code: operating_cash_flow
+      concept_priority: 1
+      cik: 0000320193
+      accession_number: 0000320193-25-000002
+      source_occurrence_id: operating_cash_flow-independent
+      source_document_name: filing.xml
+      source_sha256: checksum
+      source_ordinal: 1
+      processing_run_id: silver-run
+      parser_version: '1'
+      schema_version: '1'
+      concept_namespace: http://fasb.org/us-gaap/2025
+      concept_local_name: NetCashProvidedByUsedInOperatingActivities
+      raw_value: '42.000000000000000001'
+      value_decimal: '42.000000000000000001'
+      decimals: '-6'
+      precision: null
+      unit_ref: USD
+      unit_expression: '{http://www.xbrl.org/2003/iso4217}USD'
+      context_ref: context
+      entity_scheme: http://www.sec.gov/CIK
+      entity_identifier: '320193'
+      period_kind: duration
+      period_start: 2025-07-01
+      period_end: 2025-09-30
+      period_instant: null
+      dimension_count: 0
+      has_dimensions: false
+      duration_days: 92
+      is_usd: true
+      form: 10-Q
+      filing_date: 2025-11-01
+      report_date: 2025-09-30
+      metadata_run_id: metadata-run
+      submissions_sha256: snapshot-checksum
+      period_label: reported_duration
+      selection_rule_version: '2'
+      selection_reason: SINGLE_ELIGIBLE_OCCURRENCE
+      supporting_occurrence_count: 1
+      supporting_occurrence_ids:
+      - operating_cash_flow-independent
+    - metric_code: operating_cash_flow
+      concept_priority: 1
+      cik: 0000789019
+      accession_number: 0000320193-25-000001
+      source_occurrence_id: operating_cash_flow-other-company
+      source_document_name: filing.xml
+      source_sha256: checksum
+      source_ordinal: 1
+      processing_run_id: silver-run
+      parser_version: '1'
+      schema_version: '1'
+      concept_namespace: http://fasb.org/us-gaap/2025
+      concept_local_name: NetCashProvidedByUsedInOperatingActivities
+      raw_value: '42.000000000000000001'
+      value_decimal: '42.000000000000000001'
+      decimals: '-6'
+      precision: null
+      unit_ref: USD
+      unit_expression: '{http://www.xbrl.org/2003/iso4217}USD'
+      context_ref: context
+      entity_scheme: http://www.sec.gov/CIK
+      entity_identifier: '789019'
+      period_kind: duration
+      period_start: 2025-07-01
+      period_end: 2025-09-30
+      period_instant: null
+      dimension_count: 0
+      has_dimensions: false
+      duration_days: 92
+      is_usd: true
+      form: 10-Q
+      filing_date: 2025-11-01
+      report_date: 2025-09-30
+      metadata_run_id: metadata-run
+      submissions_sha256: snapshot-checksum
+      period_label: reported_duration
+      selection_rule_version: '2'
+      selection_reason: SINGLE_ELIGIBLE_OCCURRENCE
+      supporting_occurrence_count: 1
+      supporting_occurrence_ids:
+      - operating_cash_flow-other-company
+- name: accuracy_group_gate_cash_flow_metric_selection_issues
+  model: int_cash_flow_metric_selection_issues
+  description: An invalid sibling blocks its exact group; independent groups and existing
+    conflicts keep their behavior.
+  given:
+  - input: ref('int_financial_metric_candidate_accuracy')
+    format: sql
+    fixture: accuracy_group_validated
+  - input: ref('stg_silver_filing_metadata')
+    format: sql
+    fixture: accuracy_group_filing_metadata
+  - input: ref('stg_silver_active_filings')
+    format: sql
+    fixture: accuracy_group_active_filings
+  expect:
+    rows:
+    - cik: 0000320193
+      accession_number: 0000320193-25-000001
+      metric_code: capital_expenditures
+      issue_code: INVALID_ACCURACY
+      severity: WARNING
+      report_date: 2025-09-30
+      period_start: 2025-07-01
+      period_end: 2025-09-30
+      source_occurrence_ids:
+      - capital_expenditures-valid-first
+      - capital_expenditures-valid-later
+      - capital_expenditures-invalid-low
+      details: 'Metric capital_expenditures, reported period 2025-07-01 through 2025-09-30:
+        unusable accuracy in eligible occurrences: occurrence "capital_expenditures-invalid-low":
+        INVALID_DECIMALS: Decimals must be an XML Schema integer or uppercase INF.
+        Raw attributes: decimals="not-a-valid-accuracy", precision=null.'
+    - cik: 0000320193
+      accession_number: 0000320193-25-000001
+      metric_code: operating_cash_flow
+      issue_code: INVALID_ACCURACY
+      severity: WARNING
+      report_date: 2025-09-30
+      period_start: 2025-07-01
+      period_end: 2025-09-30
+      source_occurrence_ids:
+      - operating_cash_flow-valid-first
+      - operating_cash_flow-valid-later
+      - operating_cash_flow-invalid-low
+      details: 'Metric operating_cash_flow, reported period 2025-07-01 through 2025-09-30:
+        unusable accuracy in eligible occurrences: occurrence "operating_cash_flow-invalid-low":
+        INVALID_DECIMALS: Decimals must be an XML Schema integer or uppercase INF.
+        Raw attributes: decimals="not-a-valid-accuracy", precision=null.'
+    - cik: 0000320193
+      accession_number: 0000320193-25-000003
+      metric_code: capital_expenditures
+      issue_code: METRIC_VALUE_CONFLICT
+      severity: WARNING
+      report_date: 2025-09-30
+      period_start: 2025-07-01
+      period_end: 2025-09-30
+      source_occurrence_ids:
+      - capital_expenditures-conflict-a
+      - capital_expenditures-conflict-b
+      details: 'Metric capital_expenditures, reported period 2025-07-01 through 2025-09-30:
+        eligible metric occurrences disagree on the exact Decimal value; concept priority
+        cannot resolve this conflict.'
+    - cik: 0000320193
+      accession_number: 0000320193-25-000003
+      metric_code: operating_cash_flow
+      issue_code: METRIC_VALUE_CONFLICT
+      severity: WARNING
+      report_date: 2025-09-30
+      period_start: 2025-07-01
+      period_end: 2025-09-30
+      source_occurrence_ids:
+      - operating_cash_flow-conflict-a
+      - operating_cash_flow-conflict-b
+      details: 'Metric operating_cash_flow, reported period 2025-07-01 through 2025-09-30:
+        eligible metric occurrences disagree on the exact Decimal value; concept priority
+        cannot resolve this conflict.'
+    - cik: 0000320193
+      accession_number: 0000320193-25-000004
+      metric_code: capital_expenditures
+      issue_code: METRIC_ACCURACY_UNRESOLVED
+      severity: WARNING
+      report_date: 2025-09-30
+      period_start: 2025-07-01
+      period_end: 2025-09-30
+      source_occurrence_ids:
+      - capital_expenditures-accuracy-a
+      - capital_expenditures-accuracy-b
+      details: 'Metric capital_expenditures, reported period 2025-07-01 through 2025-09-30:
+        eligible metric values agree, but decimals or precision attributes differ
+        (including nulls); rounding intervals are unresolved.'
+    - cik: 0000320193
+      accession_number: 0000320193-25-000004
+      metric_code: operating_cash_flow
+      issue_code: METRIC_ACCURACY_UNRESOLVED
+      severity: WARNING
+      report_date: 2025-09-30
+      period_start: 2025-07-01
+      period_end: 2025-09-30
+      source_occurrence_ids:
+      - operating_cash_flow-accuracy-a
+      - operating_cash_flow-accuracy-b
+      details: 'Metric operating_cash_flow, reported period 2025-07-01 through 2025-09-30:
+        eligible metric values agree, but decimals or precision attributes differ
+        (including nulls); rounding intervals are unresolved.'
+    - cik: 0000320193
+      accession_number: 0000320193-25-000005
+      metric_code: capital_expenditures
+      issue_code: INVALID_ACCURACY
+      severity: WARNING
+      report_date: 2025-09-30
+      period_start: 2025-07-01
+      period_end: 2025-09-30
+      source_occurrence_ids:
+      - capital_expenditures-unknown-a
+      - capital_expenditures-unknown-b
+      details: 'Metric capital_expenditures, reported period 2025-07-01 through 2025-09-30:
+        unusable accuracy in eligible occurrences: occurrence "capital_expenditures-unknown-a":
+        UNKNOWN_PRECISION: Zero precision conveys unknown accuracy and cannot support
+        trusted selection. Raw attributes: decimals=null, precision="-000".'
+    - cik: 0000320193
+      accession_number: 0000320193-25-000005
+      metric_code: operating_cash_flow
+      issue_code: INVALID_ACCURACY
+      severity: WARNING
+      report_date: 2025-09-30
+      period_start: 2025-07-01
+      period_end: 2025-09-30
+      source_occurrence_ids:
+      - operating_cash_flow-unknown-a
+      - operating_cash_flow-unknown-b
+      details: 'Metric operating_cash_flow, reported period 2025-07-01 through 2025-09-30:
+        unusable accuracy in eligible occurrences: occurrence "operating_cash_flow-unknown-a":
+        UNKNOWN_PRECISION: Zero precision conveys unknown accuracy and cannot support
+        trusted selection. Raw attributes: decimals=null, precision="-000".'
+    - cik: 0000320193
+      accession_number: 0000320193-25-000009
+      metric_code: capital_expenditures
+      issue_code: INVALID_ACCURACY
+      severity: WARNING
+      report_date: 2025-09-30
+      period_start: 2025-07-01
+      period_end: 2025-09-30
+      source_occurrence_ids:
+      - capital_expenditures-regression-a
+      - capital_expenditures-regression-b
+      details: 'Metric capital_expenditures, reported period 2025-07-01 through 2025-09-30:
+        unusable accuracy in eligible occurrences: occurrence "capital_expenditures-regression-a":
+        INVALID_DECIMALS: Decimals must be an XML Schema integer or uppercase INF.
+        Raw attributes: decimals="not-a-valid-accuracy", precision=null.; occurrence
+        "capital_expenditures-regression-b": INVALID_DECIMALS: Decimals must be an
+        XML Schema integer or uppercase INF. Raw attributes: decimals="not-a-valid-accuracy",
+        precision=null.'
+    - cik: 0000320193
+      accession_number: 0000320193-25-000009
+      metric_code: operating_cash_flow
+      issue_code: INVALID_ACCURACY
+      severity: WARNING
+      report_date: 2025-09-30
+      period_start: 2025-07-01
+      period_end: 2025-09-30
+      source_occurrence_ids:
+      - operating_cash_flow-regression-a
+      - operating_cash_flow-regression-b
+      details: 'Metric operating_cash_flow, reported period 2025-07-01 through 2025-09-30:
+        unusable accuracy in eligible occurrences: occurrence "operating_cash_flow-regression-a":
+        INVALID_DECIMALS: Decimals must be an XML Schema integer or uppercase INF.
+        Raw attributes: decimals="not-a-valid-accuracy", precision=null.; occurrence
+        "operating_cash_flow-regression-b": INVALID_DECIMALS: Decimals must be an
+        XML Schema integer or uppercase INF. Raw attributes: decimals="not-a-valid-accuracy",
+        precision=null.'

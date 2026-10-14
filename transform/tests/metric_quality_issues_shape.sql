@@ -1,3 +1,4 @@
+-- Each issue stage has different evidence fields; return rows that break those rules.
 with derivation_evidence as (
     select
         'int_quarterly_cash_flow_derivation_issues'::varchar as source_model,

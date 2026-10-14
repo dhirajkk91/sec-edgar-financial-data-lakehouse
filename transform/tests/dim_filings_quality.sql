@@ -1,3 +1,4 @@
+-- Check coverage against the required reported periods; derived or stale-source rows cannot fill gaps.
 with active_profiles as (
     select
         a.cik, a.accession_number, a.source_document_name, a.source_sha256,

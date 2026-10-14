@@ -9,3 +9,7 @@ where severity is distinct from (case when issue_code = 'UNSUPPORTED_FORM' then 
         issue_code in ('MISSING_FILING_METADATA', 'UNSUPPORTED_FORM', 'MISSING_REPORT_DATE', 'NO_ELIGIBLE_REVENUE')
         and (period_start is not null or period_end is not null or array_length(source_occurrence_ids) <> 0)
     )
+
+    or (issue_code = 'INVALID_ACCURACY' and (
+        period_start is null or period_end is null or report_date is null or period_end is distinct from report_date
+        or array_length(source_occurrence_ids) < 1))

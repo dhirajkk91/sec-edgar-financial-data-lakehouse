@@ -1,3 +1,10 @@
+"""The same filing IDs are used in memory, archive URLs and local paths.
+
+These cases check their accepted spellings and immutability. The accession
+prefix deliberately differs from the company in one case because a filing
+agent can supply that number.
+"""
+
 from dataclasses import FrozenInstanceError
 
 import pytest

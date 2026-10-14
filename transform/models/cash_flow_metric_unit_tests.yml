@@ -5,7 +5,7 @@ unit_tests:
       retain their tagged signs; agreeing occurrences keep ordered lineage.
     given:
       - &cash_input_0
-        input: ref('int_financial_metric_candidates')
+        input: ref('int_financial_metric_candidate_accuracy')
         rows:
           - &cash_row_0
             metric_code: operating_cash_flow
@@ -37,6 +37,9 @@ unit_tests:
             dimension_count: 0
             has_dimensions: false
             duration_days: 92
+            accuracy_is_usable: true
+            accuracy_issue_code: null
+            accuracy_issue_details: null
             is_usd: true
           - <<: *cash_row_0
             source_occurrence_id: ocf-b
@@ -111,7 +114,7 @@ unit_tests:
         - ocf-b
         - ocf-last
         period_label: reported_duration
-        selection_rule_version: '1'
+        selection_rule_version: '2'
         selection_reason: AGREEING_ELIGIBLE_OCCURRENCES
         raw_value: '-10'
       - source_occurrence_id: capex-loss
@@ -124,7 +127,7 @@ unit_tests:
         supporting_occurrence_ids:
         - capex-loss
         period_label: reported_duration
-        selection_rule_version: '1'
+        selection_rule_version: '2'
         selection_reason: SINGLE_ELIGIBLE_OCCURRENCE
         raw_value: '-0.25'
       - source_occurrence_id: capex-zero
@@ -137,7 +140,7 @@ unit_tests:
         supporting_occurrence_ids:
         - capex-zero
         period_label: reported_duration
-        selection_rule_version: '1'
+        selection_rule_version: '2'
         selection_reason: SINGLE_ELIGIBLE_OCCURRENCE
         raw_value: '0'
       - source_occurrence_id: ocf-zero
@@ -150,7 +153,7 @@ unit_tests:
         supporting_occurrence_ids:
         - ocf-zero
         period_label: reported_duration
-        selection_rule_version: '1'
+        selection_rule_version: '2'
         selection_reason: SINGLE_ELIGIBLE_OCCURRENCE
         raw_value: '0'
       - source_occurrence_id: capex-positive
@@ -163,7 +166,7 @@ unit_tests:
         supporting_occurrence_ids:
         - capex-positive
         period_label: reported_duration
-        selection_rule_version: '1'
+        selection_rule_version: '2'
         selection_reason: SINGLE_ELIGIBLE_OCCURRENCE
         raw_value: '025.000'
   - name: metric_units_losses_and_ordered_agreement_issues
@@ -189,7 +192,7 @@ unit_tests:
       agrees only with nulls.
     given:
       - &cash_input_3
-        input: ref('int_financial_metric_candidates')
+        input: ref('int_financial_metric_candidate_accuracy')
         format: sql
         rows: |
           select
@@ -222,7 +225,10 @@ unit_tests:
               cast('0' as BIGINT) as dimension_count,
               cast(false as BOOLEAN) as has_dimensions,
               cast('92' as BIGINT) as duration_days,
-              cast(true as BOOLEAN) as is_usd
+              cast(true as BOOLEAN) as is_usd,
+              cast(true as BOOLEAN) as accuracy_is_usable,
+              cast(null as VARCHAR) as accuracy_issue_code,
+              cast(null as VARCHAR) as accuracy_issue_details
           union all
           select
               cast('operating_cash_flow' as VARCHAR) as metric_code,
@@ -254,7 +260,10 @@ unit_tests:
               cast('0' as BIGINT) as dimension_count,
               cast(false as BOOLEAN) as has_dimensions,
               cast('92' as BIGINT) as duration_days,
-              cast(true as BOOLEAN) as is_usd
+              cast(true as BOOLEAN) as is_usd,
+              cast(true as BOOLEAN) as accuracy_is_usable,
+              cast(null as VARCHAR) as accuracy_issue_code,
+              cast(null as VARCHAR) as accuracy_issue_details
           union all
           select
               cast('operating_cash_flow' as VARCHAR) as metric_code,
@@ -273,7 +282,7 @@ unit_tests:
               cast('-10' as VARCHAR) as raw_value,
               cast('-10' as DECIMAL(38,18)) as value_decimal,
               cast(null as VARCHAR) as decimals,
-              cast(null as VARCHAR) as precision,
+              cast('INF' as VARCHAR) as precision,
               cast('USD' as VARCHAR) as unit_ref,
               cast('{http://www.xbrl.org/2003/iso4217}USD' as VARCHAR) as unit_expression,
               cast('context' as VARCHAR) as context_ref,
@@ -286,7 +295,10 @@ unit_tests:
               cast('0' as BIGINT) as dimension_count,
               cast(false as BOOLEAN) as has_dimensions,
               cast('92' as BIGINT) as duration_days,
-              cast(true as BOOLEAN) as is_usd
+              cast(true as BOOLEAN) as is_usd,
+              cast(true as BOOLEAN) as accuracy_is_usable,
+              cast(null as VARCHAR) as accuracy_issue_code,
+              cast(null as VARCHAR) as accuracy_issue_details
           union all
           select
               cast('operating_cash_flow' as VARCHAR) as metric_code,
@@ -318,7 +330,10 @@ unit_tests:
               cast('0' as BIGINT) as dimension_count,
               cast(false as BOOLEAN) as has_dimensions,
               cast('92' as BIGINT) as duration_days,
-              cast(true as BOOLEAN) as is_usd
+              cast(true as BOOLEAN) as is_usd,
+              cast(true as BOOLEAN) as accuracy_is_usable,
+              cast(null as VARCHAR) as accuracy_issue_code,
+              cast(null as VARCHAR) as accuracy_issue_details
           union all
           select
               cast('capital_expenditures' as VARCHAR) as metric_code,
@@ -350,7 +365,10 @@ unit_tests:
               cast('0' as BIGINT) as dimension_count,
               cast(false as BOOLEAN) as has_dimensions,
               cast('92' as BIGINT) as duration_days,
-              cast(true as BOOLEAN) as is_usd
+              cast(true as BOOLEAN) as is_usd,
+              cast(true as BOOLEAN) as accuracy_is_usable,
+              cast(null as VARCHAR) as accuracy_issue_code,
+              cast(null as VARCHAR) as accuracy_issue_details
           union all
           select
               cast('capital_expenditures' as VARCHAR) as metric_code,
@@ -368,7 +386,7 @@ unit_tests:
               cast('PaymentsToAcquirePropertyPlantAndEquipment' as VARCHAR) as concept_local_name,
               cast('-0.25' as VARCHAR) as raw_value,
               cast('-0.25' as DECIMAL(38,18)) as value_decimal,
-              cast('2' as VARCHAR) as decimals,
+              cast(null as VARCHAR) as decimals,
               cast('3' as VARCHAR) as precision,
               cast('USD-other-ref' as VARCHAR) as unit_ref,
               cast('{http://www.xbrl.org/2003/iso4217}USD' as VARCHAR) as unit_expression,
@@ -382,7 +400,10 @@ unit_tests:
               cast('0' as BIGINT) as dimension_count,
               cast(false as BOOLEAN) as has_dimensions,
               cast('92' as BIGINT) as duration_days,
-              cast(true as BOOLEAN) as is_usd
+              cast(true as BOOLEAN) as is_usd,
+              cast(true as BOOLEAN) as accuracy_is_usable,
+              cast(null as VARCHAR) as accuracy_issue_code,
+              cast(null as VARCHAR) as accuracy_issue_details
           union all
           select
               cast('capital_expenditures' as VARCHAR) as metric_code,
@@ -414,7 +435,10 @@ unit_tests:
               cast('0' as BIGINT) as dimension_count,
               cast(false as BOOLEAN) as has_dimensions,
               cast('92' as BIGINT) as duration_days,
-              cast(true as BOOLEAN) as is_usd
+              cast(true as BOOLEAN) as is_usd,
+              cast(true as BOOLEAN) as accuracy_is_usable,
+              cast(null as VARCHAR) as accuracy_issue_code,
+              cast(null as VARCHAR) as accuracy_issue_details
           union all
           select
               cast('capital_expenditures' as VARCHAR) as metric_code,
@@ -446,7 +470,10 @@ unit_tests:
               cast('0' as BIGINT) as dimension_count,
               cast(false as BOOLEAN) as has_dimensions,
               cast('92' as BIGINT) as duration_days,
-              cast(true as BOOLEAN) as is_usd
+              cast(true as BOOLEAN) as is_usd,
+              cast(true as BOOLEAN) as accuracy_is_usable,
+              cast(null as VARCHAR) as accuracy_issue_code,
+              cast(null as VARCHAR) as accuracy_issue_details
           union all
           select
               cast('operating_cash_flow' as VARCHAR) as metric_code,
@@ -465,7 +492,7 @@ unit_tests:
               cast('-10' as VARCHAR) as raw_value,
               cast('-10' as DECIMAL(38,18)) as value_decimal,
               cast(null as VARCHAR) as decimals,
-              cast(null as VARCHAR) as precision,
+              cast('INF' as VARCHAR) as precision,
               cast('USD' as VARCHAR) as unit_ref,
               cast('{http://www.xbrl.org/2003/iso4217}USD' as VARCHAR) as unit_expression,
               cast('context' as VARCHAR) as context_ref,
@@ -478,7 +505,10 @@ unit_tests:
               cast('0' as BIGINT) as dimension_count,
               cast(false as BOOLEAN) as has_dimensions,
               cast('92' as BIGINT) as duration_days,
-              cast(true as BOOLEAN) as is_usd
+              cast(true as BOOLEAN) as is_usd,
+              cast(true as BOOLEAN) as accuracy_is_usable,
+              cast(null as VARCHAR) as accuracy_issue_code,
+              cast(null as VARCHAR) as accuracy_issue_details
           union all
           select
               cast('operating_cash_flow' as VARCHAR) as metric_code,
@@ -497,7 +527,7 @@ unit_tests:
               cast('-10' as VARCHAR) as raw_value,
               cast('-10' as DECIMAL(38,18)) as value_decimal,
               cast(null as VARCHAR) as decimals,
-              cast(null as VARCHAR) as precision,
+              cast('INF' as VARCHAR) as precision,
               cast('USD' as VARCHAR) as unit_ref,
               cast('{http://www.xbrl.org/2003/iso4217}USD' as VARCHAR) as unit_expression,
               cast('context' as VARCHAR) as context_ref,
@@ -510,7 +540,10 @@ unit_tests:
               cast('0' as BIGINT) as dimension_count,
               cast(false as BOOLEAN) as has_dimensions,
               cast('92' as BIGINT) as duration_days,
-              cast(true as BOOLEAN) as is_usd
+              cast(true as BOOLEAN) as is_usd,
+              cast(true as BOOLEAN) as accuracy_is_usable,
+              cast(null as VARCHAR) as accuracy_issue_code,
+              cast(null as VARCHAR) as accuracy_issue_details
           union all
           select
               cast('capital_expenditures' as VARCHAR) as metric_code,
@@ -542,7 +575,10 @@ unit_tests:
               cast('0' as BIGINT) as dimension_count,
               cast(false as BOOLEAN) as has_dimensions,
               cast('92' as BIGINT) as duration_days,
-              cast(true as BOOLEAN) as is_usd
+              cast(true as BOOLEAN) as is_usd,
+              cast(true as BOOLEAN) as accuracy_is_usable,
+              cast(null as VARCHAR) as accuracy_issue_code,
+              cast(null as VARCHAR) as accuracy_issue_details
       - &cash_input_4
         input: ref('stg_silver_filing_metadata')
         rows:
@@ -560,7 +596,7 @@ unit_tests:
         - ocf-good
         - ocf-good-repeat
         period_label: reported_duration
-        selection_rule_version: '1'
+        selection_rule_version: '2'
         selection_reason: AGREEING_ELIGIBLE_OCCURRENCES
       - source_occurrence_id: capex-good
         metric_code: capital_expenditures
@@ -572,7 +608,7 @@ unit_tests:
         supporting_occurrence_ids:
         - capex-good
         period_label: reported_duration
-        selection_rule_version: '1'
+        selection_rule_version: '2'
         selection_reason: SINGLE_ELIGIBLE_OCCURRENCE
   - name: metric_and_duration_conflicts_are_isolated_issues
     model: int_cash_flow_metric_selection_issues
@@ -633,7 +669,7 @@ unit_tests:
       participate in selection.
     given:
       - &cash_input_6
-        input: ref('int_financial_metric_candidates')
+        input: ref('int_financial_metric_candidate_accuracy')
         rows:
           - <<: *cash_row_0
             source_occurrence_id: ocf-valid
@@ -931,7 +967,7 @@ unit_tests:
         supporting_occurrence_ids:
         - ocf-valid
         period_label: reported_duration
-        selection_rule_version: '1'
+        selection_rule_version: '2'
         selection_reason: SINGLE_ELIGIBLE_OCCURRENCE
       - source_occurrence_id: capex-valid
         metric_code: capital_expenditures
@@ -943,7 +979,7 @@ unit_tests:
         supporting_occurrence_ids:
         - capex-valid
         period_label: reported_duration
-        selection_rule_version: '1'
+        selection_rule_version: '2'
         selection_reason: SINGLE_ELIGIBLE_OCCURRENCE
   - name: eligibility_and_wrong_units_issues
     model: int_cash_flow_metric_selection_issues
@@ -964,7 +1000,7 @@ unit_tests:
       lineage.
     given:
       - &cash_input_9
-        input: ref('int_financial_metric_candidates')
+        input: ref('int_financial_metric_candidate_accuracy')
         rows:
           - <<: *cash_row_0
             source_occurrence_id: ocf-quarter
@@ -1026,7 +1062,7 @@ unit_tests:
         supporting_occurrence_ids:
         - ocf-quarter
         period_label: reported_duration
-        selection_rule_version: '1'
+        selection_rule_version: '2'
         selection_reason: SINGLE_ELIGIBLE_OCCURRENCE
         cik: 0000320193
       - source_occurrence_id: ocf-long
@@ -1039,7 +1075,7 @@ unit_tests:
         supporting_occurrence_ids:
         - ocf-long
         period_label: reported_duration
-        selection_rule_version: '1'
+        selection_rule_version: '2'
         selection_reason: SINGLE_ELIGIBLE_OCCURRENCE
         cik: 0000320193
       - source_occurrence_id: capex-quarter
@@ -1052,7 +1088,7 @@ unit_tests:
         supporting_occurrence_ids:
         - capex-quarter
         period_label: reported_duration
-        selection_rule_version: '1'
+        selection_rule_version: '2'
         selection_reason: SINGLE_ELIGIBLE_OCCURRENCE
         cik: 0000320193
       - source_occurrence_id: capex-long
@@ -1065,7 +1101,7 @@ unit_tests:
         supporting_occurrence_ids:
         - capex-long
         period_label: reported_duration
-        selection_rule_version: '1'
+        selection_rule_version: '2'
         selection_reason: SINGLE_ELIGIBLE_OCCURRENCE
         cik: 0000320193
       - source_occurrence_id: ocf-amendment
@@ -1078,7 +1114,7 @@ unit_tests:
         supporting_occurrence_ids:
         - ocf-amendment
         period_label: reported_duration
-        selection_rule_version: '1'
+        selection_rule_version: '2'
         selection_reason: SINGLE_ELIGIBLE_OCCURRENCE
         cik: 0000320193
       - source_occurrence_id: capex-amendment
@@ -1091,7 +1127,7 @@ unit_tests:
         supporting_occurrence_ids:
         - capex-amendment
         period_label: reported_duration
-        selection_rule_version: '1'
+        selection_rule_version: '2'
         selection_reason: SINGLE_ELIGIBLE_OCCURRENCE
         cik: 0000320193
       - source_occurrence_id: other-company
@@ -1104,7 +1140,7 @@ unit_tests:
         supporting_occurrence_ids:
         - other-company
         period_label: reported_duration
-        selection_rule_version: '1'
+        selection_rule_version: '2'
         selection_reason: SINGLE_ELIGIBLE_OCCURRENCE
         cik: '0000000002'
   - name: separate_durations_accessions_and_companies_issues
@@ -1139,7 +1175,7 @@ unit_tests:
       absent.
     given:
       - &cash_input_12
-        input: ref('int_financial_metric_candidates')
+        input: ref('int_financial_metric_candidate_accuracy')
         rows:
           - <<: *cash_row_0
             metric_code: capital_expenditures
@@ -1189,7 +1225,7 @@ unit_tests:
         supporting_occurrence_ids:
         - only-eps
         period_label: reported_duration
-        selection_rule_version: '1'
+        selection_rule_version: '2'
         selection_reason: SINGLE_ELIGIBLE_OCCURRENCE
       - source_occurrence_id: only-ni
         metric_code: operating_cash_flow
@@ -1201,7 +1237,7 @@ unit_tests:
         supporting_occurrence_ids:
         - only-ni
         period_label: reported_duration
-        selection_rule_version: '1'
+        selection_rule_version: '2'
         selection_reason: SINGLE_ELIGIBLE_OCCURRENCE
       - source_occurrence_id: capex-independent
         metric_code: capital_expenditures
@@ -1213,7 +1249,7 @@ unit_tests:
         supporting_occurrence_ids:
         - capex-independent
         period_label: reported_duration
-        selection_rule_version: '1'
+        selection_rule_version: '2'
         selection_reason: SINGLE_ELIGIBLE_OCCURRENCE
   - name: missing_metric_and_all_ambiguous_issues
     model: int_cash_flow_metric_selection_issues
@@ -1264,7 +1300,7 @@ unit_tests:
       filing issue apiece.
     given:
       - &cash_input_15
-        input: ref('int_financial_metric_candidates')
+        input: ref('int_financial_metric_candidate_accuracy')
         rows:
           - <<: *cash_row_0
             source_occurrence_id: unused
@@ -1371,7 +1407,7 @@ unit_tests:
     model: int_reported_cash_flow_metrics
     given:
       - &cash_input_18
-        input: ref('int_financial_metric_candidates')
+        input: ref('int_financial_metric_candidate_accuracy')
         format: sql
         rows: |
           select
@@ -1404,7 +1440,10 @@ unit_tests:
               cast(null as BIGINT) as dimension_count,
               cast(null as BOOLEAN) as has_dimensions,
               cast(null as BIGINT) as duration_days,
-              cast(null as BOOLEAN) as is_usd
+              cast(null as BOOLEAN) as is_usd,
+              cast(true as BOOLEAN) as accuracy_is_usable,
+              cast(null as VARCHAR) as accuracy_issue_code,
+              cast(null as VARCHAR) as accuracy_issue_details
           where false
       - &cash_input_19
         input: ref('stg_silver_filing_metadata')
@@ -1431,7 +1470,7 @@ unit_tests:
     model: int_cash_flow_metric_selection_issues
     given:
       - &cash_input_20
-        input: ref('int_financial_metric_candidates')
+        input: ref('int_financial_metric_candidate_accuracy')
         format: sql
         rows: |
           select
@@ -1464,7 +1503,10 @@ unit_tests:
               cast(null as BIGINT) as dimension_count,
               cast(null as BOOLEAN) as has_dimensions,
               cast(null as BIGINT) as duration_days,
-              cast(null as BOOLEAN) as is_usd
+              cast(null as BOOLEAN) as is_usd,
+              cast(true as BOOLEAN) as accuracy_is_usable,
+              cast(null as VARCHAR) as accuracy_issue_code,
+              cast(null as VARCHAR) as accuracy_issue_details
           where false
       - &cash_input_21
         input: ref('stg_silver_filing_metadata')

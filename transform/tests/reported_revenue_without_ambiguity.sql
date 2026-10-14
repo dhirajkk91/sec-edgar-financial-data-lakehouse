@@ -6,4 +6,4 @@ inner join {{ ref('int_revenue_selection_issues') }} as i
     and r.metric_code = i.metric_code
     and r.period_start = i.period_start
     and r.period_end = i.period_end
-where i.issue_code in ('REVENUE_VALUE_CONFLICT', 'REVENUE_ACCURACY_UNRESOLVED')
+where i.issue_code in ('INVALID_ACCURACY', 'REVENUE_VALUE_CONFLICT', 'REVENUE_ACCURACY_UNRESOLVED')

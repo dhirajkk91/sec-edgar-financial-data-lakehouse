@@ -1,3 +1,4 @@
+-- Compare saved source details and counts against active inputs in both directions, including duplicates.
 with metric_counts as (
     select
         cik, accession_number, current_source_document_name, current_source_sha256,

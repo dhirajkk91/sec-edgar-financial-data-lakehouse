@@ -5,7 +5,7 @@ unit_tests:
       do not split agreeing groups.
     given:
       - &metric_units_losses_and_ordered_agreement_candidates
-        input: ref('int_financial_metric_candidates')
+        input: ref('int_financial_metric_candidate_accuracy')
         rows:
           - &income_occurrence
             metric_code: net_income
@@ -37,6 +37,9 @@ unit_tests:
             dimension_count: 0
             has_dimensions: false
             duration_days: 92
+            accuracy_is_usable: true
+            accuracy_issue_code: null
+            accuracy_issue_details: null
             is_usd: true
           - <<: *income_occurrence
             source_occurrence_id: ni-b
@@ -106,7 +109,7 @@ unit_tests:
         - ni-b
         - ni-last
         period_label: reported_duration
-        selection_rule_version: '1'
+        selection_rule_version: '2'
         selection_reason: AGREEING_ELIGIBLE_OCCURRENCES
       - source_occurrence_id: eps-loss
         metric_code: diluted_eps
@@ -118,7 +121,7 @@ unit_tests:
         supporting_occurrence_ids:
         - eps-loss
         period_label: reported_duration
-        selection_rule_version: '1'
+        selection_rule_version: '2'
         selection_reason: SINGLE_ELIGIBLE_OCCURRENCE
       - source_occurrence_id: eps-zero
         metric_code: diluted_eps
@@ -130,7 +133,7 @@ unit_tests:
         supporting_occurrence_ids:
         - eps-zero
         period_label: reported_duration
-        selection_rule_version: '1'
+        selection_rule_version: '2'
         selection_reason: SINGLE_ELIGIBLE_OCCURRENCE
       - source_occurrence_id: ni-zero
         metric_code: net_income
@@ -142,7 +145,7 @@ unit_tests:
         supporting_occurrence_ids:
         - ni-zero
         period_label: reported_duration
-        selection_rule_version: '1'
+        selection_rule_version: '2'
         selection_reason: SINGLE_ELIGIBLE_OCCURRENCE
   - name: metric_units_losses_and_ordered_agreement_issues
     model: int_income_metric_selection_issues
@@ -166,7 +169,7 @@ unit_tests:
       agrees only with nulls.
     given:
       - &metric_and_duration_conflicts_are_isolated_candidates
-        input: ref('int_financial_metric_candidates')
+        input: ref('int_financial_metric_candidate_accuracy')
         rows:
           - <<: *income_occurrence
             source_occurrence_id: ni-value-a
@@ -178,6 +181,7 @@ unit_tests:
             value_decimal: '100.000000000000000002'
             decimals: '0'
           - <<: *income_occurrence
+            precision: 'INF'
             source_occurrence_id: ni-decimal-null
             period_start: '2025-02-01'
             decimals: null
@@ -203,7 +207,7 @@ unit_tests:
             unit_expression: ({http://www.xbrl.org/2003/iso4217}USD) / ({http://www.xbrl.org/2003/instance}shares)
             is_usd: false
             unit_ref: USD-per-share
-            decimals: '2'
+            decimals: null
             value_decimal: '-0.25'
             raw_value: '-0.25'
             period_start: '2025-03-01'
@@ -233,11 +237,11 @@ unit_tests:
           - <<: *income_occurrence
             source_occurrence_id: ni-good
             decimals: null
-            precision: null
+            precision: 'INF'
           - <<: *income_occurrence
             source_occurrence_id: ni-good-repeat
             decimals: null
-            precision: null
+            precision: 'INF'
           - <<: *income_occurrence
             source_occurrence_id: eps-good
             metric_code: diluted_eps
@@ -265,7 +269,7 @@ unit_tests:
         - ni-good
         - ni-good-repeat
         period_label: reported_duration
-        selection_rule_version: '1'
+        selection_rule_version: '2'
         selection_reason: AGREEING_ELIGIBLE_OCCURRENCES
       - source_occurrence_id: eps-good
         metric_code: diluted_eps
@@ -277,7 +281,7 @@ unit_tests:
         supporting_occurrence_ids:
         - eps-good
         period_label: reported_duration
-        selection_rule_version: '1'
+        selection_rule_version: '2'
         selection_reason: SINGLE_ELIGIBLE_OCCURRENCE
   - name: metric_and_duration_conflicts_are_isolated_issues
     model: int_income_metric_selection_issues
@@ -337,7 +341,7 @@ unit_tests:
       participate in selection.
     given:
       - &eligibility_and_wrong_units_candidates
-        input: ref('int_financial_metric_candidates')
+        input: ref('int_financial_metric_candidate_accuracy')
         rows:
           - <<: *income_occurrence
             source_occurrence_id: ni-valid
@@ -671,7 +675,7 @@ unit_tests:
         supporting_occurrence_ids:
         - ni-valid
         period_label: reported_duration
-        selection_rule_version: '1'
+        selection_rule_version: '2'
         selection_reason: SINGLE_ELIGIBLE_OCCURRENCE
       - source_occurrence_id: eps-valid
         metric_code: diluted_eps
@@ -683,7 +687,7 @@ unit_tests:
         supporting_occurrence_ids:
         - eps-valid
         period_label: reported_duration
-        selection_rule_version: '1'
+        selection_rule_version: '2'
         selection_reason: SINGLE_ELIGIBLE_OCCURRENCE
   - name: eligibility_and_wrong_units_issues
     model: int_income_metric_selection_issues
@@ -703,7 +707,7 @@ unit_tests:
       lineage.
     given:
       - &separate_durations_accessions_and_companies_candidates
-        input: ref('int_financial_metric_candidates')
+        input: ref('int_financial_metric_candidate_accuracy')
         rows:
           - <<: *income_occurrence
             source_occurrence_id: ni-quarter
@@ -771,7 +775,7 @@ unit_tests:
         supporting_occurrence_ids:
         - ni-quarter
         period_label: reported_duration
-        selection_rule_version: '1'
+        selection_rule_version: '2'
         selection_reason: SINGLE_ELIGIBLE_OCCURRENCE
         cik: 0000320193
       - source_occurrence_id: ni-long
@@ -784,7 +788,7 @@ unit_tests:
         supporting_occurrence_ids:
         - ni-long
         period_label: reported_duration
-        selection_rule_version: '1'
+        selection_rule_version: '2'
         selection_reason: SINGLE_ELIGIBLE_OCCURRENCE
         cik: 0000320193
       - source_occurrence_id: eps-quarter
@@ -797,7 +801,7 @@ unit_tests:
         supporting_occurrence_ids:
         - eps-quarter
         period_label: reported_duration
-        selection_rule_version: '1'
+        selection_rule_version: '2'
         selection_reason: SINGLE_ELIGIBLE_OCCURRENCE
         cik: 0000320193
       - source_occurrence_id: eps-long
@@ -810,7 +814,7 @@ unit_tests:
         supporting_occurrence_ids:
         - eps-long
         period_label: reported_duration
-        selection_rule_version: '1'
+        selection_rule_version: '2'
         selection_reason: SINGLE_ELIGIBLE_OCCURRENCE
         cik: 0000320193
       - source_occurrence_id: ni-amendment
@@ -823,7 +827,7 @@ unit_tests:
         supporting_occurrence_ids:
         - ni-amendment
         period_label: reported_duration
-        selection_rule_version: '1'
+        selection_rule_version: '2'
         selection_reason: SINGLE_ELIGIBLE_OCCURRENCE
         cik: 0000320193
       - source_occurrence_id: eps-amendment
@@ -836,7 +840,7 @@ unit_tests:
         supporting_occurrence_ids:
         - eps-amendment
         period_label: reported_duration
-        selection_rule_version: '1'
+        selection_rule_version: '2'
         selection_reason: SINGLE_ELIGIBLE_OCCURRENCE
         cik: 0000320193
       - source_occurrence_id: other-company
@@ -849,7 +853,7 @@ unit_tests:
         supporting_occurrence_ids:
         - other-company
         period_label: reported_duration
-        selection_rule_version: '1'
+        selection_rule_version: '2'
         selection_reason: SINGLE_ELIGIBLE_OCCURRENCE
         cik: '0000000002'
   - name: separate_durations_accessions_and_companies_issues
@@ -882,7 +886,7 @@ unit_tests:
     description: A missing metric does not suppress the other; all-ambiguous groups are not reported as absent.
     given:
       - &missing_metric_and_all_ambiguous_candidates
-        input: ref('int_financial_metric_candidates')
+        input: ref('int_financial_metric_candidate_accuracy')
         rows:
           - <<: *income_occurrence
             source_occurrence_id: only-eps
@@ -936,7 +940,7 @@ unit_tests:
         supporting_occurrence_ids:
         - only-eps
         period_label: reported_duration
-        selection_rule_version: '1'
+        selection_rule_version: '2'
         selection_reason: SINGLE_ELIGIBLE_OCCURRENCE
       - source_occurrence_id: only-ni
         metric_code: net_income
@@ -948,7 +952,7 @@ unit_tests:
         supporting_occurrence_ids:
         - only-ni
         period_label: reported_duration
-        selection_rule_version: '1'
+        selection_rule_version: '2'
         selection_reason: SINGLE_ELIGIBLE_OCCURRENCE
       - source_occurrence_id: eps-independent
         metric_code: diluted_eps
@@ -960,7 +964,7 @@ unit_tests:
         supporting_occurrence_ids:
         - eps-independent
         period_label: reported_duration
-        selection_rule_version: '1'
+        selection_rule_version: '2'
         selection_reason: SINGLE_ELIGIBLE_OCCURRENCE
   - name: missing_metric_and_all_ambiguous_issues
     model: int_income_metric_selection_issues
@@ -1009,7 +1013,7 @@ unit_tests:
       filing issue apiece.
     given:
       - &filing_issue_precedence_for_each_metric_candidates
-        input: ref('int_financial_metric_candidates')
+        input: ref('int_financial_metric_candidate_accuracy')
         rows:
           - <<: *income_occurrence
             source_occurrence_id: unused
@@ -1114,7 +1118,7 @@ unit_tests:
   - name: typed_empty_int_reported_income_metrics
     model: int_reported_income_metrics
     given:
-    - input: ref('int_financial_metric_candidates')
+    - input: ref('int_financial_metric_candidate_accuracy')
       format: sql
       rows: |
         select
@@ -1147,7 +1151,10 @@ unit_tests:
             cast(null as BIGINT) as dimension_count,
             cast(null as BOOLEAN) as has_dimensions,
             cast(null as BIGINT) as duration_days,
-            cast(null as BOOLEAN) as is_usd
+            cast(null as BOOLEAN) as is_usd,
+            cast(true as BOOLEAN) as accuracy_is_usable,
+            cast(null as VARCHAR) as accuracy_issue_code,
+            cast(null as VARCHAR) as accuracy_issue_details
         where false
     - input: ref('stg_silver_filing_metadata')
       format: sql
@@ -1172,7 +1179,7 @@ unit_tests:
   - name: typed_empty_int_income_metric_selection_issues
     model: int_income_metric_selection_issues
     given:
-    - input: ref('int_financial_metric_candidates')
+    - input: ref('int_financial_metric_candidate_accuracy')
       format: sql
       rows: |
         select
@@ -1205,7 +1212,10 @@ unit_tests:
             cast(null as BIGINT) as dimension_count,
             cast(null as BOOLEAN) as has_dimensions,
             cast(null as BIGINT) as duration_days,
-            cast(null as BOOLEAN) as is_usd
+            cast(null as BOOLEAN) as is_usd,
+            cast(true as BOOLEAN) as accuracy_is_usable,
+            cast(null as VARCHAR) as accuracy_issue_code,
+            cast(null as VARCHAR) as accuracy_issue_details
         where false
     - input: ref('stg_silver_filing_metadata')
       format: sql

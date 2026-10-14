@@ -1,4 +1,4 @@
--- Compare complete mapped records in both directions, retaining repeated issue occurrences.
+-- Check the full issue records in both directions; repeated issues must stay repeated.
 with expected as (
     select
         r.cik,

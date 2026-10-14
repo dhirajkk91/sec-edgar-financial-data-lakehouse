@@ -1,3 +1,5 @@
+-- Label each selected reported row as annual, quarter, year-to-date or instant.
+-- Keep rows we cannot classify, with the reason; do not guess the fiscal year from the calendar.
 with selected as (
     select
         metric_code, concept_priority, cik, accession_number,
@@ -118,7 +120,7 @@ with selected as (
         fiscal_year_focus, fiscal_period_focus, document_period_end_date, fiscal_metadata_status,
         fiscal_extraction_version, fiscal_metadata_run_id, fiscal_submissions_sha256, inclusive_days,
         fiscal_lineage_detail,
-        -- First applicable issue wins. A valid instant needs no resolved fiscal focus.
+        -- Use the first failing check. An instant needs a report date, not a fiscal focus.
         case
             when not valid_reported_period then 'INVALID_REPORTED_PERIOD'
             when has_fiscal_metadata and fiscal_lineage_conflicts
@@ -165,7 +167,7 @@ with selected as (
         end::varchar as provisional_classification
     from checked
 ), distinct_periods as (
-    -- Deduplicate period identities for the competition count, never financial rows.
+    -- Count different periods, not repeated facts; the financial rows stay intact.
     select distinct
         cik, accession_number, metric_code, provisional_classification,
         period_kind, period_start, period_end, period_instant,
