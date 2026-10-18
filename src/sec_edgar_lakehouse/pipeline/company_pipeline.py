@@ -9,7 +9,7 @@ from collections.abc import Collection
 from dataclasses import dataclass
 from datetime import date
 from pathlib import Path
-from typing import Literal
+from typing import Any, Literal
 
 import httpx
 
@@ -74,6 +74,9 @@ def run_company_pipeline(
     limit: int | None = None,
     client: httpx.Client | None = None,
     request_interval_seconds: float = 0.5,
+    include_history: bool = False,
+    history_since: date | None = None,
+    selected_accessions: Collection[str] | None = None,
 ) -> CompanyPipelineResult:
     """Process the company, then refresh the catalog for the whole Silver root.
 
@@ -84,6 +87,13 @@ def run_company_pipeline(
     if not isinstance(database_path, Path):
         raise CompanyPipelineError("Database path must be a pathlib.Path value")
 
+    extra: dict[str, Any] = {}
+    if include_history:
+        extra["include_history"] = True
+    if history_since is not None:
+        extra["history_since"] = history_since
+    if selected_accessions is not None:
+        extra["selected_accessions"] = selected_accessions
     processing = process_company_filings(
         cik,
         user_agent=user_agent,
@@ -96,6 +106,7 @@ def run_company_pipeline(
         limit=limit,
         client=client,
         request_interval_seconds=request_interval_seconds,
+        **extra,
     )
     if processing.usable_count == 0:
         return CompanyPipelineResult(

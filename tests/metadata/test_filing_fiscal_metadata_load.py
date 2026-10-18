@@ -33,7 +33,7 @@ def test_load_cli_insert_rerun_and_status(
             str(paths[2].resolve()),
             "0000320193-24-000123",
             "SHA-256:",
-            "Extraction version: 2",
+            "Extraction version: 3",
             "Fiscal year: 2024",
             "Occurrences:",
             "Issues:",

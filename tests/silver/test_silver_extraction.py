@@ -119,6 +119,7 @@ def fixture(
     source_complete: bool = True,
     parser_ready: bool = True,
     document_name: str = DOCUMENT_NAME,
+    description: str = "EXTRACTED XBRL INSTANCE DOCUMENT",
 ) -> tuple[Path, Path]:
     """Save the XML and discovery bytes with matching manifest sizes and hashes.
 
@@ -143,7 +144,7 @@ def fixture(
             {
                 "section": "data-file",
                 "document_name": document_name,
-                "description": "EXTRACTED XBRL INSTANCE DOCUMENT",
+                "description": description,
                 "sequence": "5",
                 "document_type": "XML",
                 "required_for_source": False,
@@ -223,6 +224,21 @@ def test_extracts_valid_instant_and_duration_facts(tmp_path: Path) -> None:
     assert duration.unit_expression == f"{{{ISO4217}}}USD"
     assert "context" in duration.context_xml
     assert "unit" in duration.unit_xml
+
+
+def test_standard_xbrl_instance_description_is_usable(tmp_path: Path) -> None:
+    xml = xbrl(
+        instant_context(),
+        usd_unit(),
+        '<us-gaap:Assets contextRef="instant" unitRef="USD">42</us-gaap:Assets>',
+    )
+    directory, manifest = fixture(tmp_path, xml, description="XBRL INSTANCE DOCUMENT")
+
+    result = extract_filing_facts(directory, manifest)
+
+    assert result.status == "COMPLETE"
+    assert result.accepted_count == 1
+    assert result.accepted_facts[0].value_decimal == Decimal(42)
 
 
 @pytest.mark.parametrize("codec,declaration,bom", XML_ENCODINGS)

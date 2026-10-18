@@ -5,4 +5,4 @@ left join {{ ref('stg_silver_active_filings') }} as a
     and m.accession_number = a.accession_number
     and m.source_document_name = a.source_document_name
     and m.source_sha256 = a.source_sha256
-where a.cik is null or m.extraction_version not in ('1', '2')
+where a.cik is null or m.extraction_version not in ('1', '2', '3')

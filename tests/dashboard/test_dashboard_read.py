@@ -584,11 +584,20 @@ def test_transaction_bound_filters_and_connection_cleanup(
     path = populated_database(tmp_path / "dashboard.duckdb")
     before = path.read_bytes()
     real_connect = duckdb.connect
-    tracked = TrackedConnection(real_connect(str(path), read_only=True), error)
+    settings: dict[str, str | bool | int | float | list[str]] = {
+        "threads": 1,
+        "memory_limit": "4GB",
+        "preserve_insertion_order": True,
+    }
+    tracked = TrackedConnection(
+        real_connect(str(path), read_only=True, config=settings), error
+    )
     calls = []
 
-    def connect(database: str, *, read_only: bool) -> TrackedConnection:
-        calls.append((database, read_only))
+    def connect(
+        database: str, *, read_only: bool, config: dict[str, object]
+    ) -> TrackedConnection:
+        calls.append((database, read_only, config))
         return tracked
 
     monkeypatch.setattr(dashboard_read.duckdb, "connect", connect)
@@ -606,7 +615,7 @@ def test_transaction_bound_filters_and_connection_cleanup(
                 database_path=path, cik="34", accession_number=ACCESSION_B
             )
         assert not any(sql == "COMMIT" for sql, _ in tracked.queries)
-    assert calls == [(str(path.resolve()), True)] and tracked.closed
+    assert calls == [(str(path.resolve()), True, settings)] and tracked.closed
     assert tracked.queries[0][0] == "BEGIN TRANSACTION"
     filtered = [
         (sql, params) for sql, params in tracked.queries if "WHERE cik = ?" in sql

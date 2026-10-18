@@ -40,6 +40,9 @@ _SECTION_DIRECTORIES = {
     ArtifactSection.DATA_FILE: "sec-derived",
 }
 _PRIMARY_DOCUMENT_TYPES = frozenset({"10-K", "10-Q", "10-K/A", "10-Q/A"})
+_INSTANCE_DESCRIPTIONS = frozenset(
+    {"extracted xbrl instance document", "xbrl instance document"}
+)
 
 
 class PublicationError(Exception):
@@ -502,14 +505,13 @@ def _parser_readiness(
     candidates = [
         file.document_name
         for file in discovery.data_files
-        if (file.description or "").strip().casefold()
-        == "extracted xbrl instance document"
+        if (file.description or "").strip().casefold() in _INSTANCE_DESCRIPTIONS
         and file.document_name.lower().endswith(".xml")
     ]
     if not candidates:
-        return False, "No EXTRACTED XBRL INSTANCE DOCUMENT XML file was listed"
+        return False, "No XBRL instance document XML file was listed"
     if len(candidates) != 1:
-        return False, "Multiple EXTRACTED XBRL INSTANCE DOCUMENT XML files were listed"
+        return False, "Multiple XBRL instance document XML files were listed"
     name = candidates[0]
     record = next(
         (

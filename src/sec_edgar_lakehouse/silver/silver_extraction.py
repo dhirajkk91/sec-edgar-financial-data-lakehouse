@@ -39,6 +39,9 @@ _UNIT_TAG = f"{{{_XBRLI}}}unit"
 _EXPLICIT_MEMBER_TAG = f"{{{_XBRLDI}}}explicitMember"
 _TYPED_MEMBER_TAG = f"{{{_XBRLDI}}}typedMember"
 _NIL_ATTRIBUTE = f"{{{_XSI}}}nil"
+_INSTANCE_DESCRIPTIONS = frozenset(
+    {"extracted xbrl instance document", "xbrl instance document"}
+)
 _SHA256_PATTERN = re.compile(r"[0-9a-f]{64}\Z")
 _DATE_PATTERN = re.compile(r"[0-9]{4}-[0-9]{2}-[0-9]{2}\Z")
 _NUMERIC_PATTERN = re.compile(
@@ -226,13 +229,13 @@ def _verify_bronze_input(filing_directory: Path, manifest_path: Path) -> _Verifi
         if record.get("section") == "data-file"
         and isinstance(record.get("description"), str)
         and cast(str, record["description"]).strip().casefold()
-        == "extracted xbrl instance document"
+        in _INSTANCE_DESCRIPTIONS
         and isinstance(record.get("document_name"), str)
         and cast(str, record["document_name"]).lower().endswith(".xml")
     ]
     if len(candidates) != 1:
         raise SilverInputError(
-            "Discovery must contain exactly one EXTRACTED XBRL INSTANCE DOCUMENT XML "
+            "Discovery must contain exactly one XBRL instance document XML "
             f"entry; found {len(candidates)}"
         )
     document_name = cast(str, candidates[0]["document_name"])

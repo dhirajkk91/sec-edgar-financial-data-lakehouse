@@ -410,8 +410,29 @@ def test_entrypoint_resolves_paths_against_repository(
     monkeypatch.setenv("SEC_EDGAR_DUCKDB_PATH", configured)
     result = AppTest.from_file(str(ROOT / "dashboard_app.py")).run()
     assert not result.exception
-    expected = ROOT / (configured.strip() or "data/query/sec_edgar.duckdb")
+    current = ROOT / "data/dashboard-current.duckdb"
+    default = current if current.is_symlink() else ROOT / "data/query/sec_edgar.duckdb"
+    expected = ROOT / configured.strip() if configured.strip() else default
     assert calls == [expected.resolve()]
+
+
+def test_entrypoint_prefers_local_dashboard_link_but_explicit_path_wins(
+    tmp_path: Path,
+) -> None:
+    from dashboard_app import _database_path
+
+    original = tmp_path / "data/query/sec_edgar.duckdb"
+    original.parent.mkdir(parents=True)
+    original.touch()
+    assert _database_path(tmp_path, "  ") == original.resolve()
+
+    cohort = tmp_path / "data/cohort/query/sec_edgar.duckdb"
+    cohort.parent.mkdir(parents=True)
+    cohort.touch()
+    current = tmp_path / "data/dashboard-current.duckdb"
+    current.symlink_to("cohort/query/sec_edgar.duckdb")
+    assert _database_path(tmp_path, "") == cohort.resolve()
+    assert _database_path(tmp_path, "data/query/sec_edgar.duckdb") == original.resolve()
 
 
 def test_core_imports_and_inspector_without_streamlit() -> None:

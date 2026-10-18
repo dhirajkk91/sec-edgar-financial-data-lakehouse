@@ -12,7 +12,7 @@ from dataclasses import dataclass
 from datetime import UTC, date, datetime
 from pathlib import Path
 from time import monotonic, sleep
-from typing import Literal
+from typing import Any, Literal
 
 import httpx
 
@@ -35,7 +35,7 @@ from sec_edgar_lakehouse.bronze.filing_ingestion import (
 from sec_edgar_lakehouse.bronze.filing_inventory import InventoryError
 from sec_edgar_lakehouse.bronze.filing_publication import PublicationError
 from sec_edgar_lakehouse.bronze.filing_request import RequestPacer
-from sec_edgar_lakehouse.filing_reference import _normalize_cik
+from sec_edgar_lakehouse.filing_reference import FilingReference, _normalize_cik
 from sec_edgar_lakehouse.silver.silver_extraction import (
     SilverExtractionError,
     SilverInputError,
@@ -52,6 +52,10 @@ ProcessingStatus = Literal["COMPLETE", "PARTIAL", "FAILED"]
 
 class CompanyProcessingError(Exception):
     """Coordinator input or company discovery prevented a processable run."""
+
+    def __init__(self, message: str, *, stop_run: bool = False) -> None:
+        super().__init__(message)
+        self.stop_run = stop_run
 
 
 class _BronzeResolutionError(Exception):
@@ -85,6 +89,7 @@ class CompanyProcessingResult:
     started_at: datetime
     completed_at: datetime
     filing_results: tuple[CompanyFilingProcessResult, ...]
+    terminal_sec_block: bool = False
 
     @property
     def selected_count(self) -> int:
@@ -139,6 +144,9 @@ def process_company_filings(
     limit: int | None = None,
     client: httpx.Client | None = None,
     request_interval_seconds: float = 0.5,
+    include_history: bool = False,
+    history_since: date | None = None,
+    selected_accessions: Collection[str] | None = None,
 ) -> CompanyProcessingResult:
     """Find and process one company's selected recent filings, one at a time.
 
@@ -158,6 +166,9 @@ def process_company_filings(
         filed_on_or_before,
         limit,
         request_interval_seconds,
+        include_history,
+        history_since,
+        selected_accessions,
     )
     started_at = datetime.now(UTC)
     pacer = RequestPacer(
@@ -178,6 +189,9 @@ def process_company_filings(
                 owned_client,
                 pacer,
                 started_at,
+                include_history,
+                history_since,
+                selected_accessions,
             )
     return _process_with_client(
         cik,
@@ -192,6 +206,9 @@ def process_company_filings(
         client,
         pacer,
         started_at,
+        include_history,
+        history_since,
+        selected_accessions,
     )
 
 
@@ -206,12 +223,32 @@ def _validate_inputs(
     filed_on_or_before: date | None,
     limit: int | None,
     request_interval_seconds: float,
+    include_history: bool = False,
+    history_since: date | None = None,
+    selected_accessions: Collection[str] | None = None,
 ) -> None:
     """Check selection, paths, run IDs and pacing before making requests."""
     try:
         _normalize_cik(cik)
         _validate_user_agent(user_agent)
         _validate_selection_inputs(forms, filed_on_or_after, filed_on_or_before, limit)
+        if not isinstance(include_history, bool):
+            raise TypeError("include_history must be a boolean")
+        if history_since is not None and type(history_since) is not date:
+            raise TypeError("history_since must be a date")
+        if selected_accessions is not None:
+            if (
+                isinstance(selected_accessions, (str, bytes))
+                or not isinstance(selected_accessions, Collection)
+                or not selected_accessions
+            ):
+                raise TypeError("selected_accessions must be a non-empty collection")
+            checked = [
+                FilingReference(cik, accession).accession_number
+                for accession in selected_accessions
+            ]
+            if len(checked) != len(set(checked)):
+                raise ValueError("selected_accessions must be distinct")
         if not isinstance(bronze_directory, Path) or not isinstance(
             silver_directory, Path
         ):
@@ -250,11 +287,23 @@ def _process_with_client(
     client: httpx.Client,
     pacer: RequestPacer,
     started_at: datetime,
+    include_history: bool,
+    history_since: date | None,
+    selected_accessions: Collection[str] | None,
 ) -> CompanyProcessingResult:
     """Keep selection order and stop new filing work after a SEC stop condition."""
     try:
+        discovery_options: dict[str, Any] = {}
+        if include_history:
+            discovery_options["include_history"] = True
+        if history_since is not None:
+            discovery_options["history_since"] = history_since
         discovery = discover_company_filings(
-            cik, user_agent=user_agent, client=client, _pacer=pacer
+            cik,
+            user_agent=user_agent,
+            client=client,
+            _pacer=pacer,
+            **discovery_options,
         )
         selected = select_company_filings(
             discovery,
@@ -263,10 +312,26 @@ def _process_with_client(
             filed_on_or_before=filed_on_or_before,
             limit=limit,
         )
+        if selected_accessions is not None:
+            requested = set(selected_accessions)
+            selected = tuple(
+                filing
+                for filing in selected
+                if filing.reference.accession_number in requested
+            )
+            missing = requested - {
+                filing.reference.accession_number for filing in selected
+            }
+            if missing:
+                raise CompanyFilingsDiscoveryError(
+                    "Requested accessions are absent from the verified selection: "
+                    + ", ".join(sorted(missing))
+                )
     except CompanyFilingsDiscoveryError as exc:
-        raise CompanyProcessingError(str(exc)) from exc
+        raise CompanyProcessingError(str(exc), stop_run=exc.stop_run) from exc
 
     results: list[CompanyFilingProcessResult] = []
+    terminal_block = False
     for index, filing in enumerate(selected):
         result, terminal = _process_filing(
             filing,
@@ -280,6 +345,7 @@ def _process_with_client(
         results.append(result)
         # Keep the full selection in the result, even though the remaining SEC work must not start.
         if terminal:
+            terminal_block = True
             message = result.error_message or "SEC requested that the run stop"
             results.extend(
                 _not_attempted(remaining, message)
@@ -294,6 +360,7 @@ def _process_with_client(
         started_at,
         datetime.now(UTC),
         tuple(results),
+        terminal_block,
     )
 
 

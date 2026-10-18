@@ -35,7 +35,9 @@ _FIELDS = {
     "DocumentFiscalPeriodFocus": "fiscal_period_focus",
     "DocumentPeriodEndDate": "document_period_end_date",
 }
-_DEI = re.compile(r"http://xbrl\.sec\.gov/dei/[0-9]{4}(?:-[0-9]{2}-[0-9]{2})?")
+_DEI = re.compile(
+    r"http://xbrl\.sec\.gov/dei/(?:[0-9]{4}(?:-[0-9]{2}-[0-9]{2})?|2021q4|2022q4)"
+)
 _XBRLI = "http://www.xbrl.org/2003/instance"
 _NIL = "{http://www.w3.org/2001/XMLSchema-instance}nil"
 
@@ -381,7 +383,7 @@ def extract_filing_fiscal_metadata(
         report,
         run_id,
         checksum,
-        "2",
+        "3",
         "COMPLETE" if all(resolved.values()) and not issues else "PARTIAL",
         int(year) if year is not None else None,
         cast(FiscalPeriod | None, focus),

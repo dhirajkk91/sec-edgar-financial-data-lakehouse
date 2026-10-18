@@ -46,6 +46,7 @@ class CompanyRunResult:
     run_record_path: Path
     error_stage: str | None
     error_message: str | None
+    terminal_sec_block: bool = False
 
 
 def _available(path: Path) -> None:
@@ -97,10 +98,15 @@ def _verify_evidence(staging: Path, record: dict[str, Any]) -> None:
     expected = {"run.json"}
     if evidence is not None:
         expected.add("submissions.json")
+    history = record.get("history_evidence", [])
+    if history:
+        expected.add("history")
     entries = list(staging.iterdir())
     if {item.name for item in entries} != expected or any(
-        item.is_symlink() or not item.is_file() for item in entries
+        item.is_symlink() for item in entries
     ):
+        raise CompanyRunError("Unexpected staged run evidence paths")
+    if any(not (staging / name).is_file() for name in expected - {"history"}):
         raise CompanyRunError("Unexpected staged run evidence paths")
     if evidence is not None:
         content = (staging / "submissions.json").read_bytes()
@@ -109,6 +115,25 @@ def _verify_evidence(staging: Path, record: dict[str, Any]) -> None:
             or hashlib.sha256(content).hexdigest() != evidence["sha256"]
         ):
             raise CompanyRunError("Submissions evidence verification failed")
+    if history:
+        directory = staging / "history"
+        if (
+            not directory.is_dir()
+            or directory.is_symlink()
+            or {item.name for item in directory.iterdir()}
+            != {item["name"] for item in history}
+        ):
+            raise CompanyRunError("Unexpected staged history evidence paths")
+        for item in history:
+            path = directory / item["name"]
+            if path.is_symlink() or not path.is_file():
+                raise CompanyRunError("History evidence must be a regular file")
+            content = path.read_bytes()
+            if (
+                len(content) != item["size_bytes"]
+                or hashlib.sha256(content).hexdigest() != item["sha256"]
+            ):
+                raise CompanyRunError("History evidence verification failed")
     with (staging / "run.json").open(encoding="utf-8") as stream:
         stored = json.load(stream)
     if stored != record:
@@ -135,6 +160,26 @@ def _publish_evidence(
                 "sha256": hashlib.sha256(content).hexdigest(),
             }
             _write_file(staging / "submissions.json", content)
+            if discovery.history_listings:
+                history_directory = staging / "history"
+                history_directory.mkdir()
+                record["history_evidence"] = []
+                for listing in discovery.history_listings:
+                    history_content = listing.content
+                    name = listing.reference.name
+                    record["history_evidence"].append(
+                        {
+                            "name": name,
+                            "path": f"history/{name}",
+                            "url": listing.url,
+                            "retrieved_at": listing.retrieved_at.astimezone(
+                                UTC
+                            ).isoformat(),
+                            "size_bytes": len(history_content),
+                            "sha256": hashlib.sha256(history_content).hexdigest(),
+                        }
+                    )
+                    _write_file(history_directory / name, history_content)
         _write_file(
             staging / "run.json",
             (json.dumps(record, indent=2, ensure_ascii=False) + "\n").encode("utf-8"),
@@ -247,6 +292,9 @@ def execute_company_pipeline_run(
     limit: int | None = None,
     client: httpx.Client | None = None,
     request_interval_seconds: float = 0.5,
+    include_history: bool = False,
+    history_since: date | None = None,
+    selected_accessions: Collection[str] | None = None,
 ) -> CompanyRunResult:
     """Run the company pipeline and save a new record with its source response.
 
@@ -282,6 +330,14 @@ def execute_company_pipeline_run(
     started_at = datetime.now(UTC)
     pipeline_result = None
     error_stage = error_message = None
+    terminal_sec_block = False
+    extra: dict[str, Any] = {}
+    if include_history:
+        extra["include_history"] = True
+    if history_since is not None:
+        extra["history_since"] = history_since
+    if selected_accessions is not None:
+        extra["selected_accessions"] = selected_accessions
     try:
         pipeline_result = run_company_pipeline(
             cik,
@@ -296,14 +352,18 @@ def execute_company_pipeline_run(
             limit=limit,
             client=client,
             request_interval_seconds=request_interval_seconds,
+            **extra,
         )
     except (CompanyPipelineError, CompanyProcessingError) as exc:
         error_stage = (
             "PIPELINE" if isinstance(exc, CompanyPipelineError) else "PROCESSING"
         )
         error_message = _safe_error(str(exc), user_agent)
+        terminal_sec_block = isinstance(exc, CompanyProcessingError) and exc.stop_run
     completed_at = datetime.now(UTC)
     status = pipeline_result.status if pipeline_result else "FAILED"
+    if pipeline_result is not None:
+        terminal_sec_block = pipeline_result.processing.terminal_sec_block
     record = {
         "schema_version": "1",
         "run_id": processing_run_id,
@@ -316,6 +376,17 @@ def execute_company_pipeline_run(
             "filed_on_or_after": _iso_date(filed_on_or_after),
             "filed_on_or_before": _iso_date(filed_on_or_before),
             "limit": limit,
+            **({"include_history": True} if include_history else {}),
+            **(
+                {"history_since": history_since.isoformat()}
+                if history_since is not None
+                else {}
+            ),
+            **(
+                {"selected_accessions": sorted(selected_accessions)}
+                if selected_accessions is not None
+                else {}
+            ),
         },
         "submissions_evidence": None,
         "processing": _processing(pipeline_result, user_agent),
@@ -323,6 +394,7 @@ def execute_company_pipeline_run(
         "error": {"stage": error_stage, "message": error_message}
         if error_stage
         else None,
+        **({"terminal_sec_block": True} if terminal_sec_block else {}),
     }
     try:
         _prepare(run_directory, normalized)
@@ -336,4 +408,5 @@ def execute_company_pipeline_run(
         path / "run.json",
         error_stage,
         error_message,
+        terminal_sec_block,
     )

@@ -174,7 +174,7 @@ def test_complete_filing_requests_in_inventory_order_and_publishes(
     assert manifest["status"] == "COMPLETE"
     assert manifest["source_complete"] is True
     assert manifest["parser_ready"] is False
-    assert "No EXTRACTED" in manifest["parser_readiness_reason"]
+    assert "No XBRL instance" in manifest["parser_readiness_reason"]
     assert [file["status"] for file in manifest["files"]] == ["VERIFIED"] * 6
     assert [file["document_name"] for file in manifest["files"][-2:]] == [
         "filing-index.html",
@@ -210,6 +210,32 @@ def test_extracted_instance_makes_published_filing_parser_ready(tmp_path: Path) 
     ).read_bytes() == b"exhibit bytes"
     manifest = read_manifest(result.published.manifest_path)
     assert manifest["source_complete"] is True
+    assert manifest["parser_ready"] is True
+    assert "parser_readiness_reason" not in manifest
+
+
+def test_standard_xbrl_instance_makes_published_filing_parser_ready(
+    tmp_path: Path,
+) -> None:
+    # Older filings list the same parser input without the EXTRACTED prefix.
+    index = INDEX_WITH_EXTRACTED.replace(
+        b"EXTRACTED XBRL INSTANCE DOCUMENT", b"XBRL INSTANCE DOCUMENT"
+    )
+    requests: list[httpx.Request] = []
+    with mock_client(
+        requests, index_content=index, contents=CONTENTS_WITH_EXTRACTED
+    ) as client:
+        result = ingest_filing(
+            REFERENCE,
+            user_agent=USER_AGENT,
+            bronze_directory=tmp_path / "filings",
+            client=client,
+        )
+
+    assert result.status == "COMPLETE"
+    assert result.parser_ready is True
+    assert result.published is not None
+    manifest = read_manifest(result.published.manifest_path)
     assert manifest["parser_ready"] is True
     assert "parser_readiness_reason" not in manifest
 
@@ -374,7 +400,7 @@ def test_ambiguous_extracted_instances_leave_parser_unready(tmp_path: Path) -> N
     manifest = read_manifest(result.published.manifest_path)
     assert manifest["source_complete"] is True
     assert manifest["parser_ready"] is False
-    assert "Multiple EXTRACTED" in manifest["parser_readiness_reason"]
+    assert "Multiple XBRL instance" in manifest["parser_readiness_reason"]
 
 
 def test_required_content_failure_stops_before_parser_input(tmp_path: Path) -> None:

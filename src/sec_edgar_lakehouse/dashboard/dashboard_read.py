@@ -13,6 +13,14 @@ import duckdb
 
 from sec_edgar_lakehouse.filing_reference import FilingReference, _normalize_cik
 
+# Gold views can re-scan the cohort's Parquet files on each Streamlit rerun.
+# One worker keeps that read within the same local budget used for the build.
+_DUCKDB_READ_SETTINGS: dict[str, str | bool | int | float | list[str]] = {
+    "threads": 1,
+    "memory_limit": "4GB",
+    "preserve_insertion_order": True,
+}
+
 # Ordered projections from the Gold models and transform/models/properties.yml.
 _FILINGS_SCHEMA = (
     ("cik", "VARCHAR"),
@@ -234,7 +242,9 @@ def load_dashboard_snapshot(
             where += " AND accession_number = ?"
             parameters.append(accession_number)
     try:
-        connection = duckdb.connect(str(database), read_only=True)
+        connection = duckdb.connect(
+            str(database), read_only=True, config=_DUCKDB_READ_SETTINGS
+        )
         try:
             # Read all marts from one database snapshot so the page cannot mix separate refreshes.
             connection.execute("BEGIN TRANSACTION")

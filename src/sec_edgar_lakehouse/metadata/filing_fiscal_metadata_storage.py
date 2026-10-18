@@ -239,7 +239,7 @@ def load_filing_fiscal_metadata(
 ) -> FilingFiscalMetadataLoadResult:
     """Extract the fields, then insert or check the row in one transaction.
 
-    The database must exist and extraction version 2 is required. Identical
+    The database must exist and extraction version 3 is required. Identical
     evidence returns ALREADY_EXISTS without replacing the row. Conflicting
     fields or evidence raise FiscalMetadataLoadError and roll back this load.
     """
@@ -249,9 +249,9 @@ def load_filing_fiscal_metadata(
         )
     except (FiscalMetadataInputError, FiscalMetadataExtractionError) as exc:
         raise FiscalMetadataLoadError(f"Fiscal extraction failed: {exc}") from exc
-    if metadata.extraction_version != "2":
+    if metadata.extraction_version != "3":
         raise FiscalMetadataLoadError(
-            "Storage supports fiscal extraction version 2 only"
+            "Storage supports fiscal extraction version 3 only"
         )
     row = _row(metadata)
     try:

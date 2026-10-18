@@ -115,7 +115,7 @@ def test_valid_forms_and_read_only_evidence(
     )  # A report's calendar year is not its fiscal focus.
     assert result.fiscal_period_focus == focus
     assert result.document_period_end_date == date(2024, 9, 28)
-    assert result.extraction_version == "2"
+    assert result.extraction_version == "3"
     assert result.metadata_run_id == "metadata-run"
     assert result.submissions_sha256 == "a" * 64
     assert result.occurrences[0].raw_value == " 2023\n"
@@ -135,6 +135,27 @@ def test_valid_forms_and_read_only_evidence(
     assert isinstance(result.occurrences, tuple) and isinstance(result.issues, tuple)
 
 
+@pytest.mark.parametrize("version", ["2021q4", "2022q4"])
+def test_official_quarter_versioned_dei_namespaces(
+    tmp_path: Path, version: str
+) -> None:
+    namespace = f"http://xbrl.sec.gov/dei/{version}"
+    xml = xbrl(
+        duration_context("year", "2023-10-01"),
+        fact(CONCEPTS[0], "2024", namespace=namespace),
+        fact(CONCEPTS[1], "FY", namespace=namespace),
+        fact(CONCEPTS[2], "2024-09-28", namespace=namespace),
+    )
+    result = extract(make_fixture(tmp_path, xml))
+    assert result.status == "COMPLETE"
+    assert (
+        result.fiscal_year_focus,
+        result.fiscal_period_focus,
+        result.document_period_end_date,
+    ) == (2024, "FY", date(2024, 9, 28))
+    assert {item.concept_namespace for item in result.occurrences} == {namespace}
+
+
 def test_nested_period_date_is_not_normalized_for_fiscal_metadata(
     tmp_path: Path,
 ) -> None:
@@ -149,7 +170,7 @@ def test_nested_period_date_is_not_normalized_for_fiscal_metadata(
     result = extract(make_fixture(tmp_path, malformed))
 
     assert result.status == "PARTIAL"
-    assert result.extraction_version == "2"
+    assert result.extraction_version == "3"
     assert len(result.occurrences) == len(CONCEPTS)
     assert all(o.normalized_value is None for o in result.occurrences)
     assert all(o.period_end is None for o in result.occurrences)
