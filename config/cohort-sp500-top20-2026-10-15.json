@@ -1,0 +1,31 @@
+{
+  "schema_version": "1",
+  "selection_as_of": "2026-10-15",
+  "retrieved_on": "2026-10-16",
+  "filing_cutoff": "2026-10-15",
+  "ranking_method": "Distinct S&P 500 issuers by reported full market capitalization. The ranking source already groups Alphabet share classes; the IVV holdings source checks membership and share classes. Figures are rounded as shown by the ranking source, so do not treat them as exact valuations. IVV weights use float-adjusted market value and can produce a different order; this manifest follows the full-capitalization ranking.",
+  "ranking_url": "https://www.finhacker.cz/en/top-20-sp-500-companies-by-market-cap/",
+  "constituent_url": "https://www.ishares.com/us/products/239726/ishares-core-s-p-500-etf/latest-holdings.csv",
+  "issuers": [
+    {"rank": 1, "name": "NVIDIA", "tickers": ["NVDA"], "cik": "0001045810", "market_cap_reported": "5.245T"},
+    {"rank": 2, "name": "Apple", "tickers": ["AAPL"], "cik": "0000320193", "market_cap_reported": "4.996T"},
+    {"rank": 3, "name": "Alphabet", "tickers": ["GOOGL", "GOOG"], "cik": "0001652044", "market_cap_reported": "4.271T", "identity_note": "Class A and Class C are one SEC issuer and one cohort member."},
+    {"rank": 4, "name": "Microsoft", "tickers": ["MSFT"], "cik": "0000789019", "market_cap_reported": "4.006T"},
+    {"rank": 5, "name": "Amazon", "tickers": ["AMZN"], "cik": "0001018724", "market_cap_reported": "2.747T"},
+    {"rank": 6, "name": "Meta Platforms", "tickers": ["META"], "cik": "0001326801", "market_cap_reported": "1.877T"},
+    {"rank": 7, "name": "Broadcom", "tickers": ["AVGO"], "cik": "0001730168", "market_cap_reported": "1.644T"},
+    {"rank": 8, "name": "Tesla", "tickers": ["TSLA"], "cik": "0001318605", "market_cap_reported": "1.431T"},
+    {"rank": 9, "name": "Eli Lilly", "tickers": ["LLY"], "cik": "0000059478", "market_cap_reported": "1.178T"},
+    {"rank": 10, "name": "Berkshire Hathaway", "tickers": ["BRK.B"], "cik": "0001067983", "market_cap_reported": "1.129T"},
+    {"rank": 11, "name": "Micron Technology", "tickers": ["MU"], "cik": "0000723125", "market_cap_reported": "1.053T"},
+    {"rank": 12, "name": "Walmart", "tickers": ["WMT"], "cik": "0000104169", "market_cap_reported": "936.12B"},
+    {"rank": 13, "name": "Advanced Micro Devices", "tickers": ["AMD"], "cik": "0000002488", "market_cap_reported": "917.56B"},
+    {"rank": 14, "name": "JPMorgan Chase", "tickers": ["JPM"], "cik": "0000019617", "market_cap_reported": "891.03B"},
+    {"rank": 15, "name": "Visa", "tickers": ["V"], "cik": "0001403161", "market_cap_reported": "746.85B"},
+    {"rank": 16, "name": "Exxon Mobil", "tickers": ["XOM"], "cik": "0000034088", "market_cap_reported": "718.28B"},
+    {"rank": 17, "name": "Johnson & Johnson", "tickers": ["JNJ"], "cik": "0000200406", "market_cap_reported": "609.96B"},
+    {"rank": 18, "name": "Mastercard", "tickers": ["MA"], "cik": "0001141391", "market_cap_reported": "541.13B"},
+    {"rank": 19, "name": "AbbVie", "tickers": ["ABBV"], "cik": "0001551152", "market_cap_reported": "500.79B"},
+    {"rank": 20, "name": "Palantir Technologies", "tickers": ["PLTR"], "cik": "0001321655", "market_cap_reported": "481.78B"}
+  ]
+}

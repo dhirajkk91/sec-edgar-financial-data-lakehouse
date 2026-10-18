@@ -9,7 +9,7 @@ import json
 import re
 import unicodedata
 from collections.abc import Collection
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from datetime import UTC, date, datetime
 from pathlib import PureWindowsPath
 from typing import Any
@@ -29,6 +29,10 @@ from sec_edgar_lakehouse.filing_reference import FilingReference, _normalize_cik
 class CompanyFilingsDiscoveryError(Exception):
     """Company discovery or selection received unusable input or an SEC response."""
 
+    def __init__(self, message: str, *, stop_run: bool = False) -> None:
+        super().__init__(message)
+        self.stop_run = stop_run
+
 
 @dataclass(frozen=True, slots=True)
 class CompanyFiling:
@@ -39,6 +43,29 @@ class CompanyFiling:
     filing_date: date
     report_date: date | None
     primary_document: str
+    source_listing_name: str | None = None
+
+
+@dataclass(frozen=True, slots=True)
+class HistoryFileReference:
+    """A history file named by the company's main SEC submissions response."""
+
+    name: str
+    filing_count: int
+    filing_from: date
+    filing_to: date
+
+
+@dataclass(frozen=True, slots=True)
+class HistoryListing:
+    """Verified older listing bytes and the filings they supplied."""
+
+    reference: HistoryFileReference
+    filings: tuple[CompanyFiling, ...]
+    url: str
+    retrieved_at: datetime
+    content: bytes = field(repr=False)
+    range_mismatches: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True, slots=True)
@@ -53,6 +80,20 @@ class CompanyFilingsDiscovery:
     submissions_url: str
     retrieved_at: datetime
     submissions_content: bytes = field(repr=False)
+    history_files: tuple[HistoryFileReference, ...] = ()
+    history_listings: tuple[HistoryListing, ...] = ()
+
+    @property
+    def all_filings(self) -> tuple[CompanyFiling, ...]:
+        """Use the recent copy of an identical overlap; conflicts fail during discovery."""
+        seen = {filing.reference.accession_number for filing in self.recent_filings}
+        older = []
+        for listing in self.history_listings:
+            for filing in listing.filings:
+                if filing.reference.accession_number not in seen:
+                    older.append(filing)
+                    seen.add(filing.reference.accession_number)
+        return self.recent_filings + tuple(older)
 
 
 def discover_company_filings(
@@ -61,10 +102,12 @@ def discover_company_filings(
     user_agent: str,
     client: httpx.Client | None = None,
     _pacer: filing_request.RequestPacer | None = None,
+    include_history: bool = False,
+    history_since: date | None = None,
 ) -> CompanyFilingsDiscovery:
     """Fetch the company listing and keep the response exactly as received.
 
-    Only filings.recent is read; this does not fetch older listing files.
+    Older listing files are fetched only when include_history is true.
     A supplied HTTP client stays open for its caller. Bad inputs or an invalid
     response raise CompanyFilingsDiscoveryError. Nothing is written to disk.
     """
@@ -77,19 +120,90 @@ def discover_company_filings(
             if _pacer is None
             else _pacer
         )
+        if not isinstance(include_history, bool):
+            raise TypeError("include_history must be a boolean")
+        if history_since is not None and type(history_since) is not date:
+            raise TypeError("history_since must be a date")
         if client is None:
             with httpx.Client() as owned:
-                content, _ = _fetch_content(
-                    owned, url, user_agent, pacer, subject="Company submissions"
+                return _discover_with_client(
+                    normalized,
+                    url,
+                    user_agent,
+                    owned,
+                    pacer,
+                    include_history,
+                    history_since,
                 )
-        else:
-            content, _ = _fetch_content(
-                client, url, user_agent, pacer, subject="Company submissions"
-            )
-        retrieved_at = datetime.now(UTC)
-        return _parse(content, normalized, url, retrieved_at)
+        return _discover_with_client(
+            normalized, url, user_agent, client, pacer, include_history, history_since
+        )
     except (TypeError, ValueError, DiscoveryError) as exc:
-        raise CompanyFilingsDiscoveryError(str(exc)) from exc
+        raise CompanyFilingsDiscoveryError(
+            str(exc), stop_run=isinstance(exc, DiscoveryError) and exc.stop_run
+        ) from exc
+
+
+def _discover_with_client(
+    cik: str,
+    url: str,
+    user_agent: str,
+    client: httpx.Client,
+    pacer: filing_request.RequestPacer,
+    include_history: bool,
+    history_since: date | None,
+) -> CompanyFilingsDiscovery:
+    content, _ = _fetch_content(
+        client, url, user_agent, pacer, subject="Company submissions"
+    )
+    discovery = _parse(
+        content, cik, url, datetime.now(UTC), include_history=include_history
+    )
+    if not include_history:
+        return discovery
+    listings: list[HistoryListing] = []
+    seen = {
+        filing.reference.accession_number: filing for filing in discovery.recent_filings
+    }
+    for reference in discovery.history_files:
+        if history_since is not None and reference.filing_to < history_since:
+            continue
+        history_url = f"https://data.sec.gov/submissions/{reference.name}"
+        history_content, _ = _fetch_content(
+            client,
+            history_url,
+            user_agent,
+            pacer,
+            subject="Company submissions history",
+        )
+        listing = _parse_history(
+            history_content,
+            cik,
+            reference,
+            history_url,
+            datetime.now(UTC),
+            history_since=history_since,
+        )
+        for filing in listing.filings:
+            accession = filing.reference.accession_number
+            earlier = seen.get(accession)
+            if earlier is not None and (
+                earlier.form,
+                earlier.filing_date,
+                earlier.report_date,
+                earlier.primary_document,
+            ) != (
+                filing.form,
+                filing.filing_date,
+                filing.report_date,
+                filing.primary_document,
+            ):
+                raise ValueError(
+                    f"Conflicting accession across submissions listings: {accession}"
+                )
+            seen[accession] = filing
+        listings.append(listing)
+    return replace(discovery, history_listings=tuple(listings))
 
 
 def _object(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
@@ -160,7 +274,12 @@ def _document_path(value: object) -> str:
 
 
 def _parse(
-    content: bytes, cik: str, url: str, retrieved_at: datetime
+    content: bytes,
+    cik: str,
+    url: str,
+    retrieved_at: datetime,
+    *,
+    include_history: bool = False,
 ) -> CompanyFilingsDiscovery:
     """Check the company ID and matching array lengths, then read the recent filings."""
     data = json.loads(
@@ -184,33 +303,138 @@ def _parse(
     recent = filings.get("recent") if isinstance(filings, dict) else None
     if not isinstance(recent, dict):
         raise TypeError("Missing or invalid filings.recent")
+    assert isinstance(filings, dict)
+    rows = _parse_rows(recent, cik, "filings.recent", None)
+    history_files = (
+        _parse_history_references(filings.get("files", []), cik)
+        if include_history
+        else ()
+    )
+    return CompanyFilingsDiscovery(
+        cik,
+        name,
+        tickers,
+        exchanges,
+        rows,
+        url,
+        retrieved_at,
+        content,
+        history_files,
+    )
+
+
+def _parse_history_references(
+    value: object, cik: str
+) -> tuple[HistoryFileReference, ...]:
+    if not isinstance(value, list):
+        raise TypeError("filings.files must be an array")
+    references = []
+    seen = set()
+    for item in value:
+        if not isinstance(item, dict):
+            raise TypeError("Each filings.files entry must be an object")
+        name = _text(item.get("name"), "History file name")
+        if (
+            re.fullmatch(rf"CIK{cik}-submissions-[0-9]{{3}}\.json", name) is None
+            or name in seen
+        ):
+            raise ValueError(f"Invalid or duplicate history file name: {name!r}")
+        seen.add(name)
+        count = item.get("filingCount")
+        if type(count) is not int or count < 0:
+            raise ValueError("History filingCount must be a non-negative integer")
+        first = _date(item.get("filingFrom"), "filingFrom")
+        last = _date(item.get("filingTo"), "filingTo")
+        if first > last:
+            raise ValueError("History filingFrom must not be after filingTo")
+        references.append(HistoryFileReference(name, count, first, last))
+    return tuple(references)
+
+
+def _parse_rows(
+    data: dict[str, Any],
+    cik: str,
+    location: str,
+    source_listing_name: str | None,
+    history_since: date | None = None,
+) -> tuple[CompanyFiling, ...]:
     columns = ("accessionNumber", "filingDate", "reportDate", "form", "primaryDocument")
     for column in columns:
-        if not isinstance(recent.get(column), list):
-            raise TypeError(f"filings.recent.{column} must be an array")
-    # These are parallel arrays. Unequal lengths could attach one filing's fields to another.
-    if len({len(recent[column]) for column in columns}) != 1:
-        raise ValueError("Required recent columns must have equal lengths")
+        if not isinstance(data.get(column), list):
+            raise TypeError(f"{location}.{column} must be an array")
+    # Unequal parallel arrays could attach another filing's date or document to an accession.
+    if len({len(data[column]) for column in columns}) != 1:
+        raise ValueError(f"Required {location} columns must have equal lengths")
     rows = []
     seen = set()
     for accession, filed, reported, form, document in zip(
-        *(recent[c] for c in columns), strict=True
+        *(data[c] for c in columns), strict=True
     ):
         reference = FilingReference(cik, accession)
         if accession in seen:
             raise ValueError(f"Duplicate accession number: {accession}")
         seen.add(accession)
+        filing_date = _date(filed, "filingDate")
+        report_date = None if reported == "" else _date(reported, "reportDate")
+        filing_form = _text(form, "form")
+        # Old SEC rows can have no primary document. They cannot be selected,
+        # but a later, in-scope financial row still needs a safe document path.
+        if (
+            document == ""
+            and source_listing_name is not None
+            and (
+                filing_form not in {"10-K", "10-Q"}
+                or (history_since is not None and filing_date < history_since)
+            )
+        ):
+            continue
+        primary_document = _document_path(document)
+        if history_since is not None and filing_date < history_since:
+            continue
         rows.append(
             CompanyFiling(
                 reference,
-                _text(form, "form"),
-                _date(filed, "filingDate"),
-                None if reported == "" else _date(reported, "reportDate"),
-                _document_path(document),
+                filing_form,
+                filing_date,
+                report_date,
+                primary_document,
+                source_listing_name,
             )
         )
-    return CompanyFilingsDiscovery(
-        cik, name, tickers, exchanges, tuple(rows), url, retrieved_at, content
+    return tuple(rows)
+
+
+def _parse_history(
+    content: bytes,
+    cik: str,
+    reference: HistoryFileReference,
+    url: str,
+    retrieved_at: datetime,
+    *,
+    history_since: date | None = None,
+) -> HistoryListing:
+    """Bind an older response to its canonical manifest entry and validate every row."""
+    data = json.loads(
+        content, object_pairs_hook=_object, parse_constant=_invalid_constant
+    )
+    if not isinstance(data, dict):
+        raise TypeError("History submissions JSON must be an object")
+    if "cik" in data and _normalize_cik(data["cik"]) != cik:
+        raise ValueError("Requested and returned history CIK do not match")
+    rows = _parse_rows(data, cik, reference.name, reference.name, history_since)
+    if len(data["accessionNumber"]) != reference.filing_count:
+        raise ValueError(
+            f"History filing count differs from manifest: {reference.name}"
+        )
+    all_dates = tuple(_date(value, "filingDate") for value in data["filingDate"])
+    mismatches = []
+    for accession, filed in zip(data["accessionNumber"], all_dates, strict=True):
+        if filed < reference.filing_from or filed > reference.filing_to:
+            mismatches.append(str(accession))
+    if url != f"https://data.sec.gov/submissions/{reference.name}":
+        raise ValueError("History URL must match the named SEC listing")
+    return HistoryListing(
+        reference, rows, url, retrieved_at, content, tuple(mismatches)
     )
 
 
@@ -232,7 +456,7 @@ def select_company_filings(
     _validate_selection_inputs(forms, filed_on_or_after, filed_on_or_before, limit)
     matches = (
         f
-        for f in discovery.recent_filings
+        for f in discovery.all_filings
         if f.form in forms
         and (filed_on_or_after is None or f.filing_date >= filed_on_or_after)
         and (filed_on_or_before is None or f.filing_date <= filed_on_or_before)

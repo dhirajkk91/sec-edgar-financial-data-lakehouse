@@ -116,20 +116,20 @@ def test_new_extraction_version_keeps_historical_evidence(
     paths = make_fixture(tmp_path, document())
     current = load(paths)
     assert current.outcome == "INSERTED"
-    assert current.metadata.extraction_version == "2"
+    assert current.metadata.extraction_version == "3"
     with duckdb.connect(str(paths[2])) as connection:
         connection.execute(
             "INSERT INTO silver.filing_fiscal_metadata "
             "SELECT * REPLACE ('1' AS extraction_version) "
-            "FROM silver.filing_fiscal_metadata WHERE extraction_version = '2'"
+            "FROM silver.filing_fiscal_metadata WHERE extraction_version = '3'"
         )
     before = rows(paths[2])
-    assert [row[4] for row in before] == ["1", "2"]
+    assert [row[4] for row in before] == ["1", "3"]
 
     result = load(paths)
 
     assert result.outcome == "ALREADY_EXISTS"
-    assert result.metadata.extraction_version == "2"
+    assert result.metadata.extraction_version == "3"
     assert rows(paths[2]) == before
 
 

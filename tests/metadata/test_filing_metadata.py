@@ -179,6 +179,70 @@ def test_identical_new_snapshot_preserves_first_provenance(tmp_path: Path) -> No
     assert rows(database) == stored
 
 
+def test_history_metadata_uses_verified_history_bytes_and_keeps_first_source(
+    tmp_path: Path,
+) -> None:
+    older_accession = "0001193125-24-000001"
+    name = f"CIK{CIK}-submissions-001.json"
+    run_path = evidence(tmp_path)
+    main = payload()
+    main["filings"]["files"] = [
+        {
+            "name": name,
+            "filingCount": 1,
+            "filingFrom": "2024-02-01",
+            "filingTo": "2024-02-01",
+        }
+    ]
+    main_content = json.dumps(main).encode()
+    run_path.with_name("submissions.json").write_bytes(main_content)
+    history_content = json.dumps(
+        {
+            "accessionNumber": [older_accession],
+            "filingDate": ["2024-02-01"],
+            "reportDate": ["2023-12-31"],
+            "form": ["10-K"],
+            "primaryDocument": ["annual.htm"],
+        }
+    ).encode()
+    history_path = run_path.parent / "history" / name
+    history_path.parent.mkdir()
+    history_path.write_bytes(history_content)
+    record = json.loads(run_path.read_text())
+    record["submissions_evidence"].update(
+        size_bytes=len(main_content),
+        sha256=hashlib.sha256(main_content).hexdigest(),
+    )
+    record["history_evidence"] = [
+        {
+            "name": name,
+            "path": f"history/{name}",
+            "url": f"https://data.sec.gov/submissions/{name}",
+            "retrieved_at": "2026-01-02T00:00:00+00:00",
+            "size_bytes": len(history_content),
+            "sha256": hashlib.sha256(history_content).hexdigest(),
+        }
+    ]
+    run_path.write_text(json.dumps(record))
+    database = catalog(tmp_path, (older_accession,))
+    first = load_filing_metadata(run_record_path=run_path, database_path=database)
+    assert (first.inserted_count, first.missing_count) == (1, 0)
+    stored = rows(database)
+    assert stored[0][8:13] == (
+        str(history_path.resolve()),
+        f"https://data.sec.gov/submissions/{name}",
+        datetime(2026, 1, 2, tzinfo=UTC),
+        len(history_content),
+        hashlib.sha256(history_content).hexdigest(),
+    )
+    rerun = load_filing_metadata(run_record_path=run_path, database_path=database)
+    assert rerun.already_existing_count == 1 and rows(database) == stored
+    history_path.write_bytes(b"tampered")
+    with pytest.raises(FilingMetadataError, match="History bytes"):
+        load_filing_metadata(run_record_path=run_path, database_path=database)
+    assert rows(database) == stored
+
+
 def test_missing_conflicts_valid_rows_and_ordering(tmp_path: Path) -> None:
     database = catalog(tmp_path, (ACCESSIONS[1],))
     first = evidence(tmp_path)

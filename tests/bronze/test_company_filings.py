@@ -76,6 +76,107 @@ def discover(data: Any = None, *, raw: bytes | None = None) -> CompanyFilingsDis
             assert not client.is_closed
 
 
+def history_payloads() -> tuple[dict[str, Any], dict[str, Any]]:
+    main = payload()
+    name = "CIK0001122304-submissions-001.json"
+    main["filings"]["files"] = [
+        {
+            "name": name,
+            "filingCount": 5,
+            "filingFrom": "2020-12-31",
+            "filingTo": "2025-01-01",
+        }
+    ]
+    older = {
+        "accessionNumber": [
+            main["filings"]["recent"]["accessionNumber"][0],
+            *(f"0001193125-{year % 100:02}-000001" for year in range(2021, 2025)),
+        ],
+        "filingDate": ["2025-01-01", *(f"{year}-02-01" for year in range(2021, 2025))],
+        "reportDate": ["", *(f"{year - 1}-12-31" for year in range(2021, 2025))],
+        "form": ["10-Q", *("10-K" for _ in range(4))],
+        "primaryDocument": [
+            "one.htm",
+            *(f"annual-{year}.htm" for year in range(2021, 2025)),
+        ],
+    }
+    return main, older
+
+
+def discover_with_history(
+    main: dict[str, Any], older: dict[str, Any]
+) -> CompanyFilingsDiscovery:
+    name = main["filings"]["files"][0]["name"]
+    urls = []
+
+    def respond(request: httpx.Request) -> httpx.Response:
+        urls.append(str(request.url))
+        return httpx.Response(
+            200,
+            json=main if str(request.url) == URL else older,
+        )
+
+    with httpx.Client(transport=httpx.MockTransport(respond)) as client:
+        result = discover_company_filings(
+            "1122304",
+            user_agent=USER_AGENT,
+            client=client,
+            _pacer=filing_request.RequestPacer(0),
+            include_history=True,
+        )
+    assert urls == [URL, f"https://data.sec.gov/submissions/{name}"]
+    return result
+
+
+def test_history_crosses_recent_boundary_and_keeps_source_identity() -> None:
+    main, older = history_payloads()
+    discovery = discover_with_history(main, older)
+    assert len(discovery.recent_filings) == 4
+    assert len(discovery.history_listings) == 1
+    assert len(discovery.all_filings) == 8  # Identical overlap uses the recent row.
+    selected = select_company_filings(discovery, forms={"10-K"})
+    assert len(selected) == 5
+    assert selected[0].source_listing_name is None
+    assert all(
+        item.source_listing_name == discovery.history_files[0].name
+        for item in selected[1:]
+    )
+    assert selected[-1].report_date == date(2020, 12, 31)
+
+
+@pytest.mark.parametrize("change", ["count", "length", "date", "cik", "path"])
+def test_malformed_history_is_rejected(change: str) -> None:
+    main, older = history_payloads()
+    if change == "count":
+        main["filings"]["files"][0]["filingCount"] = 4
+    elif change == "length":
+        older["form"].pop()
+    elif change == "date":
+        older["filingDate"][-1] = "2019-02-99"
+    elif change == "cik":
+        older["cik"] = "0000000001"
+    else:
+        main["filings"]["files"][0]["name"] = "../other.json"
+    with pytest.raises(CompanyFilingsDiscoveryError):
+        discover_with_history(main, older)
+
+
+def test_conflicting_overlap_is_rejected() -> None:
+    main, older = history_payloads()
+    older["primaryDocument"][0] = "different.htm"
+    with pytest.raises(CompanyFilingsDiscoveryError, match="Conflicting accession"):
+        discover_with_history(main, older)
+
+
+def test_history_manifest_range_mismatch_remains_visible() -> None:
+    main, older = history_payloads()
+    older["filingDate"][-1] = "2020-12-30"
+    discovery = discover_with_history(main, older)
+    assert discovery.history_listings[0].range_mismatches == (
+        older["accessionNumber"][-1],
+    )
+
+
 def test_request_models_metadata_and_no_writes(monkeypatch: pytest.MonkeyPatch) -> None:
     content = json.dumps(payload(), indent=2).encode() + b"\n"
     calls = []

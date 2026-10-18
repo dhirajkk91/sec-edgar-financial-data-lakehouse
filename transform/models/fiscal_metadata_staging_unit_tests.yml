@@ -32,7 +32,7 @@ unit_tests:
             issues_json: '[{"reason_code":"INVALID_FISCAL_FIELD"}]'
           - <<: *fiscal_row
             extraction_version: '3'
-            metadata_run_id: unsupported
+            metadata_run_id: corrected-latest
           - <<: *fiscal_row
             cik: '0000000002'
           - <<: *fiscal_row
@@ -57,12 +57,12 @@ unit_tests:
       - accession_number: 0000320193-24-000123
         source_document_name: filing.xml
         source_sha256: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
-        extraction_version: '2'
-        extraction_status: PARTIAL
-        fiscal_year_focus: null
-        metadata_run_id: corrected
+        extraction_version: '3'
+        extraction_status: COMPLETE
+        fiscal_year_focus: 2024
+        metadata_run_id: corrected-latest
         occurrences_json: '[]'
-        issues_json: '[{"reason_code":"INVALID_FISCAL_FIELD"}]'
+        issues_json: '[]'
       - accession_number: 0000320193-24-000125
         source_document_name: filing.xml
         source_sha256: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
