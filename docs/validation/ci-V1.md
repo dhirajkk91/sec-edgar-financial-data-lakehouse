@@ -22,7 +22,7 @@ The offline dbt script makes a temporary `profiles.yml` inside its work director
 | The package works without optional stacks | A fresh environment installs the wheel and locked core dependencies only. Reader/inspector, public imports, CLI help, timestamps, and exact values must work without dbt or Streamlit. |
 | A small runner can build within a stated budget | The temporary profile sets both dbt concurrency and DuckDB engine limits; diagnostics record the configured and observed settings. |
 
-This test design catches many cross-layer regressions without making CI depend on a changing SEC response or a developer's saved database. It does **not** prove that every real issuer's XBRL is supported or that the local single-writer architecture is safe under concurrent access. The [Apple/Microsoft acceptance report](multi-company-acceptance-V1.md) tests the separate real-data question.
+The fixtures catch cross-layer regressions without depending on a changing SEC response or a developer's saved database. They cannot measure coverage of every issuer's XBRL or concurrent database access. The [Apple/Microsoft acceptance run](multi-company-acceptance-V1.md) checks selected real filings separately.
 
 ## Local reproduction
 
@@ -42,7 +42,7 @@ env -u SEC_USER_AGENT uv run --no-sync python scripts/ci/validate_wheel.py --wor
 git diff --check
 ```
 
-The dbt script runs debug and one full build itself; do not wrap it in another build. Each script keeps failed-attempt diagnostics under its work directory. Hosted jobs upload logs and summaries for seven days. The socket guard is a pytest guard, not an OS network sandbox or a guarantee about arbitrary child processes.
+The dbt script runs debug and one full build. Each script keeps failed-attempt diagnostics under its work directory. Hosted jobs upload logs and summaries for seven days. The socket guard applies to pytest; arbitrary child processes are not covered by it.
 
 ## What has been checked locally
 
@@ -52,4 +52,4 @@ An independent Linux run found an out-of-memory failure in `fct_financial_metric
 
 The warnings are financial evidence, not failed dbt tests: Q2 lacks the Q1 cumulative inputs needed for standalone operating cash flow and capex; one Q2 cash candidate has invalid accuracy. Q3 cash flow/capex and four Q4 metrics derived from compatible inputs. EPS stayed reported and exact. Supporting occurrences and both derived inputs were checked back to Silver. No financial mapping or assertion was weakened for the resource correction.
 
-These are **local** results plus an independent Linux report. The corrected workflow also passed in [GitHub Actions on `main`](https://github.com/dhirajkk91/sec-edgar-financial-data-lakehouse/actions/runs/38617505874) at commit `769828c`: Python checks on Ubuntu and macOS, offline dbt validation on Ubuntu, and built-wheel validation on Ubuntu all completed successfully. The local evidence from the corrected attempt is under `/private/tmp/sec-edgar-ci-resources-0p77awg0/` on the original development machine; temporary files may not exist in another checkout. The versioned scripts and fixtures are the reproducible part of the check.
+The corrected workflow passed locally on macOS after the independent Linux failure, and later passed in [GitHub Actions on `main`](https://github.com/dhirajkk91/sec-edgar-financial-data-lakehouse/actions/runs/38617505874) at commit `769828c`: Python checks on Ubuntu and macOS, offline dbt validation on Ubuntu, and built-wheel validation on Ubuntu all completed successfully. The local attempt used a temporary directory, so its artifacts may not be available in another checkout; the scripts and fixtures remain in the repository.
