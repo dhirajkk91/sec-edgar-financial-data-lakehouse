@@ -1,8 +1,9 @@
 """After the catalog refresh, a company run still needs its filing and fiscal metadata.
 
-The filing loader runs once. Fiscal loading then follows the usable
-selected filings in order, keeping a failure on the filing it belongs to
-so later filings can still be handled.
+The filing loader runs once, then the company profile is saved from the same
+SEC response. Fiscal loading then follows the usable selected filings in
+order, keeping a failure on the filing it belongs to so later filings can
+still be handled.
 """
 
 from dataclasses import dataclass
@@ -10,6 +11,11 @@ from pathlib import Path
 from typing import Literal
 
 from sec_edgar_lakehouse.filing_reference import FilingReference, _normalize_cik
+from sec_edgar_lakehouse.metadata.company_profile import (
+    CompanyProfileError,
+    CompanyProfileLoadResult,
+    load_company_profile,
+)
 from sec_edgar_lakehouse.metadata.filing_fiscal_metadata_storage import (
     FilingFiscalMetadataLoadResult,
     FiscalMetadataLoadError,
@@ -59,6 +65,8 @@ class CompanyMetadataLoadResult:
     filing_metadata_error: str | None
     fiscal_results: tuple[CompanyFiscalMetadataResult, ...]
     skip_reason: str | None
+    company_profile_result: CompanyProfileLoadResult | None = None
+    company_profile_error: str | None = None
 
 
 def _validate_identity(company_run: CompanyRunResult, database: Path) -> None:
@@ -200,18 +208,37 @@ def load_company_run_metadata(
             ),
             None,
         )
+    # A missing company profile makes the stage PARTIAL; it does not block fiscal loading.
+    profile_result: CompanyProfileLoadResult | None = None
+    profile_error: str | None = None
+    try:
+        profile_result = load_company_profile(
+            run_record_path=company_run.run_record_path, database_path=database
+        )
+    except CompanyProfileError as exc:
+        profile_error = str(exc)
     fiscal_results = tuple(
         _load_fiscal(item, filing_metadata, database) for item in usable
     )
     status: Literal["COMPLETE", "PARTIAL", "FAILED"]
     if not any(item.status in {"COMPLETE", "PARTIAL"} for item in fiscal_results):
         status = "FAILED"
-    elif filing_metadata.status == "PARTIAL" or any(
-        item.status != "COMPLETE" for item in fiscal_results
+    elif (
+        filing_metadata.status == "PARTIAL"
+        or profile_error is not None
+        or any(item.status != "COMPLETE" for item in fiscal_results)
     ):
         status = "PARTIAL"
     else:
         status = "COMPLETE"
     return CompanyMetadataLoadResult(
-        status, company_run, database, filing_metadata, None, fiscal_results, None
+        status,
+        company_run,
+        database,
+        filing_metadata,
+        None,
+        fiscal_results,
+        None,
+        profile_result,
+        profile_error,
     )
