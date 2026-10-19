@@ -14,10 +14,11 @@ Bronze: verified source files and manifests
 Silver: XBRL occurrences, rejections, versioned Parquet
            │
            ▼
-DuckDB: active Silver catalog + verified filing/fiscal metadata
+DuckDB: active Silver catalog + verified filing/fiscal metadata + company profiles
            │
            ▼
-dbt Gold: selected metrics, filing summaries, quality issues
+dbt Gold: selected metrics, filing summaries, quality issues,
+          company dimension, company financials by period
            │
            ▼
 Read-only Streamlit filing explorer
@@ -31,7 +32,9 @@ The identities stay separate too. **CIK + accession** names a filing; the **docu
 
 Gold selects eight metrics: revenue, net income, diluted EPS, total assets, total liabilities, cash and equivalents, operating cash flow, and capital expenditures. A value carries its exact period, unit, source accession, and supporting XBRL occurrence IDs. Reported annual, quarter, year-to-date, and instant values stay separate. The supported derived quarters are cash flow/capex from compatible cumulative filings and Q4 revenue, net income, cash flow, and capex from annual minus Q3 year-to-date. EPS is never derived by subtraction.
 
-The three final Gold views are `gold.fct_financial_metrics`, `gold.dim_filings`, and `gold.metric_quality_issues`. A successful pipeline run can still have financial warnings. For example, a missing earlier 10-Q can prevent a standalone quarter from being calculated while the reported year-to-date value remains useful.
+The three core Gold views are `gold.fct_financial_metrics`, `gold.dim_filings`, and `gold.metric_quality_issues`. A successful pipeline run can still have financial warnings. For example, a missing earlier 10-Q can prevent a standalone quarter from being calculated while the reported year-to-date value remains useful.
+
+Two analysis tables sit on top of them. `gold.dim_companies` has one row per company: name, tickers, SIC industry, and sector. Every field comes from the SEC submissions response that Bronze discovery saved for the company run, checked against its recorded SHA-256 before loading; nothing is typed in or fetched from another source. *Sector* is the SEC's own industry office (`ownerOrg`, for example `06 Technology`), not a market classification such as GICS, so NVIDIA appears under Manufacturing and Visa under Trade & Services. An empty SEC field stays empty: Exxon's saved response had no tickers, so its `primary_ticker` is NULL. `gold.fct_company_financials` has one row per company and fiscal period (FY, Q1–Q4) with revenue, net income, diluted EPS, operating cash flow, capital expenditures, free cash flow, balance-sheet totals, margins, and year-over-year revenue growth side by side. It only rearranges rows from `gold.fct_financial_metrics`, so a value Gold withheld stays NULL there too. For the cohort it has 500 rows: 20 companies, five fiscal years, five periods each.
 
 Apple's FY 2025 filing reports 111,482,000,000 USD in operating cash flow; its Q3 filing reports 81,754,000,000 USD year to date. Bronze keeps both checked XML files, Silver assigns stable IDs to the two occurrences, and the catalog exposes their active versions. Gold subtracts the compatible Q3 value to produce 29,728,000,000 USD for Q4 and keeps both accessions and occurrence IDs on the derived row. Without that Q3 filing, the annual value would still be available, but Q4 would be a warning rather than a guessed number.
 
@@ -48,6 +51,8 @@ The [fixed 20-issuer cohort report](docs/validation/cohort-V1.md) is the larger 
 | Shared catalog | 601,103 accepted facts, 643,624 dimension rows, zero rejected facts |
 | Gold | 400 filing summaries, 4,015 metrics (3,349 reported; 666 derived), 487 issue rows |
 | Final dbt build | All 538 nodes passed, with no failed or skipped nodes |
+| Company layer (added after V1) | 25 saved run records loaded as 20 company profiles; 500 company-period rows; all 562 dbt nodes passed |
+| Gold stored as tables (added after V1) | Same 562 nodes, same data: dbt build time fell from 34m27s to 18.1s |
 
 The cohort's execution status remains `PARTIAL`: one JPMorgan accession disagreed with its history file's declared date range, and two appeared in different numbered history files when the company was processed than when the plan was saved. All three filings landed, but their planning-to-processing source trace needs review. Gold quality is separate: 190 filing summaries are `COMPLETE` and 210 `PARTIAL` under the current metric rules, with 364 error and 123 warning issue rows.
 
@@ -102,7 +107,7 @@ SEC_EDGAR_DUCKDB_PATH="$cohort_root/query/sec_edgar.duckdb" \
   uv run --no-sync streamlit run dashboard_app.py
 ```
 
-The plan is `cohort-plan.json`; progress, per-accession outcomes, fiscal checks, and dbt attempt paths are in `cohort-state.json`. `plan` freezes accessions but downloads no filing documents. Check its gaps before `execute`. A pilot can use `execute --ranks 2 3 --build-after-batch` and then `resume` for the rest. A complete-company rerun requires `resume --ranks <rank> --rerun-complete`; if only Gold needs another attempt, use `resume --build-after-batch`. The CLI exits 2 for `PARTIAL`, so inspect the state and dbt attempt rather than assuming a nonzero exit means no data landed. Keep readers closed during writes; the cohort runner creates a fresh dbt artifact directory for each build. The SEC contact value stays in the environment and out of both files. The recorded final build took 29m04.79s with one DuckDB engine thread and a configured 4GB limit.
+The plan is `cohort-plan.json`; progress, per-accession outcomes, fiscal checks, and dbt attempt paths are in `cohort-state.json`. `plan` freezes accessions but downloads no filing documents. Check its gaps before `execute`. A pilot can use `execute --ranks 2 3 --build-after-batch` and then `resume` for the rest. A complete-company rerun requires `resume --ranks <rank> --rerun-complete`; if only Gold needs another attempt, use `resume --build-after-batch`. The CLI exits 2 for `PARTIAL`, so inspect the state and dbt attempt rather than assuming a nonzero exit means no data landed. Keep readers closed during writes; the cohort runner creates a fresh dbt artifact directory for each build. The SEC contact value stays in the environment and out of both files. The recorded V1 build took 29m04.79s with one DuckDB engine thread and a configured 4GB limit, when every Gold model was a view. Gold models are now stored as tables (staging stays as views over Silver), and the same 562-node build takes about 18 seconds.
 
 In this checkout, `uv run streamlit run dashboard_app.py` opens the completed 20-issuer cohort through the ignored `data/dashboard-current.duckdb` link. The link points to the shared cohort database; the older `data/query/sec_edgar.duckdb` has not been replaced. Set `SEC_EDGAR_DUCKDB_PATH` as above to inspect a different database. In a fresh checkout without the local link, the launcher uses `data/query/sec_edgar.duckdb`.
 
@@ -128,6 +133,19 @@ silver/cik=<CIK>/accession=<id>/            active pointer, versions, attempt re
 query/sec_edgar.duckdb                      catalog, metadata, and Gold relations
 dbt/artifacts-<id>/                         build logs, manifest.json, run_results.json
 ```
+
+New company runs load the company profile automatically during the metadata stage. A database built before company profiles existed needs a one-time backfill from the saved run records, then a Gold rebuild:
+
+```sh
+uv run --no-sync python -m sec_edgar_lakehouse.metadata.company_profile_load \
+  --database "$cohort_root/query/sec_edgar.duckdb" \
+  --run-record "$cohort_root"/runs/cik=*/run_id=*/run.json
+uv run --no-sync python -m sec_edgar_lakehouse.pipeline.cohort_run resume \
+  --manifest "$manifest" --data-root "$cohort_root" \
+  --build-after-batch --dbt-timeout-seconds 43200
+```
+
+Loading the same saved response twice reports `ALREADY_EXISTS`; a newer response for the same company is kept as another snapshot, and `dim_companies` uses the newest one.
 
 Before using Gold, check the latest `cohort-state.json.dbt_attempts` status and its `target/run_results.json`. A DuckDB file may exist even after a failed dbt model or test. The database's Silver views contain absolute Parquet paths; moving only the `.duckdb` file is not a portable copy.
 
@@ -171,6 +189,16 @@ queries = {
         )
         ORDER BY accession_number
     """,
+    "five years of annual results by sector": """
+        SELECT c.sector, c.primary_ticker, c.company_name, f.fiscal_year,
+               f.revenue, f.net_income, f.free_cash_flow,
+               round(f.net_margin, 3) AS net_margin,
+               round(f.revenue_yoy_growth, 3) AS revenue_growth
+        FROM gold.fct_company_financials AS f
+        JOIN gold.dim_companies AS c USING (cik)
+        WHERE f.fiscal_period = 'FY'
+        ORDER BY c.sector, c.company_name, f.fiscal_year
+    """,
     "issue reasons": """
         SELECT issue_code, severity, count(*) AS occurrences
         FROM gold.metric_quality_issues
@@ -197,7 +225,7 @@ To trace a displayed metric, copy its CIK, accession, current `source_occurrence
 | --- | --- |
 | `src/sec_edgar_lakehouse/bronze/` | SEC discovery, paced requests, source validation, and canonical filing publication. |
 | `src/sec_edgar_lakehouse/silver/` | XBRL extraction, exact values, rejected facts, versioned Parquet, and active pointers. |
-| `src/sec_edgar_lakehouse/catalog/` and `src/sec_edgar_lakehouse/metadata/` | Active Silver DuckDB views and filing/fiscal metadata tied to source evidence. |
+| `src/sec_edgar_lakehouse/catalog/` and `src/sec_edgar_lakehouse/metadata/` | Active Silver DuckDB views, plus filing/fiscal metadata and company profiles tied to source evidence. |
 | `src/sec_edgar_lakehouse/pipeline/` | Company processing, stage gates, dbt invocation, and run summaries. |
 | `transform/` | dbt concept mappings, reported/derived metric SQL, marts, and tests. |
 | `src/sec_edgar_lakehouse/dashboard/` | Read-only Gold snapshot, CLI inspector, and filing explorer. |
