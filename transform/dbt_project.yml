@@ -9,7 +9,12 @@ test-paths: [tests]
 
 models:
   sec_edgar_gold:
-    +materialized: view
+    # Gold results are stored as tables so tests and the dashboard read computed rows
+    # instead of re-running the whole chain over Silver every time.
+    +materialized: table
+    staging:
+      # Staging stays a thin view over Silver Parquet; DuckDB keeps no second copy of facts.
+      +materialized: view
 
 seeds:
   sec_edgar_gold:
