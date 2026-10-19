@@ -20,7 +20,10 @@ from typing import Any, Literal
 import httpx
 
 from sec_edgar_lakehouse.filing_reference import _normalize_cik
-from sec_edgar_lakehouse.metadata.company_metadata import CompanyFiscalMetadataResult
+from sec_edgar_lakehouse.metadata.company_metadata import (
+    CompanyFiscalMetadataResult,
+    CompanyMetadataLoadResult,
+)
 from sec_edgar_lakehouse.pipeline.company_processing import (
     CompanyProcessingError,
     _validate_inputs,
@@ -243,11 +246,29 @@ def _metadata(result: EndToEndPipelineResult, user_agent: str) -> dict[str, Any]
         }
         if filing
         else None,
+        "company_profile": _company_profile(metadata, user_agent),
         "fiscal_results": [
             _fiscal(item, user_agent) for item in metadata.fiscal_results
         ]
         if metadata
         else None,
+    }
+
+
+def _company_profile(
+    metadata: CompanyMetadataLoadResult | None, user_agent: str
+) -> dict[str, Any] | None:
+    """Record whether the company profile was saved, and from which SEC response."""
+    if metadata is None:
+        return None
+    loaded = metadata.company_profile_result
+    return {
+        "outcome": loaded.outcome if loaded else None,
+        "company_name": loaded.profile.company_name if loaded else None,
+        "owner_org": loaded.profile.owner_org if loaded else None,
+        "sic_code": loaded.profile.sic_code if loaded else None,
+        "submissions_sha256": loaded.profile.submissions_sha256 if loaded else None,
+        "error": _safe_error(metadata.company_profile_error, user_agent),
     }
 
 

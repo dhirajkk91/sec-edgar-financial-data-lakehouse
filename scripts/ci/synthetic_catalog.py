@@ -7,6 +7,7 @@ from typing import Any
 
 from sec_edgar_lakehouse import (
     extract_filing_facts,
+    load_company_profile,
     load_filing_fiscal_metadata,
     load_filing_metadata,
     publish_silver_extraction,
@@ -108,6 +109,10 @@ def build_synthetic_catalog(work_dir: Path) -> Path:
             "name": "Fictional CI Company (synthetic)",
             "tickers": [],
             "exchanges": [],
+            "sic": "7372",
+            "sicDescription": "Services-Prepackaged Software",
+            "ownerOrg": "06 Technology",
+            "fiscalYearEnd": "1231",
             "filings": {
                 "files": [],
                 "recent": {
@@ -143,6 +148,10 @@ def build_synthetic_catalog(work_dir: Path) -> Path:
         run_record_path=run_dir / "run.json", database_path=database
     )
     assert metadata.status == "COMPLETE" and metadata.inserted_count == 3
+    profile = load_company_profile(
+        run_record_path=run_dir / "run.json", database_path=database
+    )
+    assert profile.outcome == "INSERTED"
     for directory, manifest in inputs:
         fiscal = load_filing_fiscal_metadata(
             directory, manifest, database_path=database
@@ -159,6 +168,7 @@ def build_synthetic_catalog(work_dir: Path) -> Path:
             "dimensions": catalog.fact_dimensions_count,
             "rejected": catalog.rejected_facts_count,
             "filing_metadata": metadata.inserted_count,
+            "company_profile": profile.outcome,
             "fiscal_metadata": len(inputs),
         },
     )

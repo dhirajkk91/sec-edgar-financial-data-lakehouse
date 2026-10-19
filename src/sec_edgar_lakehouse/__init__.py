@@ -65,6 +65,12 @@ from sec_edgar_lakehouse.metadata.company_metadata import (
     CompanyMetadataLoadResult,
     load_company_run_metadata,
 )
+from sec_edgar_lakehouse.metadata.company_profile import (
+    CompanyProfile,
+    CompanyProfileError,
+    CompanyProfileLoadResult,
+    load_company_profile,
+)
 from sec_edgar_lakehouse.metadata.filing_fiscal_metadata import (
     FilingFiscalMetadata,
     FiscalMetadataExtractionError,
@@ -151,6 +157,9 @@ __all__ = [
     "CompanyPipelineResult",
     "CompanyProcessingError",
     "CompanyProcessingResult",
+    "CompanyProfile",
+    "CompanyProfileError",
+    "CompanyProfileLoadResult",
     "CompanyRunError",
     "CompanyRunResult",
     "CompleteSubmissionFile",
@@ -210,6 +219,7 @@ __all__ = [
     "extract_filing_facts",
     "extract_filing_fiscal_metadata",
     "ingest_filing",
+    "load_company_profile",
     "load_company_run_metadata",
     "load_dashboard_snapshot",
     "load_filing_fiscal_metadata",

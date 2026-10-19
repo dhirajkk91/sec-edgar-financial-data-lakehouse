@@ -97,6 +97,15 @@ def _print_pipeline(result: EndToEndPipelineResult, user_agent: str) -> None:
                     f"{issue.accession_number} | {issue.reason_code}: {issue.message}",
                     error=True,
                 )
+        if metadata.company_profile_result:
+            profile = metadata.company_profile_result.profile
+            show(
+                f"Company profile: {metadata.company_profile_result.outcome} | "
+                f"{profile.company_name} | {profile.owner_org or '-'} | "
+                f"{profile.sic_description or '-'}"
+            )
+        if metadata.company_profile_error:
+            show(f"Company profile error: {metadata.company_profile_error}", error=True)
         for item in metadata.fiscal_results:
             show(
                 f"Fiscal metadata: {item.reference.accession_number} | {item.outcome} | {item.status}"

@@ -22,6 +22,7 @@ from sec_edgar_lakehouse import (
     CompanyMetadataLoadResult,
     CompanyPipelineResult,
     CompanyProcessingResult,
+    CompanyProfileError,
     CompanyRunResult,
     FilingFiscalMetadata,
     FilingFiscalMetadataLoadResult,
@@ -159,6 +160,7 @@ def loaders(monkeypatch: pytest.MonkeyPatch) -> tuple[Mock, Mock]:
     fiscal = Mock()
     monkeypatch.setattr(metadata, "load_filing_metadata", filing)
     monkeypatch.setattr(metadata, "load_filing_fiscal_metadata", fiscal)
+    monkeypatch.setattr(metadata, "load_company_profile", Mock())
     return filing, fiscal
 
 
@@ -486,3 +488,44 @@ def test_public_result_models_are_frozen_and_slotted(tmp_path: Path) -> None:
         assert not hasattr(item, "__dict__")
         with pytest.raises(FrozenInstanceError):
             setattr(item, field, "COMPLETE")
+
+
+def test_company_profile_is_loaded_from_the_same_run_record(
+    tmp_path: Path, loaders: tuple[Mock, Mock], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    filing, fiscal = loaders
+    run = company_run(tmp_path)
+    filing.return_value = filing_result(tmp_path)
+    fiscal.side_effect = lambda directory, manifest, database_path: fiscal_result(
+        tmp_path, selected(run)[0].filing.reference
+    )
+    profile = Mock()
+    monkeypatch.setattr(metadata, "load_company_profile", profile)
+    result = load_company_run_metadata(run, database_path=tmp_path / "catalog.duckdb")
+    profile.assert_called_once_with(
+        run_record_path=run.run_record_path,
+        database_path=(tmp_path / "catalog.duckdb").resolve(),
+    )
+    assert result.company_profile_result is profile.return_value
+    assert result.company_profile_error is None and result.status == "COMPLETE"
+
+
+def test_company_profile_failure_is_partial_and_fiscal_continues(
+    tmp_path: Path, loaders: tuple[Mock, Mock], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    filing, fiscal = loaders
+    run = company_run(tmp_path)
+    filing.return_value = filing_result(tmp_path)
+    fiscal.side_effect = lambda directory, manifest, database_path: fiscal_result(
+        tmp_path, selected(run)[0].filing.reference
+    )
+    monkeypatch.setattr(
+        metadata,
+        "load_company_profile",
+        Mock(side_effect=CompanyProfileError("bad company response")),
+    )
+    result = load_company_run_metadata(run, database_path=tmp_path / "catalog.duckdb")
+    assert result.status == "PARTIAL"
+    assert result.company_profile_result is None
+    assert result.company_profile_error == "bad company response"
+    assert fiscal.call_count == len(selected(run))

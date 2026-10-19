@@ -213,6 +213,25 @@ A few rows show what the lineage check means in practice. These are stored Decim
 
 The final dbt attempt is `dbt/artifacts-77e2d8fb400a482f9a7ca1cadb4e754b/`, invocation `9278f159-292d-4596-8a6a-c369d13effe7`. Its `target/run_results.json` has 514 passing tests and 24 successful model/seed nodes, with no failures or skips, in 29m04.79s. That invocation and the artifact path match the saved cohort state, and all 20 saved company-record checksums match their files. The read-only `dashboard_inspect` command returned 20 CIKs, 400 filings, 4,015 metrics, and 487 issues; its terminal output is `dashboard-inspect-after-resource-fix.log`. The original `data/query/sec_edgar.duckdb` checksum remained `095684c1c2572d6e202b44b262324854b813f07d61e8e9a5751b4d1c0284b52b` before and after the cohort work. The isolated cohort database stayed at `12c5dac06521aa8deb0b14ad73315ef79d5e784c51766e0355abc544a507ff99` across the final reader and UI checks.
 
+## Company layer (added after V1)
+
+`gold.dim_companies` and `gold.fct_company_financials` were added after the V1 run, without new SEC requests. The 25 saved company-run records in the cohort root were loaded with `company_profile_load`: 21 were new snapshots and 4 were byte-identical responses from repeated runs, reported as `ALREADY_EXISTS`. The 3 new models, 19 data tests, and 2 unit tests add 24 dbt nodes. The full Gold rebuild on the cohort database, `resume --build-after-batch` with artifacts in `dbt/artifacts-b550610aea9d4625941afe1a539cca24/`, passed all 562 nodes with no failures or skips in 34m27s. An earlier attempt that was interrupted by hand at node 495 is kept as `dbt/artifacts-cf559e67810d42ada40b0aac2ba09ed7/`; it had no failed node before the interruption.
+
+After that build, opening the dashboard on the full cohort ran out of DuckDB's 4GB limit, because every Gold model was a view and each read recomputed the whole chain. Intermediate models and marts were changed to tables, with staging left as views over Silver. The next rebuild, with artifacts in `dbt/artifacts-a75f093f42604ae8bbbeb3d31d915c9f/`, passed the same 562 nodes with no failures or skips. dbt reported 18.07s of elapsed time, and the whole `resume --build-after-batch` command took 22.5s, against 34m27s for the view-based build.
+
+| Check | Result |
+| --- | --- |
+| Company profiles | 20 companies, one snapshot each except Apple (2 distinct responses) |
+| Sectors (SEC office) | Technology 5, Manufacturing 5, Trade & Services 4, Life Sciences 3, Finance 2, Energy & Transportation 1 |
+| Empty SEC fields | Exxon's saved response had an empty ticker list, so its `primary_ticker` is NULL |
+| `fct_company_financials` | 500 rows: 20 companies × 5 fiscal years × FY/Q1/Q2/Q3/Q4 |
+| Revenue present | FY 88, Q1 80, Q2 80, Q3 81, Q4 81 of 100 each |
+| Free cash flow present | 75 of 100 in each period |
+| Q4 diluted EPS | 0 of 100, as intended: EPS is never derived |
+| Spot check | Apple FY 2025: revenue 416,161,000,000; free cash flow 111,482,000,000 − 12,715,000,000 = 98,767,000,000 USD |
+
+Missing values in the new table are the same gaps already recorded in `gold.metric_quality_issues`; the table does not fill them.
+
 ## Architecture exercised
 
 Historical discovery follows only CIK-specific files referenced by a verified main submissions response. It validates their parallel arrays, source identity, paths, and overlaps before selecting a row. The original bytes, retrieval URL/time, size, and SHA-256 are saved in company run evidence. Filing metadata rechecks the particular listing used for its accession before insertion. This is why older filings get the same verifiable provenance as recent filings.

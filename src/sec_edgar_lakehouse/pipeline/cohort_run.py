@@ -487,6 +487,12 @@ def _company_attempt(
         "filing_metadata_error": _safe_error(
             metadata.filing_metadata_error, user_agent
         ),
+        "company_profile_outcome": metadata.company_profile_result.outcome
+        if metadata.company_profile_result
+        else None,
+        "company_profile_error": _safe_error(
+            metadata.company_profile_error, user_agent
+        ),
         "filings": filings,
         "coverage_issues": issues,
         "reason": _safe_error(company_run.error_message, user_agent),

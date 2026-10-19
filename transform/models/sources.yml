@@ -17,3 +17,5 @@ sources:
         description: Verified SEC metadata and first accepted discovery provenance per filing.
       - name: filing_fiscal_metadata
         description: Persisted fiscal DEI extraction evidence, including historical sources.
+      - name: company_profiles
+        description: Company fields from each saved SEC submissions response; one snapshot per company and response checksum.

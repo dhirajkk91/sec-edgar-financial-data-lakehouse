@@ -129,6 +129,34 @@ This file explains the main choices behind the pipeline: what I picked, what I c
 
 **Trade-off:** Amendments are left out for now. All 400 filings landed, but the cohort is marked `PARTIAL`: for three JPMorgan accessions, the SEC history files they came from didn't match between planning and processing. Their filing data matched; only that source record didn't.
 
+### 13. Company attributes come from the saved SEC response, not a lookup table
+
+**Context:** A company table needs a name, ticker and sector. The quick way is a hand-typed CSV or a call to a market-data site.
+
+**Decision:** `dim_companies` uses only the SEC submissions response that Bronze already saves for each company run, checked against its SHA-256 before loading. Sector is the SEC's own industry office (`ownerOrg`), industry is the SIC description, and an empty SEC field stays NULL. Each distinct response is kept as a snapshot, and the newest one wins.
+
+**Alternatives:** A hand-maintained seed file, or GICS sectors from a market-data provider.
+
+**Trade-off:** The SEC's grouping isn't what investors expect. NVIDIA is "Manufacturing" and Visa is "Trade & Services." Exxon has no ticker because its saved response listed none. In return, every company attribute is traceable to a saved, checksummed SEC file, like every financial value.
+
+### 14. The company financials table only rearranges Gold
+
+**Decision:** `fct_company_financials` pivots `fct_financial_metrics` into one row per company and fiscal period. It adds free cash flow, margins and growth, but never selects or derives a metric. A reconciliation test checks every value against its source row.
+
+**Why:** All financial rules stay in one place. A gap in the wide table is the same gap recorded in `metric_quality_issues`, not a new one.
+
+**Trade-off:** Some rows have holes, for example no Q4 EPS and no free cash flow when capex isn't mapped for a company.
+
+### 15. Gold is stored as tables; staging stays as views
+
+**Context:** Every dbt model started as a view. That kept the database small, but every test and every dashboard read recomputed the whole chain over about 600,000 Silver facts.
+
+**Decision:** Intermediate models and marts are tables, built once per `dbt build`. Staging models stay as thin views over Silver Parquet, so decision 6 still holds: DuckDB keeps no second copy of the facts.
+
+**Result:** The same 562-node cohort build went from 34m27s to 18.1s, and the dashboard no longer runs out of memory.
+
+**Trade-off:** Gold is now a stored snapshot. After a catalog refresh it is stale until dbt runs again, which the pipeline already does right after the refresh.
+
 ## Bugs that changed the design
 
 - **The complete submission file was in a `colspan` row.** The SEC filing index sometimes merges cells on that row, so normal column mapping missed or misread it. Discovery now finds that row explicitly and requires a `.txt` file name.
@@ -139,12 +167,13 @@ This file explains the main choices behind the pipeline: what I picked, what I c
 - **Matching garbage counted as agreement.** A revenue candidate with `decimals="not-a-valid-accuracy"` was selected, because identical invalid values "agreed." Gold now validates accuracy before comparing candidates.
 - **Fiscal year was missing for some filings.** Fiscal metadata extraction missed the SEC's `dei/2021q4` namespace. Extraction version 3 recognizes it, as well as `dei/2022q4`.
 - **Bad CLI input crashed while writing the run record.** Invalid forms or dates were rejected, but then the wrapper crashed trying to save them, and no `run.json` was written. Inputs are now validated before any file or network work.
+- **The dashboard ran out of memory on the full cohort.** Every Gold model was a view, so a page load recomputed everything, and the reader even read `dim_filings` twice. Storing Gold as tables fixed both the memory error and the 34-minute build (decision 15).
 - **dbt ran out of memory, then out of time.** Setting `threads: 1` in dbt still let DuckDB use 8 engine threads, and a lineage test ran out of memory. The offline build also hit its 900-second timeout after 515 of 538 steps. DuckDB now gets 1 thread and a memory limit, and the timeout is 1,500 seconds.
 - **A clean install couldn't read timestamps.** Installing only the wheel showed that DuckDB needs `pytz` for timezone-aware timestamps. I added the dependency and a wheel check in CI.
 
 ## What I would change next
 
-- **Materialize Gold.** Every dbt model is a view, so the full cohort build took about 29 minutes and every dashboard read runs the whole chain again. The heavy intermediate models and marts should be tables, with the fact table incremental.
+- **Make the fact table incremental**, so a new filing doesn't rebuild every Gold table. At 18 seconds a full rebuild is fine for 400 filings, but not for the whole S&P 500.
 - **Replace the active pointer with Iceberg** when moving to cloud storage.
 - **Make the database portable** by not storing absolute Parquet paths in the views.
 - **Decide an amendment policy:** when a 10-K/A should replace the original in trend analysis.
