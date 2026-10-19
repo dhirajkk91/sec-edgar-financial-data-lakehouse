@@ -1536,6 +1536,112 @@ models:
               arguments:
                 values: ["1"]
 
+  - name: stg_silver_company_profiles
+    description: Saved SEC company profile snapshots for companies with active filings; one row per company and submissions checksum.
+    columns:
+      - name: cik
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('stg_silver_active_filings')
+                field: cik
+      - name: company_name
+        data_tests: [not_null]
+      - name: submissions_sha256
+        data_tests: [not_null]
+      - name: submissions_retrieved_at
+        data_tests: [not_null]
+  - name: dim_companies
+    description: >-
+      One row per company with active filings, from the newest saved SEC submissions response. Sector is the SEC's
+      own industry office (ownerOrg) and industry is the SIC description; neither is typed in or fetched elsewhere.
+    columns:
+      - name: cik
+        data_type: VARCHAR
+        description: "Company Central Index Key; the dimension key."
+        data_tests: [not_null, unique]
+      - name: company_name
+        data_type: VARCHAR
+        description: "Company name exactly as the SEC lists it."
+        data_tests: [not_null]
+      - name: primary_ticker
+        data_type: VARCHAR
+        description: "First ticker in the SEC list; NULL when the SEC list was empty."
+      - name: tickers
+        data_type: VARCHAR[]
+        description: "All tickers in the SEC list, in SEC order."
+      - name: exchanges
+        data_type: VARCHAR[]
+        description: "Exchanges in the same order as tickers."
+      - name: sec_office_code
+        data_type: VARCHAR
+        description: "Two-digit code of the SEC industry office, e.g. 06."
+      - name: sector
+        data_type: VARCHAR
+        description: "SEC industry office name, e.g. Technology or Life Sciences. Not GICS."
+      - name: sic_code
+        data_type: VARCHAR
+        description: "Standard Industrial Classification code assigned by the SEC."
+      - name: industry
+        data_type: VARCHAR
+        description: "SEC description of the SIC code."
+      - name: fiscal_year_end
+        data_type: VARCHAR
+        description: "Fiscal year end as MMDD, as the SEC lists it."
+      - name: filing_count
+        data_type: BIGINT
+        description: "Active filings for this company in dim_filings."
+        data_tests: [not_null]
+      - name: profile_snapshot_count
+        data_type: BIGINT
+        description: "Number of saved SEC responses for this company; the newest one is used."
+        data_tests: [not_null]
+  - name: fct_company_financials
+    description: >-
+      One row per company, fiscal year and fiscal period (FY, Q1-Q4) with each metric's standalone value side by side.
+      Values are copied from fct_financial_metrics; year-to-date rows are excluded and missing values stay NULL.
+      Ratios and free cash flow are computed only when their inputs exist.
+    columns:
+      - name: cik
+        data_type: VARCHAR
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_companies')
+                field: cik
+      - name: fiscal_year
+        data_type: INTEGER
+        description: "DEI fiscal year of the source filing."
+        data_tests: [not_null]
+      - name: fiscal_period
+        data_type: VARCHAR
+        description: "FY for the full year, Q1-Q4 for a three-month quarter. Q4 comes from the 10-K."
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ["FY", "Q1", "Q2", "Q3", "Q4"]
+      - name: accession_number
+        data_type: VARCHAR
+        description: "Filing that reported the values; for derived quarters, the later filing."
+        data_tests: [not_null]
+      - name: free_cash_flow
+        data_type: DECIMAL(38,18)
+        description: "Operating cash flow minus capital expenditures; NULL unless both exist."
+      - name: net_margin
+        data_type: DOUBLE
+        description: "Net income divided by revenue; NULL without positive revenue."
+      - name: free_cash_flow_margin
+        data_type: DOUBLE
+        description: "Free cash flow divided by revenue; NULL without positive revenue."
+      - name: revenue_yoy_growth
+        data_type: DOUBLE
+        description: "Revenue change against the same fiscal period one fiscal year earlier."
+      - name: derived_metric_codes
+        data_type: VARCHAR[]
+        description: "Metrics in this row that Gold derived rather than read as reported."
 seeds:
   - name: metric_concept_map
     description: Approved revenue, income, balance-sheet and cash-flow concept mappings; one row per metric, namespace prefix, concept and period kind. Priority is evidence for later selection.

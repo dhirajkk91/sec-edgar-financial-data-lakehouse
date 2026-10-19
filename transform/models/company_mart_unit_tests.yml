@@ -1,0 +1,65 @@
+unit_tests:
+  - name: dim_companies_uses_newest_snapshot
+    model: dim_companies
+    description: "The newest saved SEC response wins. Sector is parsed from the SEC office name. An empty ticker list stays NULL."
+    given:
+      - input: ref('stg_silver_company_profiles')
+        format: sql
+        rows: |
+          select '0000000001' as cik, 'Old Name' as company_name, ['OLD']::varchar[] as tickers,
+                 ['NYSE']::varchar[] as exchanges, '3571' as sic_code, 'Electronic Computers' as sic_description,
+                 '06 Technology' as owner_org, 'operating' as entity_type, 'Large accelerated filer' as filer_category,
+                 '1231' as fiscal_year_end, 'DE' as state_of_incorporation, 'run-1' as profile_run_id,
+                 '/runs/1/run.json' as run_record_path, '/runs/1/submissions.json' as submissions_path,
+                 'https://data.sec.gov/submissions/CIK0000000001.json' as submissions_url,
+                 '2026-01-01 00:00:00+00'::timestamptz as submissions_retrieved_at, 10::bigint as submissions_size_bytes,
+                 'a' as submissions_sha256
+          union all
+          select '0000000001', 'New Name', ['NEW', 'NEW-P']::varchar[], ['Nasdaq', 'Nasdaq']::varchar[], '3571',
+                 'Electronic Computers', '06 Technology', 'operating', 'Large accelerated filer', '1231', 'DE',
+                 'run-2', '/runs/2/run.json', '/runs/2/submissions.json',
+                 'https://data.sec.gov/submissions/CIK0000000001.json', '2026-02-01 00:00:00+00'::timestamptz,
+                 10::bigint, 'b'
+          union all
+          select '0000000002', 'No Ticker Co', []::varchar[], []::varchar[], null, null, 'Office of Something',
+                 'operating', null, null, null, 'run-3', '/runs/3/run.json', '/runs/3/submissions.json',
+                 'https://data.sec.gov/submissions/CIK0000000002.json', '2026-01-01 00:00:00+00'::timestamptz,
+                 10::bigint, 'c'
+      - input: ref('dim_filings')
+        rows:
+          - {cik: "0000000001", fiscal_year_focus: 2024, report_date: "2024-12-31"}
+          - {cik: "0000000001", fiscal_year_focus: 2025, report_date: "2025-12-31"}
+    expect:
+      rows:
+        - {cik: "0000000001", company_name: "New Name", primary_ticker: "NEW", sec_office_code: "06", sector: "Technology", industry: "Electronic Computers", filing_count: 2, first_fiscal_year: 2024, last_fiscal_year: 2025, profile_snapshot_count: 2, profile_run_id: "run-2"}
+        - {cik: "0000000002", company_name: "No Ticker Co", primary_ticker: null, sec_office_code: null, sector: "Office of Something", industry: null, filing_count: 0, first_fiscal_year: null, last_fiscal_year: null, profile_snapshot_count: 1, profile_run_id: "run-3"}
+
+  - name: company_financials_pivot_and_ratios
+    model: fct_company_financials
+    description: "Annual and quarter values are pivoted per fiscal period; year-to-date rows are ignored; Q4 uses the 10-K balance sheet; FCF, margins and growth use only existing inputs."
+    given:
+      - input: ref('fct_financial_metrics')
+        rows:
+          # FY2024 10-K and its derived Q4.
+          - {cik: "0000000001", accession_number: "k24", form: "10-K", report_date: "2024-12-31", fiscal_year_focus: 2024, fiscal_period_focus: "FY", metric_code: "revenue", period_label: "annual", value_origin: "reported", period_start: "2024-01-01", period_end: "2024-12-31", value_decimal: 400}
+          - {cik: "0000000001", accession_number: "k24", form: "10-K", report_date: "2024-12-31", fiscal_year_focus: 2024, fiscal_period_focus: "FY", metric_code: "net_income", period_label: "annual", value_origin: "reported", period_start: "2024-01-01", period_end: "2024-12-31", value_decimal: 100}
+          - {cik: "0000000001", accession_number: "k24", form: "10-K", report_date: "2024-12-31", fiscal_year_focus: 2024, fiscal_period_focus: "Q4", metric_code: "revenue", period_label: "derived_quarter", value_origin: "derived", period_start: "2024-10-01", period_end: "2024-12-31", value_decimal: 100}
+          # FY2025 10-K, its derived Q4 and its year-end balance sheet.
+          - {cik: "0000000001", accession_number: "k25", form: "10-K", report_date: "2025-12-31", fiscal_year_focus: 2025, fiscal_period_focus: "FY", metric_code: "revenue", period_label: "annual", value_origin: "reported", period_start: "2025-01-01", period_end: "2025-12-31", value_decimal: 500}
+          - {cik: "0000000001", accession_number: "k25", form: "10-K", report_date: "2025-12-31", fiscal_year_focus: 2025, fiscal_period_focus: "FY", metric_code: "net_income", period_label: "annual", value_origin: "reported", period_start: "2025-01-01", period_end: "2025-12-31", value_decimal: 125}
+          - {cik: "0000000001", accession_number: "k25", form: "10-K", report_date: "2025-12-31", fiscal_year_focus: 2025, fiscal_period_focus: "FY", metric_code: "operating_cash_flow", period_label: "annual", value_origin: "reported", period_start: "2025-01-01", period_end: "2025-12-31", value_decimal: 200}
+          - {cik: "0000000001", accession_number: "k25", form: "10-K", report_date: "2025-12-31", fiscal_year_focus: 2025, fiscal_period_focus: "FY", metric_code: "capital_expenditures", period_label: "annual", value_origin: "reported", period_start: "2025-01-01", period_end: "2025-12-31", value_decimal: 50}
+          - {cik: "0000000001", accession_number: "k25", form: "10-K", report_date: "2025-12-31", fiscal_year_focus: 2025, fiscal_period_focus: "FY", metric_code: "total_assets", period_label: "instant", value_origin: "reported", period_instant: "2025-12-31", value_decimal: 1000}
+          - {cik: "0000000001", accession_number: "k25", form: "10-K", report_date: "2025-12-31", fiscal_year_focus: 2025, fiscal_period_focus: "FY", metric_code: "total_assets", period_label: "instant", value_origin: "reported", period_instant: "2024-12-31", value_decimal: 900}
+          - {cik: "0000000001", accession_number: "k25", form: "10-K", report_date: "2025-12-31", fiscal_year_focus: 2025, fiscal_period_focus: "Q4", metric_code: "revenue", period_label: "derived_quarter", value_origin: "derived", period_start: "2025-10-01", period_end: "2025-12-31", value_decimal: 150}
+          - {cik: "0000000001", accession_number: "k25", form: "10-K", report_date: "2025-12-31", fiscal_year_focus: 2025, fiscal_period_focus: "Q4", metric_code: "operating_cash_flow", period_label: "derived_quarter", value_origin: "derived", period_start: "2025-10-01", period_end: "2025-12-31", value_decimal: 60}
+          # A Q3 10-Q: the reported quarter is used, its year-to-date revenue is not.
+          - {cik: "0000000001", accession_number: "q325", form: "10-Q", report_date: "2025-09-30", fiscal_year_focus: 2025, fiscal_period_focus: "Q3", metric_code: "revenue", period_label: "quarter", value_origin: "reported", period_start: "2025-07-01", period_end: "2025-09-30", value_decimal: 120}
+          - {cik: "0000000001", accession_number: "q325", form: "10-Q", report_date: "2025-09-30", fiscal_year_focus: 2025, fiscal_period_focus: "Q3", metric_code: "revenue", period_label: "year_to_date", value_origin: "reported", period_start: "2025-01-01", period_end: "2025-09-30", value_decimal: 350}
+    expect:
+      rows:
+        - {cik: "0000000001", fiscal_year: 2024, fiscal_period: "FY", accession_number: "k24", revenue: 400, net_income: 100, operating_cash_flow: null, free_cash_flow: null, total_assets: null, net_margin: 0.25, free_cash_flow_margin: null, revenue_yoy_growth: null}
+        - {cik: "0000000001", fiscal_year: 2024, fiscal_period: "Q4", accession_number: "k24", revenue: 100, net_income: null, operating_cash_flow: null, free_cash_flow: null, total_assets: null, net_margin: null, free_cash_flow_margin: null, revenue_yoy_growth: null}
+        - {cik: "0000000001", fiscal_year: 2025, fiscal_period: "FY", accession_number: "k25", revenue: 500, net_income: 125, operating_cash_flow: 200, free_cash_flow: 150, total_assets: 1000, net_margin: 0.25, free_cash_flow_margin: 0.3, revenue_yoy_growth: 0.25}
+        - {cik: "0000000001", fiscal_year: 2025, fiscal_period: "Q4", accession_number: "k25", revenue: 150, net_income: null, operating_cash_flow: 60, free_cash_flow: null, total_assets: 1000, net_margin: null, free_cash_flow_margin: null, revenue_yoy_growth: 0.5}
+        - {cik: "0000000001", fiscal_year: 2025, fiscal_period: "Q3", accession_number: "q325", revenue: 120, net_income: null, operating_cash_flow: null, free_cash_flow: null, total_assets: null, net_margin: null, free_cash_flow_margin: null, revenue_yoy_growth: null}
