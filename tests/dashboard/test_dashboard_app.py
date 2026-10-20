@@ -452,14 +452,24 @@ def test_core_imports_and_inspector_without_streamlit() -> None:
     code = """
 import importlib.abc
 import sys
+import importlib
+import pkgutil
 class NoStreamlit(importlib.abc.MetaPathFinder):
     def find_spec(self, fullname, path=None, target=None):
-        if fullname == 'streamlit' or fullname.startswith('streamlit.'):
+        if fullname.split('.')[0] in {'streamlit', 'altair'}:
             raise ModuleNotFoundError(fullname)
 sys.meta_path.insert(0, NoStreamlit())
 import sec_edgar_lakehouse
 import sec_edgar_lakehouse.dashboard.dashboard_inspect
-assert 'streamlit' not in sys.modules
+# Like the CI wheel probe: every module except the two UI modules must import.
+ui = {
+    'sec_edgar_lakehouse.dashboard.dashboard_app',
+    'sec_edgar_lakehouse.dashboard.company_page',
+}
+for module in pkgutil.walk_packages(sec_edgar_lakehouse.__path__, 'sec_edgar_lakehouse.'):
+    if module.name not in ui:
+        importlib.import_module(module.name)
+assert 'streamlit' not in sys.modules and 'altair' not in sys.modules
 """
     result = subprocess.run(
         [sys.executable, "-I", "-c", code], capture_output=True, text=True, check=False
