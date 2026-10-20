@@ -4,6 +4,14 @@ This local pipeline turns SEC 10-K and 10-Q filings into financial values you ca
 
 It runs with Python, Parquet, DuckDB, dbt, and Streamlit. A dashboard value can be traced back to the filing and the XBRL fact or facts that produced it.
 
+The dashboard opens on a company comparison: pick companies, a metric, and annual or quarterly periods.
+
+![Companies view: five years of revenue for five companies, from SEC filings](docs/images/companies.png)
+
+The **Trace a filing** view follows any number back to its source. Here, Apple's FY 2025 Q4 operating cash flow is derived from the annual 10-K value minus the Q3 year-to-date value, with both inputs shown:
+
+![Trace a filing: a derived Q4 value with its two source inputs and derivation method](docs/images/trace-a-filing.png)
+
 ```text
 SEC submissions + filing index
            │
@@ -21,7 +29,7 @@ dbt Gold: selected metrics, filing summaries, quality issues,
           company dimension, company financials by period
            │
            ▼
-Read-only Streamlit filing explorer
+Read-only Streamlit dashboard: company comparison + filing explorer
 ```
 
 Bronze keeps the SEC bytes before interpreting them. Silver records recognized numeric XBRL occurrences before Gold selects a metric, and it verifies a new version before changing the active pointer. DuckDB exposes active versions; dbt makes the financial selections; the dashboard reads the result. A failed dbt build does not erase an earlier verified source file.
@@ -228,7 +236,7 @@ To trace a displayed metric, copy its CIK, accession, current `source_occurrence
 | `src/sec_edgar_lakehouse/catalog/` and `src/sec_edgar_lakehouse/metadata/` | Active Silver DuckDB views, plus filing/fiscal metadata and company profiles tied to source evidence. |
 | `src/sec_edgar_lakehouse/pipeline/` | Company processing, stage gates, dbt invocation, and run summaries. |
 | `transform/` | dbt concept mappings, reported/derived metric SQL, marts, and tests. |
-| `src/sec_edgar_lakehouse/dashboard/` | Read-only Gold snapshot, CLI inspector, and filing explorer. |
+| `src/sec_edgar_lakehouse/dashboard/` | Read-only Gold readers, CLI inspector, the Companies view, and the filing explorer. |
 | `tests/`, `scripts/ci/`, `.github/workflows/` | Python tests, synthetic offline validation, clean wheel checks, and CI. |
 
 For implementation details, see [Bronze](docs/architectures/bronze-ingestion-V1.md), [Silver](docs/architectures/silver-processing-V1.md), the [DuckDB catalog](docs/architectures/duckdb-query-catalog-V1.md), [company processing](docs/architectures/company-pipeline-orchestration-V1.md), the [end-to-end runner](docs/architectures/end-to-end-pipeline-V1.md), [cohort backfill](docs/architectures/cohort-backfill-V1.md), [Gold](docs/architectures/gold-financial-metrics-V1.md), and the [dashboard](docs/architectures/dashboard-V1.md). The [engineering decisions](docs/decisions/engineering-decisions.md) cover the choices and corrections behind them. Results are in the [offline CI](docs/validation/ci-V1.md), [Apple/Microsoft](docs/validation/multi-company-acceptance-V1.md), and [full cohort](docs/validation/cohort-V1.md) reports.

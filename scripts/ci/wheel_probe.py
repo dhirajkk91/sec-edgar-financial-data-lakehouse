@@ -82,8 +82,11 @@ def main() -> None:
     for module in pkgutil.walk_packages(
         sec_edgar_lakehouse.__path__, sec_edgar_lakehouse.__name__ + "."
     ):
-        # The optional UI module belongs in the wheel but needs Streamlit to import.
-        if module.name == "sec_edgar_lakehouse.dashboard.dashboard_app":
+        # The optional UI modules belong in the wheel but need Streamlit to import.
+        if module.name in {
+            "sec_edgar_lakehouse.dashboard.dashboard_app",
+            "sec_edgar_lakehouse.dashboard.company_page",
+        }:
             continue
         value = importlib.import_module(module.name)
         path = Path(value.__file__).resolve()

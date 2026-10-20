@@ -53,9 +53,11 @@ from sec_edgar_lakehouse.catalog.silver_catalog import (
     refresh_silver_catalog,
 )
 from sec_edgar_lakehouse.dashboard.dashboard_read import (
+    CompanySnapshot,
     DashboardReadError,
     DashboardSnapshot,
     DashboardTable,
+    load_company_snapshot,
     load_dashboard_snapshot,
 )
 from sec_edgar_lakehouse.filing_reference import FilingReference
@@ -162,6 +164,7 @@ __all__ = [
     "CompanyProfileLoadResult",
     "CompanyRunError",
     "CompanyRunResult",
+    "CompanySnapshot",
     "CompleteSubmissionFile",
     "DashboardReadError",
     "DashboardSnapshot",
@@ -221,6 +224,7 @@ __all__ = [
     "ingest_filing",
     "load_company_profile",
     "load_company_run_metadata",
+    "load_company_snapshot",
     "load_dashboard_snapshot",
     "load_filing_fiscal_metadata",
     "load_filing_metadata",
