@@ -13,8 +13,8 @@ import duckdb
 
 from sec_edgar_lakehouse.filing_reference import FilingReference, _normalize_cik
 
-# Gold views can re-scan the cohort's Parquet files on each Streamlit rerun.
-# One worker keeps that read within the same local budget used for the build.
+# Gold marts are stored tables, but staging views can still reach Silver Parquet.
+# One worker keeps any read within the same local budget used for the build.
 _DUCKDB_READ_SETTINGS: dict[str, str | bool | int | float | list[str]] = {
     "threads": 1,
     "memory_limit": "4GB",
@@ -129,6 +129,44 @@ _ISSUES_SCHEMA = (
 )
 
 
+_COMPANIES_SCHEMA = (
+    ("cik", "VARCHAR"),
+    ("company_name", "VARCHAR"),
+    ("primary_ticker", "VARCHAR"),
+    ("sector", "VARCHAR"),
+    ("industry", "VARCHAR"),
+    ("sic_code", "VARCHAR"),
+    ("fiscal_year_end", "VARCHAR"),
+    ("filing_count", "BIGINT"),
+    ("first_fiscal_year", "INTEGER"),
+    ("last_fiscal_year", "INTEGER"),
+)
+
+_COMPANY_FINANCIALS_SCHEMA = (
+    ("cik", "VARCHAR"),
+    ("fiscal_year", "INTEGER"),
+    ("fiscal_period", "VARCHAR"),
+    ("accession_number", "VARCHAR"),
+    ("form", "VARCHAR"),
+    ("report_date", "DATE"),
+    ("period_start", "DATE"),
+    ("period_end", "DATE"),
+    ("revenue", "DECIMAL(38,18)"),
+    ("net_income", "DECIMAL(38,18)"),
+    ("diluted_eps", "DECIMAL(38,18)"),
+    ("operating_cash_flow", "DECIMAL(38,18)"),
+    ("capital_expenditures", "DECIMAL(38,18)"),
+    ("free_cash_flow", "DECIMAL(38,18)"),
+    ("total_assets", "DECIMAL(38,18)"),
+    ("total_liabilities", "DECIMAL(38,18)"),
+    ("cash_and_equivalents", "DECIMAL(38,18)"),
+    ("net_margin", "DOUBLE"),
+    ("free_cash_flow_margin", "DOUBLE"),
+    ("revenue_yoy_growth", "DOUBLE"),
+    ("derived_metric_codes", "VARCHAR[]"),
+)
+
+
 class DashboardReadError(Exception):
     """Invalid input, unavailable Gold schema, or an expected read failure."""
 
@@ -140,6 +178,15 @@ class DashboardTable:
     columns: tuple[str, ...]
     column_types: tuple[str, ...]
     rows: tuple[tuple[object, ...], ...]
+
+
+@dataclass(frozen=True, slots=True)
+class CompanySnapshot:
+    """Company profiles and per-period financials read in one transaction."""
+
+    database_path: Path
+    companies: DashboardTable
+    financials: DashboardTable
 
 
 @dataclass(frozen=True, slots=True)
@@ -297,3 +344,98 @@ def load_dashboard_snapshot(
         raise DashboardReadError(
             f"Cannot read dashboard database {database}: {exc}"
         ) from exc
+
+
+def load_company_snapshot(*, database_path: Path) -> CompanySnapshot:
+    """Read gold.dim_companies and gold.fct_company_financials read-only.
+
+    A database built before the company layer existed has neither table;
+    that is reported as an error with the backfill hint, not as an empty page.
+    """
+    if not isinstance(database_path, Path):
+        raise DashboardReadError("database_path must be a pathlib.Path")
+    try:
+        database = database_path.resolve(strict=True)
+        if not stat.S_ISREG(database.stat().st_mode):
+            raise DashboardReadError(
+                f"Database must be an existing regular file: {database}"
+            )
+    except (OSError, ValueError) as exc:
+        raise DashboardReadError(
+            f"Cannot access database {database_path}: {exc}"
+        ) from exc
+    try:
+        connection = duckdb.connect(
+            str(database), read_only=True, config=_DUCKDB_READ_SETTINGS
+        )
+        try:
+            missing = [
+                name
+                for name in ("dim_companies", "fct_company_financials")
+                if connection.execute(
+                    "SELECT 1 FROM information_schema.tables "
+                    "WHERE table_schema='gold' AND table_name=?",
+                    [name],
+                ).fetchone()
+                is None
+            ]
+            if missing:
+                raise DashboardReadError(
+                    "This database has no company layer (missing "
+                    + ", ".join(f"gold.{name}" for name in missing)
+                    + "). Load company profiles with company_profile_load, "
+                    "then rebuild Gold."
+                )
+            connection.execute("BEGIN TRANSACTION")
+            companies = _read_table(
+                connection,
+                "gold.dim_companies",
+                _COMPANIES_SCHEMA,
+                "",
+                [],
+                "cik ASC",
+            )
+            financials = _read_table(
+                connection,
+                "gold.fct_company_financials",
+                _COMPANY_FINANCIALS_SCHEMA,
+                "",
+                [],
+                "cik ASC, fiscal_year ASC, fiscal_period ASC",
+            )
+            connection.execute("COMMIT")
+            return CompanySnapshot(database, companies, financials)
+        finally:
+            connection.close()
+    except (duckdb.Error, OSError) as exc:
+        raise DashboardReadError(
+            f"Cannot read dashboard database {database}: {exc}"
+        ) from exc
+
+
+def load_company_names(*, database_path: Path) -> dict[str, str]:
+    """CIK to company name from gold.dim_companies, or empty when that table is absent.
+
+    Names only label the filing explorer's company selector, so a database
+    without the company layer still works with plain CIKs.
+    """
+    try:
+        with duckdb.connect(
+            str(database_path.resolve(strict=True)),
+            read_only=True,
+            config=_DUCKDB_READ_SETTINGS,
+        ) as connection:
+            exists = connection.execute(
+                "SELECT 1 FROM information_schema.tables "
+                "WHERE table_schema='gold' AND table_name='dim_companies'"
+            ).fetchone()
+            if exists is None:
+                return {}
+            return {
+                str(cik): str(name)
+                for cik, name in connection.execute(
+                    "SELECT cik, company_name FROM gold.dim_companies"
+                ).fetchall()
+            }
+    except (duckdb.Error, OSError) as exc:
+        raise DashboardReadError(f"Cannot read company names: {exc}") from exc

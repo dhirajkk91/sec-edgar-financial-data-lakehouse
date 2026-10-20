@@ -143,10 +143,18 @@ def database(tmp_path: Path) -> Path:
     return path
 
 
+def explorer(result: AppTest) -> AppTest:
+    """The page opens on Companies; these tests use the Trace a filing view."""
+    result.radio(key="view").set_value("Trace a filing").run()
+    return result
+
+
 def app(monkeypatch: pytest.MonkeyPatch, path: Path) -> AppTest:
     """Start the real root launcher with this database and fail immediately on a page exception."""
     monkeypatch.setenv("SEC_EDGAR_DUCKDB_PATH", str(path))
     result = AppTest.from_file(str(ROOT / "dashboard_app.py"), default_timeout=15).run()
+    assert not result.exception
+    explorer(result)
     assert not result.exception
     return result
 
@@ -391,7 +399,7 @@ def test_programming_exceptions_are_visible(
 
     monkeypatch.setattr(dashboard_app, "load_dashboard_snapshot", broken)
     monkeypatch.setenv("SEC_EDGAR_DUCKDB_PATH", str(database))
-    result = AppTest.from_file(str(ROOT / "dashboard_app.py")).run()
+    result = explorer(AppTest.from_file(str(ROOT / "dashboard_app.py")).run())
     assert len(result.exception) == 1
     assert result.exception[0].message == "Unexpected programming failure"
 
@@ -408,7 +416,7 @@ def test_entrypoint_resolves_paths_against_repository(
 
     monkeypatch.setattr(dashboard_app, "load_dashboard_snapshot", load)
     monkeypatch.setenv("SEC_EDGAR_DUCKDB_PATH", configured)
-    result = AppTest.from_file(str(ROOT / "dashboard_app.py")).run()
+    result = explorer(AppTest.from_file(str(ROOT / "dashboard_app.py")).run())
     assert not result.exception
     current = ROOT / "data/dashboard-current.duckdb"
     default = current if current.is_symlink() else ROOT / "data/query/sec_edgar.duckdb"

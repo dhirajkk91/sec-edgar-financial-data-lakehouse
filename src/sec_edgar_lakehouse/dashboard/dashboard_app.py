@@ -1,4 +1,7 @@
-"""The page shows stored Gold results and lets the user follow them back to their sources.
+"""Two views of the stored Gold results.
+
+Companies compares companies' financials across fiscal years. Trace a filing
+lets the user follow one filing's values back to their sources.
 
 Each rerun uses one read-only snapshot, then filters it in memory.
 Table labels and shortened number text are only for display. Full detail
@@ -11,9 +14,12 @@ from pathlib import Path
 
 import streamlit as st
 
+from sec_edgar_lakehouse.dashboard import company_page
 from sec_edgar_lakehouse.dashboard.dashboard_read import (
     DashboardReadError,
     DashboardTable,
+    load_company_names,
+    load_company_snapshot,
     load_dashboard_snapshot,
 )
 
@@ -333,14 +339,36 @@ def _quality_issues(records: list[Record]) -> None:
             st.json(_present_record(record))
 
 
-def main(*, database_path: Path) -> None:
-    """Load a fresh read-only snapshot and render the filing explorer.
+VIEWS = ("Companies", "Trace a filing")
 
-    Filters use the loaded rows so the page stays consistent within a rerun.
-    Changing a parent selection clears its child widgets. Expected read errors
-    are shown on the page; unexpected errors still raise.
+
+def _companies(database_path: Path) -> None:
+    """Render the company comparison view, or explain why it cannot be shown."""
+    try:
+        snapshot = load_company_snapshot(database_path=database_path)
+    except DashboardReadError as exc:
+        st.title("Company financials from SEC filings")
+        st.error(f"Unable to read company financials: {exc}")
+        st.info(
+            "Check the configured database path and finish any pipeline writes first."
+        )
+        return
+    company_page.render(snapshot)
+
+
+def main(*, database_path: Path) -> None:
+    """Show the chosen view: company comparison, or the filing explorer.
+
+    In the explorer, filters use the loaded rows so the page stays consistent
+    within a rerun. Changing a parent selection clears its child widgets.
+    Expected read errors are shown on the page; unexpected errors still raise.
     """
-    st.set_page_config(page_title="SEC filing explorer", layout="wide")
+    st.set_page_config(page_title="SEC EDGAR financials", layout="wide")
+    view = st.sidebar.radio("View", VIEWS, key="view")
+    st.sidebar.caption(f"Database: {database_path.name}")
+    if view == "Companies":
+        _companies(database_path)
+        return
     st.title("SEC filing explorer")
     _reset_dependents(
         "_database",
@@ -374,11 +402,18 @@ def main(*, database_path: Path) -> None:
     if not snapshot.available_ciks:
         st.info("No filings are available in this dataset.")
         return
+    try:
+        names = load_company_names(database_path=database_path)
+    except DashboardReadError:
+        names = {}
     cik = st.sidebar.selectbox(
-        "SEC company identifier (CIK)",
+        "Company",
         snapshot.available_ciks,
         index=None,
-        placeholder="Choose a CIK",
+        format_func=lambda value: (
+            f"{names[value]} ({value})" if value in names else value
+        ),
+        placeholder="Choose a company",
         key="company_cik",
     )
     _reset_dependents(
