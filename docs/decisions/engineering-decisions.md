@@ -75,11 +75,11 @@ This file explains the main choices behind the pipeline: what I picked, what I c
 
 **Context:** Picking "the revenue number" for a filing means filtering on period, unit, dimensions, entity and accuracy, then choosing between the facts that remain.
 
-**Decision:** dbt models (staging → intermediate → marts) do the selection. A [seed file](../../transform/seeds/metric_concept_map.csv) maps 8 metrics to US-GAAP concepts with priorities. Only company-wide facts (no dimensions) with the expected unit are eligible. A value is selected only when all eligible facts agree, and priority just picks which agreeing fact represents it. If they disagree, Gold publishes no value and writes a row to `gold.metric_quality_issues`.
+**Decision:** dbt models (staging → intermediate → marts) do the selection. A [seed file](../../transform/seeds/metric_concept_map.csv) maps 8 metrics to US-GAAP concepts with priorities. Only company-wide facts (no dimensions) with the expected unit are eligible. Priority picks which concept supplies the value (decision 16). The facts of that concept must agree; if they disagree, Gold publishes no value and writes a row to `gold.metric_quality_issues`.
 
 **Alternatives:** Doing the selection in Python, or letting priority (or row order) pick a winner even when values conflict.
 
-**Trade-off:** Fewer filled metrics. In the cohort, 210 of 400 filings are `PARTIAL`. But every published number has a reason and a source.
+**Trade-off:** Fewer filled metrics. In the cohort, 162 of 400 filings are `PARTIAL`. But every published number has a reason and a source.
 
 ### 8. Reported and derived values stay separate
 
@@ -93,7 +93,7 @@ This file explains the main choices behind the pipeline: what I picked, what I c
 
 **Decision:** Execution status (`COMPLETE` / `PARTIAL` / `FAILED` for a run; `SKIPPED` and `NOT_ATTEMPTED` for individual filings) is tracked separately from each filing's Gold quality status.
 
-**Why:** In the cohort run, all 538 dbt nodes passed and there are still 487 metric issue rows. Both are true, and combining them would hide one of them.
+**Why:** In the cohort, all 571 dbt nodes pass and there are still 557 metric issue rows. Both are true, and combining them would hide one of them.
 
 **Trade-off:** Two statuses to explain. The CLI exits with code 2 for `PARTIAL`, so a non-zero exit doesn't mean no data landed.
 
@@ -157,6 +157,21 @@ This file explains the main choices behind the pipeline: what I picked, what I c
 
 **Trade-off:** Gold is now a stored snapshot. After a catalog refresh it is stale until dbt runs again, which the pipeline already does right after the refresh.
 
+### 16. Priority picks the concept, never the value
+
+**Context:** The dashboard showed gaps for big companies. Some used XBRL concepts I hadn't mapped (Amazon's capex is `PaymentsToAcquireProductiveAssets`). Others reported two revenue concepts that measure different things: Walmart's total `Revenues` ($713.2B) vs. contract revenue ($706.4B). My old rule required every mapped concept to agree, so it withheld Walmart's and Berkshire's revenue for all five years.
+
+**Decision:** Add the missing concepts as lower-priority fallbacks, put total `Revenues` first, and change the rule:
+- Use the highest-priority concept the company reports. Its own facts must still agree, or the value is withheld.
+- Keep every agreeing fact, of any concept, as supporting evidence.
+- Record a lower-priority concept with a different value as a `LOWER_PRIORITY_CONCEPT_DIFFERS` warning instead of hiding the value.
+
+**Alternatives:** Keep requiring all concepts to agree (safe, but it can never use a fallback: Exxon's `ProfitLoss` differs from its `NetIncomeLoss` by minority interests, so adding it would have erased Exxon's net income). Or pick by priority and say nothing about the disagreement (hides real information).
+
+**How I checked it:** I snapshotted every Gold value before the change and compared after: 295 values gained, 0 changed, 0 lost. Annual revenue coverage went from 88 to 100 of 100 and free cash flow from 75 to 93. The full table is in the [cohort report](../validation/cohort-V1.md#concept-fallbacks-and-priority-selection).
+
+**Trade-off:** 254 new warnings, most of them net income differing by minority interests. `ProfitLoss` as a fallback includes minority interests (0.14% of Mastercard's net income), which the docs say. Some gaps stay on purpose: bank capex and EPS for companies with several share classes.
+
 ## Bugs that changed the design
 
 - **The complete submission file was in a `colspan` row.** The SEC filing index sometimes merges cells on that row, so normal column mapping missed or misread it. Discovery now finds that row explicitly and requires a `.txt` file name.
@@ -174,6 +189,7 @@ This file explains the main choices behind the pipeline: what I picked, what I c
 
 ## What I would change next
 
+- **Handle multi-class EPS** (Berkshire, Visa) by choosing a documented share class instead of leaving EPS empty.
 - **Make the fact table incremental**, so a new filing doesn't rebuild every Gold table. At 18 seconds a full rebuild is fine for 400 filings, but not for the whole S&P 500.
 - **Replace the active pointer with Iceberg** when moving to cloud storage.
 - **Make the database portable** by not storing absolute Parquet paths in the views.

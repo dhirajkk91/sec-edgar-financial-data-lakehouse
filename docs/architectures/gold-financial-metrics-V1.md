@@ -1,6 +1,6 @@
 # Gold: choosing a defensible financial value
 
-Silver keeps every accepted XBRL occurrence. Gold selects which occurrence can represent a metric for a filing and exact period. The dbt rules cover eight mapped metrics, publish three final views, and record issues when the evidence cannot support a choice.
+Silver keeps every accepted XBRL occurrence. Gold selects which occurrence can represent a metric for a filing and exact period. The dbt rules cover eight mapped metrics, publish five final views, and record issues when the evidence cannot support a choice.
 
 ## Inputs and metric set
 
@@ -17,9 +17,17 @@ Gold reads the active Silver catalog, stored filing metadata from the saved subm
 | `operating_cash_flow` | duration | USD | No |
 | `capital_expenditures` | duration | USD | No |
 
-The marts cover mapped US-GAAP concepts. Issuer extensions, operating income, equity, ratios, and free cash flow are outside the current metric set.
+The marts cover mapped US-GAAP concepts. Issuer extensions, operating income and equity are outside the current metric set; free cash flow and ratios are computed only in `fct_company_financials` from the mapped values.
 
-The seed is a **candidate map**, not a table of final answers. For revenue it allows `RevenueFromContractWithCustomerExcludingAssessedTax`, `SalesRevenueNet`, then `Revenues` in that priority order. A higher-priority concept cannot win over a lower-priority one that reports a different eligible value for the same period; that is a conflict to inspect. Keeping mappings in a seed makes the supported vocabulary reviewable without burying it in several `CASE` expressions.
+The seed is a **candidate map**, not a table of final answers. Three metrics have more than one concept, in priority order:
+
+| Metric | Concepts, highest priority first | Why the order |
+| --- | --- | --- |
+| `revenue` | `Revenues`, `RevenueFromContractWithCustomerExcludingAssessedTax`, `SalesRevenueNet` | Total revenue first. Contract revenue leaves out items such as Walmart's membership income or Berkshire's insurance premiums. |
+| `net_income` | `NetIncomeLoss`, `ProfitLoss` | Net income attributable to the company first. `ProfitLoss` also includes noncontrolling interests and is used only when a company does not report `NetIncomeLoss` (Broadcom, Mastercard). |
+| `capital_expenditures` | `PaymentsToAcquirePropertyPlantAndEquipment`, `PaymentsToAcquireProductiveAssets`, `PaymentsToAcquireOtherPropertyPlantAndEquipment` | Purchases of property and equipment first. Amazon, NVIDIA and Visa report capex as productive assets; Eli Lilly as other property and equipment. |
+
+Every other metric has one concept. Keeping mappings in a seed makes the supported vocabulary reviewable without burying it in several `CASE` expressions.
 
 The path from active facts to the marts runs through these models:
 
@@ -35,11 +43,16 @@ The path from active facts to the marts runs through these models:
 
 `int_financial_metric_candidates` joins mapped, non-nil facts to their active source document. It keeps one row per occurrence and counts dimensions without multiplying fact rows. The accuracy model keeps the raw `decimals` and `precision` strings. It requires exactly one usable attribute: an integer or uppercase `INF` for `decimals`, or a non-negative integer or uppercase `INF` for `precision`. Zero precision means unknown accuracy. Missing, malformed, or simultaneous attributes make the candidate unusable; the raw strings and issue stay available for inspection.
 
-The check is more than “numeric-looking value.” The fact must belong to the active document and issuer, have the right duration or instant kind, use the exact USD or USD/share expression expected for that metric, and have no dimensions for these consolidated selections. Reported values with unrepresentable precision were already rejected in Silver; Gold also checks whether the XBRL accuracy attributes can support a trusted choice. An otherwise eligible period group with even one unusable accuracy attribute is withheld rather than choosing the cleaner duplicate and hiding the bad one.
+The check is more than “numeric-looking value.” The fact must belong to the active document and issuer, have the right duration or instant kind, use the exact USD or USD/share expression expected for that metric, and have no dimensions for these consolidated selections. Reported values with unrepresentable precision were already rejected in Silver; Gold also checks whether the XBRL accuracy attributes can support a trusted choice. Within the concept that is used, an otherwise eligible period group with even one unusable accuracy attribute is withheld rather than choosing the cleaner duplicate and hiding the bad one.
 
-The reported selection models then require matching issuer identity, verified filing metadata, appropriate form and report date, exact period boundaries, no dimensions, and the expected unit. Agreement is checked across eligible occurrences for the same metric and period. If their values or accuracy attributes conflict, concept priority does **not** decide the answer; the group produces an issue and no selected reported row. When they agree, one occurrence supplies the displayed value, while the ordered supporting occurrence IDs retain the others. Priority only makes that representative deterministic.
+The reported selection models then require matching issuer identity, verified filing metadata, appropriate form and report date, exact period boundaries, no dimensions, and the expected unit. Selection then works in two steps:
 
-For example, two revenue facts for the same accession and dates may report the same USD value under different mapped concepts. One representative row is useful for a dashboard, but both occurrence IDs remain in `current_supporting_occurrence_ids`. If those values disagree, the issue view retains the source IDs and the metric is withheld. Deduplicating Silver first would remove the evidence needed to tell those cases apart.
+1. **Priority picks the concept.** For each filing, metric and exact period, only the highest-priority mapped concept that has eligible facts is used. Its occurrences must agree on the value and accuracy attributes; if they do not, the group produces an issue and no selected row. Priority never picks between two different values of the same concept.
+2. **Evidence keeps every agreeing fact.** The selected value's `supporting_occurrence_ids` list every usable occurrence, of any mapped concept, that reports exactly that value. A lower-priority concept that reports a *different* value does not block or change the selection; [`int_lower_priority_concept_differences`](../../transform/models/intermediate/int_lower_priority_concept_differences.sql) records it as a `LOWER_PRIORITY_CONCEPT_DIFFERS` warning with the differing occurrence IDs.
+
+For example, Walmart's FY2026 10-K reports `Revenues` of 713,163,000,000 USD and contract revenue of 706,413,000,000 USD. Gold publishes 713,163,000,000 from `Revenues` and records the contract figure as a warning, so the other definition stays visible. When both concepts report the same value, both occurrence IDs remain in `current_supporting_occurrence_ids` and no warning is written. Deduplicating Silver first would remove the evidence needed to tell those cases apart.
+
+The earlier rule required every mapped concept to agree. That withheld revenue for Walmart and Berkshire in all five years, because their two revenue concepts measure different things, and it would have made adding a fallback concept dangerous: Exxon reports both `NetIncomeLoss` and `ProfitLoss`, and they differ by its noncontrolling interests. The [cohort report](../validation/cohort-V1.md#concept-fallbacks-and-priority-selection) has the before-and-after backtest.
 
 Period classification uses the verified fiscal year/period focus together with the reported dates and form. Annual, quarter, year-to-date, and instant values retain different labels. An instant balance must match the report date. A quarter and a longer year-to-date value in the same 10-Q are not interchangeable. Missing or conflicting fiscal evidence leaves a row unclassified and visible through the issue view instead of turning a guessed period into a final metric.
 
