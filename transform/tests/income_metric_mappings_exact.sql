@@ -1,6 +1,7 @@
 with expected as (
     select * from (values
         ('net_income', 'http://fasb.org/us-gaap/', 'NetIncomeLoss', 1, 'duration'),
+        ('net_income', 'http://fasb.org/us-gaap/', 'ProfitLoss', 2, 'duration'),
         ('diluted_eps', 'http://fasb.org/us-gaap/', 'EarningsPerShareDiluted', 1, 'duration')
     ) as mappings(metric_code, concept_namespace_prefix, concept_local_name, concept_priority, expected_period_kind)
 ), actual as (

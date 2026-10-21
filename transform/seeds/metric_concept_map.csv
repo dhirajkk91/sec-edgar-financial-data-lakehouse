@@ -1,11 +1,14 @@
 metric_code,concept_namespace_prefix,concept_local_name,concept_priority,expected_period_kind
-revenue,http://fasb.org/us-gaap/,RevenueFromContractWithCustomerExcludingAssessedTax,1,duration
-revenue,http://fasb.org/us-gaap/,SalesRevenueNet,2,duration
-revenue,http://fasb.org/us-gaap/,Revenues,3,duration
+revenue,http://fasb.org/us-gaap/,Revenues,1,duration
+revenue,http://fasb.org/us-gaap/,RevenueFromContractWithCustomerExcludingAssessedTax,2,duration
+revenue,http://fasb.org/us-gaap/,SalesRevenueNet,3,duration
 net_income,http://fasb.org/us-gaap/,NetIncomeLoss,1,duration
+net_income,http://fasb.org/us-gaap/,ProfitLoss,2,duration
 diluted_eps,http://fasb.org/us-gaap/,EarningsPerShareDiluted,1,duration
 total_assets,http://fasb.org/us-gaap/,Assets,1,instant
 total_liabilities,http://fasb.org/us-gaap/,Liabilities,1,instant
 cash_and_equivalents,http://fasb.org/us-gaap/,CashAndCashEquivalentsAtCarryingValue,1,instant
 operating_cash_flow,http://fasb.org/us-gaap/,NetCashProvidedByUsedInOperatingActivities,1,duration
 capital_expenditures,http://fasb.org/us-gaap/,PaymentsToAcquirePropertyPlantAndEquipment,1,duration
+capital_expenditures,http://fasb.org/us-gaap/,PaymentsToAcquireProductiveAssets,2,duration
+capital_expenditures,http://fasb.org/us-gaap/,PaymentsToAcquireOtherPropertyPlantAndEquipment,3,duration

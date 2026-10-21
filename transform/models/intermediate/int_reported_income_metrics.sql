@@ -32,6 +32,15 @@ with eligible as (
         and regexp_full_match(c.entity_identifier, '[0-9]{1,10}')
         and regexp_matches(c.entity_identifier, '[1-9]')
         and lpad(c.entity_identifier, 10, '0') = c.cik
+), top_concept as (
+    -- Use only the highest-priority mapped concept present for this exact period.
+    -- A lower-priority concept never competes with it; if its value differs, that is
+    -- recorded as a WARNING in int_lower_priority_concept_differences.
+    select *
+    from eligible
+    qualify concept_priority = min(concept_priority) over (
+        partition by cik, accession_number, metric_code, period_start, period_end
+    )
 ), period_agreement as (
     select
         cik,
@@ -50,16 +59,48 @@ with eligible as (
         count(distinct decimals) + case when count(decimals) < count(*) then 1 else 0 end
             as decimals_count,
         count(distinct precision) + case when count(precision) < count(*) then 1 else 0 end
-            as precision_count
-    from eligible
+            as precision_count,
+        -- With value_count = 1 this is the one agreed value of the selected concept.
+        min(value_decimal) as agreed_value
+    from top_concept
     group by cik, accession_number, metric_code, report_date, period_start, period_end
+), support as (
+    -- Evidence for the selected value: every usable occurrence of any mapped concept
+    -- that reports exactly that value, so agreeing duplicates keep their lineage.
+    select
+        e.cik,
+        e.accession_number,
+        e.metric_code,
+        e.period_start,
+        e.period_end,
+        count(*) as supporting_occurrence_count,
+        list(e.source_occurrence_id order by e.concept_priority, e.source_ordinal, e.source_occurrence_id)
+            as supporting_occurrence_ids
+    from eligible as e
+    inner join period_agreement as a
+        on e.cik = a.cik
+        and e.accession_number = a.accession_number
+        and e.metric_code = a.metric_code
+        and e.period_start = a.period_start
+        and e.period_end = a.period_end
+    where a.invalid_accuracy_count = 0
+        and a.value_count = 1 and a.decimals_count = 1 and a.precision_count = 1
+        and e.value_decimal = a.agreed_value
+        and e.accuracy_is_usable
+    group by e.cik, e.accession_number, e.metric_code, e.period_start, e.period_end
 ), agreeing_occurrences as (
-    -- All mapped concepts must agree first; priority cannot settle a value conflict.
+    -- Occurrences of the selected concept must agree; priority picks a concept, never a value.
     select
         e.*,
-        a.supporting_occurrence_count,
-        a.supporting_occurrence_ids
-    from eligible as e
+        s.supporting_occurrence_count,
+        s.supporting_occurrence_ids
+    from top_concept as e
+    inner join support as s
+        on e.cik = s.cik
+        and e.accession_number = s.accession_number
+        and e.metric_code = s.metric_code
+        and e.period_start = s.period_start
+        and e.period_end = s.period_end
     inner join period_agreement as a
         on e.cik = a.cik
         and e.accession_number = a.accession_number
@@ -114,7 +155,7 @@ select
     metadata_run_id,
     submissions_sha256,
     'reported_duration'::varchar as period_label,
-    '2'::varchar as selection_rule_version,
+    '3'::varchar as selection_rule_version,
     case when supporting_occurrence_count = 1
         then 'SINGLE_ELIGIBLE_OCCURRENCE'
         else 'AGREEING_ELIGIBLE_OCCURRENCES'

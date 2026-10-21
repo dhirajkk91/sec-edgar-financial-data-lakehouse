@@ -100,10 +100,11 @@ def verify_gold(database: Path) -> dict[str, Any]:
                         )
                     ]
                     assert len(ids) == 2
+                # Revenues has priority 1, so the agreeing contract-revenue fact follows it.
                 if row["metric_code"] == "revenue":
                     assert [source["concept_local_name"] for source in inputs] == [
-                        "RevenueFromContractWithCustomerExcludingAssessedTax",
                         "Revenues",
+                        "RevenueFromContractWithCustomerExcludingAssessedTax",
                     ]
                 assert row[f"{prefix}_source_occurrence_id"] == ids[0]
             if row["value_origin"] == "reported":

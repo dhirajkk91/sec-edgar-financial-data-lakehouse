@@ -105,7 +105,7 @@ unit_tests:
         duration_days: null
         is_usd: true
         period_label: reported_instant
-        selection_rule_version: '2'
+        selection_rule_version: '3'
         selection_reason: AGREEING_ELIGIBLE_OCCURRENCES
         supporting_occurrence_count: 4
         supporting_occurrence_ids:
@@ -125,7 +125,7 @@ unit_tests:
         duration_days: null
         is_usd: true
         period_label: reported_instant
-        selection_rule_version: '2'
+        selection_rule_version: '3'
         selection_reason: SINGLE_ELIGIBLE_OCCURRENCE
         supporting_occurrence_count: 1
         supporting_occurrence_ids:
@@ -142,7 +142,7 @@ unit_tests:
         duration_days: null
         is_usd: true
         period_label: reported_instant
-        selection_rule_version: '2'
+        selection_rule_version: '3'
         selection_reason: SINGLE_ELIGIBLE_OCCURRENCE
         supporting_occurrence_count: 1
         supporting_occurrence_ids:
@@ -181,7 +181,6 @@ unit_tests:
             concept_local_name: Assets
             value_decimal: '10.000000000000000002'
             decimals: '0'
-            concept_priority: 2
           - <<: *balance_occurrence
             precision: 'INF'
             source_occurrence_id: decimal-null
@@ -253,7 +252,7 @@ unit_tests:
         duration_days: null
         is_usd: true
         period_label: reported_instant
-        selection_rule_version: '2'
+        selection_rule_version: '3'
         selection_reason: SINGLE_ELIGIBLE_OCCURRENCE
         supporting_occurrence_count: 1
         supporting_occurrence_ids:
@@ -270,7 +269,7 @@ unit_tests:
         duration_days: null
         is_usd: true
         period_label: reported_instant
-        selection_rule_version: '2'
+        selection_rule_version: '3'
         selection_reason: AGREEING_ELIGIBLE_OCCURRENCES
         supporting_occurrence_count: 2
         supporting_occurrence_ids:
@@ -467,7 +466,7 @@ unit_tests:
         duration_days: null
         is_usd: true
         period_label: reported_instant
-        selection_rule_version: '2'
+        selection_rule_version: '3'
         selection_reason: SINGLE_ELIGIBLE_OCCURRENCE
         supporting_occurrence_count: 1
         supporting_occurrence_ids:
@@ -484,7 +483,7 @@ unit_tests:
         duration_days: null
         is_usd: true
         period_label: reported_instant
-        selection_rule_version: '2'
+        selection_rule_version: '3'
         selection_reason: SINGLE_ELIGIBLE_OCCURRENCE
         supporting_occurrence_count: 1
         supporting_occurrence_ids:
@@ -501,7 +500,7 @@ unit_tests:
         duration_days: null
         is_usd: true
         period_label: reported_instant
-        selection_rule_version: '2'
+        selection_rule_version: '3'
         selection_reason: SINGLE_ELIGIBLE_OCCURRENCE
         supporting_occurrence_count: 1
         supporting_occurrence_ids:
@@ -586,7 +585,7 @@ unit_tests:
         duration_days: null
         is_usd: true
         period_label: reported_instant
-        selection_rule_version: '2'
+        selection_rule_version: '3'
         selection_reason: SINGLE_ELIGIBLE_OCCURRENCE
         supporting_occurrence_count: 1
         supporting_occurrence_ids:
@@ -603,7 +602,7 @@ unit_tests:
         duration_days: null
         is_usd: true
         period_label: reported_instant
-        selection_rule_version: '2'
+        selection_rule_version: '3'
         selection_reason: SINGLE_ELIGIBLE_OCCURRENCE
         supporting_occurrence_count: 1
         supporting_occurrence_ids:
@@ -620,7 +619,7 @@ unit_tests:
         duration_days: null
         is_usd: true
         period_label: reported_instant
-        selection_rule_version: '2'
+        selection_rule_version: '3'
         selection_reason: SINGLE_ELIGIBLE_OCCURRENCE
         supporting_occurrence_count: 1
         supporting_occurrence_ids:
@@ -637,7 +636,7 @@ unit_tests:
         duration_days: null
         is_usd: true
         period_label: reported_instant
-        selection_rule_version: '2'
+        selection_rule_version: '3'
         selection_reason: SINGLE_ELIGIBLE_OCCURRENCE
         supporting_occurrence_count: 1
         supporting_occurrence_ids:
@@ -654,7 +653,7 @@ unit_tests:
         duration_days: null
         is_usd: true
         period_label: reported_instant
-        selection_rule_version: '2'
+        selection_rule_version: '3'
         selection_reason: SINGLE_ELIGIBLE_OCCURRENCE
         supporting_occurrence_count: 1
         supporting_occurrence_ids:
@@ -671,7 +670,7 @@ unit_tests:
         duration_days: null
         is_usd: true
         period_label: reported_instant
-        selection_rule_version: '2'
+        selection_rule_version: '3'
         selection_reason: SINGLE_ELIGIBLE_OCCURRENCE
         supporting_occurrence_count: 1
         supporting_occurrence_ids:
@@ -688,7 +687,7 @@ unit_tests:
         duration_days: null
         is_usd: true
         period_label: reported_instant
-        selection_rule_version: '2'
+        selection_rule_version: '3'
         selection_reason: SINGLE_ELIGIBLE_OCCURRENCE
         supporting_occurrence_count: 1
         supporting_occurrence_ids:

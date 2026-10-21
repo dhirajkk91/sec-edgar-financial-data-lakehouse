@@ -170,7 +170,7 @@ models:
           - not_null
           - accepted_values:
               arguments:
-                values: ['2']
+                values: ['3']
       - name: form
         description: Verified form; original and amended accessions stay separate.
         data_tests: [not_null]
@@ -265,7 +265,7 @@ models:
           - not_null
           - accepted_values:
               arguments:
-                values: ['2']
+                values: ['3']
       - name: form
         description: Verified form; original and amended accessions stay separate.
         data_tests: [not_null]
@@ -364,7 +364,7 @@ models:
           - not_null
           - accepted_values:
               arguments:
-                values: ['2']
+                values: ['3']
       - name: form
         description: Verified form; original and amended accessions stay separate.
         data_tests: [not_null]
@@ -462,7 +462,7 @@ models:
           - not_null
           - accepted_values:
               arguments:
-                values: ['2']
+                values: ['3']
       - name: form
         description: Verified form; original and amended accessions stay separate.
         data_tests: [not_null]
@@ -1247,9 +1247,33 @@ models:
         data_type: VARCHAR
         description: Preserved input previous precision; independently nullable. Previous accuracy is null for reported rows; no derived accuracy is invented.
 
+  - name: int_lower_priority_concept_differences
+    description: >-
+      One WARNING per selected value whose filing also reports a lower-priority mapped concept with a different
+      value for the same metric, exact period and unit (company-wide facts only). The selected value is unchanged;
+      priority picks the concept, and this keeps the other definition visible, e.g. total Revenues vs. contract
+      revenue, or NetIncomeLoss vs. ProfitLoss, which includes noncontrolling interests.
+    columns:
+      - name: cik
+        data_tests: [not_null]
+      - name: accession_number
+        data_tests: [not_null]
+      - name: issue_code
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: ["LOWER_PRIORITY_CONCEPT_DIFFERS"]
+      - name: severity
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: ["WARNING"]
+      - name: source_occurrence_ids
+        description: The differing lower-priority occurrences, ordered by priority, ordinal and ID.
+        data_tests: [not_null]
   - name: metric_quality_issues
     description: >-
-      Unified view of six dedicated issue views and reported rows with non-null period_issue_code.
+      Unified view of seven dedicated issue views and reported rows with non-null period_issue_code.
       It preserves upstream occurrences and ordered evidence with UNION ALL; repeated records are valid
       and no uniqueness is imposed. Selection, classification and derivation retain stage-specific nullability.
       Classification uses the existing critical-metric severity profile without changing financial or filing-status behavior.
@@ -1284,7 +1308,7 @@ models:
           - not_null
           - accepted_values:
               arguments:
-                values: ["int_revenue_selection_issues", "int_income_metric_selection_issues", "int_balance_sheet_metric_selection_issues", "int_cash_flow_metric_selection_issues", "int_reported_financial_periods", "int_quarterly_cash_flow_derivation_issues", "int_q4_financial_metric_derivation_issues"]
+                values: ["int_revenue_selection_issues", "int_income_metric_selection_issues", "int_lower_priority_concept_differences", "int_balance_sheet_metric_selection_issues", "int_cash_flow_metric_selection_issues", "int_reported_financial_periods", "int_quarterly_cash_flow_derivation_issues", "int_q4_financial_metric_derivation_issues"]
       - name: issue_code
         data_type: VARCHAR
         description: Preserved selection/derivation issue code or classified period_issue_code.

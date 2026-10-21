@@ -46,6 +46,26 @@ select
     r.accession_number,
     r.metric_code,
     'selection'::varchar as issue_stage,
+    'int_lower_priority_concept_differences'::varchar as source_model,
+    r.issue_code,
+    r.severity,
+    r.report_date,
+    r.period_start,
+    r.period_end,
+    r.period_instant,
+    null::integer as fiscal_year_focus,
+    null::varchar as fiscal_period_focus,
+    null::varchar as current_source_occurrence_id,
+    r.source_occurrence_ids,
+    []::varchar[] as previous_source_occurrence_ids,
+    r.details
+from {{ ref('int_lower_priority_concept_differences') }} as r
+union all
+select
+    r.cik,
+    r.accession_number,
+    r.metric_code,
+    'selection'::varchar as issue_stage,
     'int_balance_sheet_metric_selection_issues'::varchar as source_model,
     r.issue_code,
     r.severity,
