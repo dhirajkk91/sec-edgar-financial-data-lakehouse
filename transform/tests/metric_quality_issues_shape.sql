@@ -26,6 +26,15 @@ where not coalesce(
                 and q.period_start is null and q.period_end is null)
             or (q.source_model <> 'int_balance_sheet_metric_selection_issues' and q.period_instant is null)
         ))
+    or (q.issue_stage = 'selection'
+        and q.source_model = 'int_lower_priority_concept_differences'
+        and q.issue_code = 'LOWER_PRIORITY_CONCEPT_DIFFERS' and q.severity = 'WARNING'
+        and q.fiscal_year_focus is null and q.fiscal_period_focus is null
+        and q.current_source_occurrence_id is null
+        and q.previous_source_occurrence_ids = []::varchar[]
+        and len(q.source_occurrence_ids) > 0
+        and ((q.period_instant is null and q.period_start is not null and q.period_end is not null)
+            or (q.period_instant is not null and q.period_start is null and q.period_end is null)))
     or (q.issue_stage = 'period_classification'
         and q.source_model = 'int_reported_financial_periods'
         and q.current_source_occurrence_id is not null

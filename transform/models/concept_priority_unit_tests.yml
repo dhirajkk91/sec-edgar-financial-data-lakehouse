@@ -1,0 +1,213 @@
+unit_tests:
+  - name: highest_priority_concept_wins_selected
+    model: int_reported_revenue
+    description: >-
+      Priority picks the concept, never a value. A lower-priority concept with a different value
+      does not block or change the selection; a lower-priority concept is used when it is the only
+      one reported; a conflict inside the highest-priority concept still withholds the value.
+    given:
+      - input: ref('int_financial_metric_candidate_accuracy')
+        rows:
+          - &priority_occurrence
+            metric_code: revenue
+            concept_priority: 1
+            cik: 0000104169
+            accession_number: 0000104169-26-000001
+            source_occurrence_id: total-revenue
+            source_document_name: filing.xml
+            source_sha256: checksum
+            source_ordinal: 1
+            processing_run_id: silver-run
+            parser_version: '3'
+            schema_version: '1'
+            concept_namespace: http://fasb.org/us-gaap/2025
+            concept_local_name: Revenues
+            raw_value: '713163000000'
+            value_decimal: '713163000000'
+            decimals: '-6'
+            precision: null
+            unit_ref: USD
+            unit_expression: '{http://www.xbrl.org/2003/iso4217}USD'
+            context_ref: context
+            entity_scheme: http://www.sec.gov/CIK
+            entity_identifier: '104169'
+            period_kind: duration
+            period_start: '2025-02-01'
+            period_end: '2026-01-31'
+            period_instant: null
+            dimension_count: 0
+            has_dimensions: false
+            duration_days: 365
+            accuracy_is_usable: true
+            accuracy_issue_code: null
+            accuracy_issue_details: null
+            is_usd: true
+          - <<: *priority_occurrence
+            source_occurrence_id: contract-revenue
+            source_ordinal: 2
+            concept_priority: 2
+            concept_local_name: RevenueFromContractWithCustomerExcludingAssessedTax
+            raw_value: '706413000000'
+            value_decimal: '706413000000'
+          - <<: *priority_occurrence
+            source_occurrence_id: contract-only
+            accession_number: 0000104169-26-000002
+            concept_priority: 2
+            concept_local_name: RevenueFromContractWithCustomerExcludingAssessedTax
+            value_decimal: '500000000000'
+            raw_value: '500000000000'
+          - <<: *priority_occurrence
+            source_occurrence_id: top-conflict-a
+            accession_number: 0000104169-26-000003
+            value_decimal: '10'
+            raw_value: '10'
+          - <<: *priority_occurrence
+            source_occurrence_id: top-conflict-b
+            accession_number: 0000104169-26-000003
+            source_ordinal: 2
+            value_decimal: '11'
+            raw_value: '11'
+          - <<: *priority_occurrence
+            source_occurrence_id: lower-agrees-with-a
+            accession_number: 0000104169-26-000003
+            source_ordinal: 3
+            concept_priority: 2
+            concept_local_name: RevenueFromContractWithCustomerExcludingAssessedTax
+            value_decimal: '10'
+            raw_value: '10'
+      - input: ref('stg_silver_filing_metadata')
+        rows:
+          - &priority_metadata
+            cik: 0000104169
+            accession_number: 0000104169-26-000001
+            form: 10-K
+            filing_date: '2026-03-15'
+            report_date: '2026-01-31'
+            primary_document: filing.htm
+            metadata_run_id: metadata-run
+            run_record_path: /verified/run.json
+            submissions_path: /verified/submissions.json
+            submissions_url: https://data.sec.gov/submissions/CIK0000104169.json
+            submissions_retrieved_at: '2026-04-01T00:00:00+00:00'
+            submissions_size_bytes: 100
+            submissions_sha256: snapshot-checksum
+          - <<: *priority_metadata
+            accession_number: 0000104169-26-000002
+          - <<: *priority_metadata
+            accession_number: 0000104169-26-000003
+    expect:
+      rows:
+      - source_occurrence_id: total-revenue
+        concept_local_name: Revenues
+        value_decimal: '713163000000'
+        supporting_occurrence_ids: [total-revenue]
+        supporting_occurrence_count: 1
+        selection_reason: SINGLE_ELIGIBLE_OCCURRENCE
+        selection_rule_version: '3'
+      - source_occurrence_id: contract-only
+        concept_local_name: RevenueFromContractWithCustomerExcludingAssessedTax
+        value_decimal: '500000000000'
+        supporting_occurrence_ids: [contract-only]
+        supporting_occurrence_count: 1
+        selection_reason: SINGLE_ELIGIBLE_OCCURRENCE
+        selection_rule_version: '3'
+
+  - name: highest_priority_concept_wins_issues
+    model: int_revenue_selection_issues
+    description: >-
+      Only a disagreement inside the highest-priority concept is a conflict. Its evidence lists
+      only that concept's occurrences.
+    given:
+      - input: ref('int_financial_metric_candidate_accuracy')
+        rows:
+          - <<: *priority_occurrence
+          - <<: *priority_occurrence
+            source_occurrence_id: contract-revenue
+            source_ordinal: 2
+            concept_priority: 2
+            concept_local_name: RevenueFromContractWithCustomerExcludingAssessedTax
+            raw_value: '706413000000'
+            value_decimal: '706413000000'
+          - <<: *priority_occurrence
+            source_occurrence_id: top-conflict-a
+            accession_number: 0000104169-26-000003
+            value_decimal: '10'
+            raw_value: '10'
+          - <<: *priority_occurrence
+            source_occurrence_id: top-conflict-b
+            accession_number: 0000104169-26-000003
+            source_ordinal: 2
+            value_decimal: '11'
+            raw_value: '11'
+          - <<: *priority_occurrence
+            source_occurrence_id: lower-agrees-with-a
+            accession_number: 0000104169-26-000003
+            source_ordinal: 3
+            concept_priority: 2
+            concept_local_name: RevenueFromContractWithCustomerExcludingAssessedTax
+            value_decimal: '10'
+            raw_value: '10'
+      - input: ref('stg_silver_filing_metadata')
+        rows:
+          - <<: *priority_metadata
+          - <<: *priority_metadata
+            accession_number: 0000104169-26-000003
+      - input: ref('stg_silver_active_filings')
+        rows:
+          - {cik: 0000104169, accession_number: 0000104169-26-000001}
+          - {cik: 0000104169, accession_number: 0000104169-26-000003}
+    expect:
+      rows:
+      - accession_number: 0000104169-26-000003
+        issue_code: REVENUE_VALUE_CONFLICT
+        severity: ERROR
+        source_occurrence_ids: [top-conflict-a, top-conflict-b]
+
+  - name: lower_priority_differences_become_warnings
+    model: int_lower_priority_concept_differences
+    description: >-
+      A lower-priority concept that reports a different value for the same filing, metric, exact
+      period and unit is recorded as a WARNING. Equal values, dimensioned facts, other periods and
+      other units are not.
+    given:
+      - input: ref('int_reported_revenue')
+        rows:
+          - {cik: 0000104169, accession_number: 0000104169-26-000001, metric_code: revenue,
+             report_date: '2026-01-31', period_start: '2025-02-01', period_end: '2026-01-31',
+             period_instant: null, concept_priority: 1, concept_local_name: Revenues,
+             value_decimal: '713163000000', unit_expression: '{http://www.xbrl.org/2003/iso4217}USD'}
+      - input: ref('int_reported_income_metrics')
+        rows: []
+      - input: ref('int_reported_cash_flow_metrics')
+        rows: []
+      - input: ref('int_reported_balance_sheet_metrics')
+        rows: []
+      - input: ref('int_financial_metric_candidates')
+        rows:
+          - &difference_candidate
+            {cik: 0000104169, accession_number: 0000104169-26-000001, metric_code: revenue,
+             source_occurrence_id: contract-revenue, source_ordinal: 2, concept_priority: 2,
+             concept_local_name: RevenueFromContractWithCustomerExcludingAssessedTax,
+             value_decimal: '706413000000', unit_expression: '{http://www.xbrl.org/2003/iso4217}USD',
+             period_start: '2025-02-01', period_end: '2026-01-31', period_instant: null,
+             dimension_count: 0, entity_identifier: '104169'}
+          - <<: *difference_candidate
+            source_occurrence_id: lower-but-equal
+            value_decimal: '713163000000'
+          - <<: *difference_candidate
+            source_occurrence_id: segment-only
+            dimension_count: 1
+          - <<: *difference_candidate
+            source_occurrence_id: prior-year
+            period_start: '2024-02-01'
+            period_end: '2025-01-31'
+          - <<: *difference_candidate
+            source_occurrence_id: other-unit
+            unit_expression: '{http://www.xbrl.org/2003/iso4217}EUR'
+    expect:
+      rows:
+      - accession_number: 0000104169-26-000001
+        metric_code: revenue
+        issue_code: LOWER_PRIORITY_CONCEPT_DIFFERS
+        severity: WARNING
+        source_occurrence_ids: [contract-revenue]

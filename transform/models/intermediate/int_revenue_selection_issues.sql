@@ -29,6 +29,15 @@ with eligible as (
         and regexp_full_match(c.entity_identifier, '[0-9]{1,10}')
         and regexp_matches(c.entity_identifier, '[1-9]')
         and lpad(c.entity_identifier, 10, '0') = c.cik
+), top_concept as (
+    -- Use only the highest-priority mapped concept present for this exact period.
+    -- A lower-priority concept never competes with it; if its value differs, that is
+    -- recorded as a WARNING in int_lower_priority_concept_differences.
+    select *
+    from eligible
+    qualify concept_priority = min(concept_priority) over (
+        partition by cik, accession_number, metric_code, period_start, period_end
+    )
 ), period_agreement as (
     select
         cik,
@@ -53,7 +62,7 @@ with eligible as (
             as decimals_count,
         count(distinct precision) + case when count(precision) < count(*) then 1 else 0 end
             as precision_count
-    from eligible
+    from top_concept
     group by cik, accession_number, metric_code, report_date, period_start, period_end
 ), filing_base as (
     select
@@ -118,7 +127,7 @@ with eligible as (
             || case when invalid_accuracy_count > 0
                 then 'unusable accuracy in eligible occurrences: ' || invalid_accuracy_details
                 when value_count > 1
-                then 'eligible revenue occurrences disagree on the exact Decimal value; concept priority cannot resolve this conflict.'
+                then 'eligible revenue occurrences of the highest-priority concept disagree on the exact Decimal value.'
                 else 'eligible revenue values agree, but decimals or precision attributes differ (including nulls); rounding intervals are unresolved.'
             end as details
     from period_agreement

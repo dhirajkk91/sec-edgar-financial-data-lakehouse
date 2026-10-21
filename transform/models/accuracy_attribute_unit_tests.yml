@@ -658,7 +658,7 @@ unit_tests:
       metadata_run_id: metadata-run
       submissions_sha256: snapshot-checksum
       period_label: reported_duration
-      selection_rule_version: '2'
+      selection_rule_version: '3'
       selection_reason: SINGLE_ELIGIBLE_OCCURRENCE
       supporting_occurrence_count: 1
       supporting_occurrence_ids:
@@ -699,7 +699,7 @@ unit_tests:
       metadata_run_id: metadata-run
       submissions_sha256: snapshot-checksum
       period_label: reported_duration
-      selection_rule_version: '2'
+      selection_rule_version: '3'
       selection_reason: SINGLE_ELIGIBLE_OCCURRENCE
       supporting_occurrence_count: 1
       supporting_occurrence_ids:
@@ -740,7 +740,7 @@ unit_tests:
       metadata_run_id: metadata-run
       submissions_sha256: snapshot-checksum
       period_label: reported_duration
-      selection_rule_version: '2'
+      selection_rule_version: '3'
       selection_reason: SINGLE_ELIGIBLE_OCCURRENCE
       supporting_occurrence_count: 1
       supporting_occurrence_ids:
@@ -788,9 +788,7 @@ unit_tests:
       source_occurrence_ids:
       - revenue-conflict-a
       - revenue-conflict-b
-      details: 'Reported period 2025-07-01 through 2025-09-30: eligible revenue occurrences
-        disagree on the exact Decimal value; concept priority cannot resolve this
-        conflict.'
+      details: 'Reported period 2025-07-01 through 2025-09-30: eligible revenue occurrences of the highest-priority concept disagree on the exact Decimal value.'
     - cik: 0000320193
       accession_number: 0000320193-25-000004
       metric_code: revenue
@@ -886,7 +884,7 @@ unit_tests:
       metadata_run_id: metadata-run
       submissions_sha256: snapshot-checksum
       period_label: reported_duration
-      selection_rule_version: '2'
+      selection_rule_version: '3'
       selection_reason: SINGLE_ELIGIBLE_OCCURRENCE
       supporting_occurrence_count: 1
       supporting_occurrence_ids:
@@ -927,7 +925,7 @@ unit_tests:
       metadata_run_id: metadata-run
       submissions_sha256: snapshot-checksum
       period_label: reported_duration
-      selection_rule_version: '2'
+      selection_rule_version: '3'
       selection_reason: SINGLE_ELIGIBLE_OCCURRENCE
       supporting_occurrence_count: 1
       supporting_occurrence_ids:
@@ -968,7 +966,7 @@ unit_tests:
       metadata_run_id: metadata-run
       submissions_sha256: snapshot-checksum
       period_label: reported_duration
-      selection_rule_version: '2'
+      selection_rule_version: '3'
       selection_reason: SINGLE_ELIGIBLE_OCCURRENCE
       supporting_occurrence_count: 1
       supporting_occurrence_ids:
@@ -1009,7 +1007,7 @@ unit_tests:
       metadata_run_id: metadata-run
       submissions_sha256: snapshot-checksum
       period_label: reported_duration
-      selection_rule_version: '2'
+      selection_rule_version: '3'
       selection_reason: SINGLE_ELIGIBLE_OCCURRENCE
       supporting_occurrence_count: 1
       supporting_occurrence_ids:
@@ -1050,7 +1048,7 @@ unit_tests:
       metadata_run_id: metadata-run
       submissions_sha256: snapshot-checksum
       period_label: reported_duration
-      selection_rule_version: '2'
+      selection_rule_version: '3'
       selection_reason: SINGLE_ELIGIBLE_OCCURRENCE
       supporting_occurrence_count: 1
       supporting_occurrence_ids:
@@ -1091,7 +1089,7 @@ unit_tests:
       metadata_run_id: metadata-run
       submissions_sha256: snapshot-checksum
       period_label: reported_duration
-      selection_rule_version: '2'
+      selection_rule_version: '3'
       selection_reason: SINGLE_ELIGIBLE_OCCURRENCE
       supporting_occurrence_count: 1
       supporting_occurrence_ids:
@@ -1156,8 +1154,8 @@ unit_tests:
       - diluted_eps-conflict-a
       - diluted_eps-conflict-b
       details: 'Metric diluted_eps, reported period 2025-07-01 through 2025-09-30:
-        eligible metric occurrences disagree on the exact Decimal value; concept priority
-        cannot resolve this conflict.'
+        eligible metric occurrences of the highest-priority concept disagree on the exact
+        Decimal value.'
     - cik: 0000320193
       accession_number: 0000320193-25-000003
       metric_code: net_income
@@ -1170,8 +1168,8 @@ unit_tests:
       - net_income-conflict-a
       - net_income-conflict-b
       details: 'Metric net_income, reported period 2025-07-01 through 2025-09-30:
-        eligible metric occurrences disagree on the exact Decimal value; concept priority
-        cannot resolve this conflict.'
+        eligible metric occurrences of the highest-priority concept disagree on the exact
+        Decimal value.'
     - cik: 0000320193
       accession_number: 0000320193-25-000004
       metric_code: diluted_eps
@@ -1315,7 +1313,7 @@ unit_tests:
       metadata_run_id: metadata-run
       submissions_sha256: snapshot-checksum
       period_label: reported_instant
-      selection_rule_version: '2'
+      selection_rule_version: '3'
       selection_reason: SINGLE_ELIGIBLE_OCCURRENCE
       supporting_occurrence_count: 1
       supporting_occurrence_ids:
@@ -1356,7 +1354,7 @@ unit_tests:
       metadata_run_id: metadata-run
       submissions_sha256: snapshot-checksum
       period_label: reported_instant
-      selection_rule_version: '2'
+      selection_rule_version: '3'
       selection_reason: SINGLE_ELIGIBLE_OCCURRENCE
       supporting_occurrence_count: 1
       supporting_occurrence_ids:
@@ -1397,7 +1395,7 @@ unit_tests:
       metadata_run_id: metadata-run
       submissions_sha256: snapshot-checksum
       period_label: reported_instant
-      selection_rule_version: '2'
+      selection_rule_version: '3'
       selection_reason: SINGLE_ELIGIBLE_OCCURRENCE
       supporting_occurrence_count: 1
       supporting_occurrence_ids:
@@ -1438,7 +1436,7 @@ unit_tests:
       metadata_run_id: metadata-run
       submissions_sha256: snapshot-checksum
       period_label: reported_instant
-      selection_rule_version: '2'
+      selection_rule_version: '3'
       selection_reason: SINGLE_ELIGIBLE_OCCURRENCE
       supporting_occurrence_count: 1
       supporting_occurrence_ids:
@@ -1479,7 +1477,7 @@ unit_tests:
       metadata_run_id: metadata-run
       submissions_sha256: snapshot-checksum
       period_label: reported_instant
-      selection_rule_version: '2'
+      selection_rule_version: '3'
       selection_reason: SINGLE_ELIGIBLE_OCCURRENCE
       supporting_occurrence_count: 1
       supporting_occurrence_ids:
@@ -1520,7 +1518,7 @@ unit_tests:
       metadata_run_id: metadata-run
       submissions_sha256: snapshot-checksum
       period_label: reported_instant
-      selection_rule_version: '2'
+      selection_rule_version: '3'
       selection_reason: SINGLE_ELIGIBLE_OCCURRENCE
       supporting_occurrence_count: 1
       supporting_occurrence_ids:
@@ -1597,8 +1595,7 @@ unit_tests:
       - cash_and_equivalents-conflict-a
       - cash_and_equivalents-conflict-b
       details: 'Metric cash_and_equivalents, reported instant 2025-09-30: eligible
-        metric occurrences disagree on the exact Decimal value; concept priority cannot
-        resolve this conflict.'
+        metric occurrences of the highest-priority concept disagree on the exact Decimal value.'
     - cik: 0000320193
       accession_number: 0000320193-25-000003
       metric_code: total_assets
@@ -1610,8 +1607,7 @@ unit_tests:
       - total_assets-conflict-a
       - total_assets-conflict-b
       details: 'Metric total_assets, reported instant 2025-09-30: eligible metric
-        occurrences disagree on the exact Decimal value; concept priority cannot resolve
-        this conflict.'
+        occurrences of the highest-priority concept disagree on the exact Decimal value.'
     - cik: 0000320193
       accession_number: 0000320193-25-000003
       metric_code: total_liabilities
@@ -1623,8 +1619,7 @@ unit_tests:
       - total_liabilities-conflict-a
       - total_liabilities-conflict-b
       details: 'Metric total_liabilities, reported instant 2025-09-30: eligible metric
-        occurrences disagree on the exact Decimal value; concept priority cannot resolve
-        this conflict.'
+        occurrences of the highest-priority concept disagree on the exact Decimal value.'
     - cik: 0000320193
       accession_number: 0000320193-25-000004
       metric_code: cash_and_equivalents
@@ -1804,7 +1799,7 @@ unit_tests:
       metadata_run_id: metadata-run
       submissions_sha256: snapshot-checksum
       period_label: reported_duration
-      selection_rule_version: '2'
+      selection_rule_version: '3'
       selection_reason: SINGLE_ELIGIBLE_OCCURRENCE
       supporting_occurrence_count: 1
       supporting_occurrence_ids:
@@ -1845,7 +1840,7 @@ unit_tests:
       metadata_run_id: metadata-run
       submissions_sha256: snapshot-checksum
       period_label: reported_duration
-      selection_rule_version: '2'
+      selection_rule_version: '3'
       selection_reason: SINGLE_ELIGIBLE_OCCURRENCE
       supporting_occurrence_count: 1
       supporting_occurrence_ids:
@@ -1886,7 +1881,7 @@ unit_tests:
       metadata_run_id: metadata-run
       submissions_sha256: snapshot-checksum
       period_label: reported_duration
-      selection_rule_version: '2'
+      selection_rule_version: '3'
       selection_reason: SINGLE_ELIGIBLE_OCCURRENCE
       supporting_occurrence_count: 1
       supporting_occurrence_ids:
@@ -1927,7 +1922,7 @@ unit_tests:
       metadata_run_id: metadata-run
       submissions_sha256: snapshot-checksum
       period_label: reported_duration
-      selection_rule_version: '2'
+      selection_rule_version: '3'
       selection_reason: SINGLE_ELIGIBLE_OCCURRENCE
       supporting_occurrence_count: 1
       supporting_occurrence_ids:
@@ -1968,7 +1963,7 @@ unit_tests:
       metadata_run_id: metadata-run
       submissions_sha256: snapshot-checksum
       period_label: reported_duration
-      selection_rule_version: '2'
+      selection_rule_version: '3'
       selection_reason: SINGLE_ELIGIBLE_OCCURRENCE
       supporting_occurrence_count: 1
       supporting_occurrence_ids:
@@ -2009,7 +2004,7 @@ unit_tests:
       metadata_run_id: metadata-run
       submissions_sha256: snapshot-checksum
       period_label: reported_duration
-      selection_rule_version: '2'
+      selection_rule_version: '3'
       selection_reason: SINGLE_ELIGIBLE_OCCURRENCE
       supporting_occurrence_count: 1
       supporting_occurrence_ids:
@@ -2074,8 +2069,8 @@ unit_tests:
       - capital_expenditures-conflict-a
       - capital_expenditures-conflict-b
       details: 'Metric capital_expenditures, reported period 2025-07-01 through 2025-09-30:
-        eligible metric occurrences disagree on the exact Decimal value; concept priority
-        cannot resolve this conflict.'
+        eligible metric occurrences of the highest-priority concept disagree on the exact
+        Decimal value.'
     - cik: 0000320193
       accession_number: 0000320193-25-000003
       metric_code: operating_cash_flow
@@ -2088,8 +2083,8 @@ unit_tests:
       - operating_cash_flow-conflict-a
       - operating_cash_flow-conflict-b
       details: 'Metric operating_cash_flow, reported period 2025-07-01 through 2025-09-30:
-        eligible metric occurrences disagree on the exact Decimal value; concept priority
-        cannot resolve this conflict.'
+        eligible metric occurrences of the highest-priority concept disagree on the exact
+        Decimal value.'
     - cik: 0000320193
       accession_number: 0000320193-25-000004
       metric_code: capital_expenditures

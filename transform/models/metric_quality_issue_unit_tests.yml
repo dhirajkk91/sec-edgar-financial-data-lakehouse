@@ -36,6 +36,13 @@ unit_tests:
             period_start: null
             period_end: null
             source_occurrence_ids: []
+      - input: ref('int_lower_priority_concept_differences')
+        rows:
+          - {cik: "0000000001", accession_number: "filing", metric_code: "revenue",
+             issue_code: "LOWER_PRIORITY_CONCEPT_DIFFERS", severity: "WARNING",
+             report_date: "2026-03-28", period_start: "2025-09-28", period_end: "2026-03-28",
+             period_instant: null, source_occurrence_ids: ["lower-b"],
+             details: "Exact upstream detail; retain punctuation and order."}
       - input: ref('int_balance_sheet_metric_selection_issues')
         rows:
           - &quality_instant_issue
@@ -152,6 +159,15 @@ unit_tests:
             details: "Two Q3 candidates in deterministic accession/occurrence order; keep this reason unchanged."
     expect:
       rows:
+        - {cik: "0000000001", accession_number: "filing",
+           metric_code: "revenue", issue_stage: "selection",
+           source_model: "int_lower_priority_concept_differences", issue_code: "LOWER_PRIORITY_CONCEPT_DIFFERS",
+           severity: "WARNING", report_date: "2026-03-28",
+           period_start: "2025-09-28", period_end: "2026-03-28",
+           period_instant: null, fiscal_year_focus: null,
+           fiscal_period_focus: null, current_source_occurrence_id: null,
+           source_occurrence_ids: ["lower-b"], previous_source_occurrence_ids: [],
+           details: "Exact upstream detail; retain punctuation and order."}
         - {cik: "0000000001", accession_number: "filing",
            metric_code: "revenue", issue_stage: "selection",
            source_model: "int_revenue_selection_issues", issue_code: "REVENUE_VALUE_CONFLICT",
@@ -332,6 +348,8 @@ unit_tests:
             source_occurrence_ids: []
       - input: ref('int_income_metric_selection_issues')
         rows: []
+      - input: ref('int_lower_priority_concept_differences')
+        rows: []
       - input: ref('int_balance_sheet_metric_selection_issues')
         rows: []
       - input: ref('int_cash_flow_metric_selection_issues')
@@ -493,6 +511,8 @@ unit_tests:
       - input: ref('int_revenue_selection_issues')
         rows: []
       - input: ref('int_income_metric_selection_issues')
+        rows: []
+      - input: ref('int_lower_priority_concept_differences')
         rows: []
       - input: ref('int_balance_sheet_metric_selection_issues')
         rows: []

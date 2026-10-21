@@ -232,6 +232,37 @@ After that build, opening the dashboard on the full cohort ran out of DuckDB's 4
 
 Missing values in the new table are the same gaps already recorded in `gold.metric_quality_issues`; the table does not fill them.
 
+## Concept fallbacks and priority selection
+
+After the Companies dashboard exposed gaps for large companies, the gaps were traced to two causes in `gold.metric_quality_issues`:
+
+- **An unmapped concept** (`NO_ELIGIBLE_METRIC`). Amazon, NVIDIA and Visa report capex as `PaymentsToAcquireProductiveAssets`, Eli Lilly as `PaymentsToAcquireOtherPropertyPlantAndEquipment`, and Broadcom and Mastercard report net income as `ProfitLoss`.
+- **Two revenue concepts that measure different things** (`REVENUE_VALUE_CONFLICT`). Walmart reports `Revenues` of 713,163,000,000 USD and contract revenue of 706,413,000,000 USD for FY2026; Berkshire reports 371,444,000,000 and 247,244,000,000 USD. The earlier rule required all mapped concepts to agree, so it withheld revenue for both companies in all five years.
+
+The fix added those concepts as lower-priority fallbacks, put `Revenues` (total) first for revenue, and changed selection so that the highest-priority concept a company reports supplies the value, its own occurrences must still agree, every agreeing occurrence of any concept stays in the evidence, and a lower-priority concept with a different value becomes a `LOWER_PRIORITY_CONCEPT_DIFFERS` warning. No new SEC data was requested.
+
+Before shipping, every Gold value was compared with a snapshot taken before the change, on the same cohort database:
+
+| Check | Before | After |
+| --- | ---: | ---: |
+| `fct_financial_metrics` rows | 4,015 | 4,310 |
+| Values gained / changed / lost | — | 295 / 0 / 0 |
+| Same value, now represented by `Revenues` instead of contract revenue | — | 24 |
+| Filings with `COMPLETE` Gold quality | 190 | 238 |
+| Issue rows (errors / warnings) | 487 (364 / 123) | 557 (240 / 317) |
+| Annual rows with revenue (of 100) | 88 | 100 |
+| Annual rows with net income | 91 | 100 |
+| Annual rows with capex and free cash flow | 75 | 93 |
+| Quarterly rows with free cash flow (of 400) | 300 | 372 |
+
+The 295 gained values are reported and derived revenue, net income and capex for Walmart, Berkshire, Mastercard, Broadcom, Amazon, Visa, Eli Lilly, NVIDIA and Exxon. No existing value changed or disappeared. The 24 same-value rows are filings where `Revenues` and contract revenue agree; both occurrences remain in the supporting evidence.
+
+Issue changes: 85 `REVENUE_VALUE_CONFLICT` errors are gone, `NO_ELIGIBLE_METRIC` fell from 325 to 213, and 254 `LOWER_PRIORITY_CONCEPT_DIFFERS` warnings appeared. Of those, 169 are net income, where `ProfitLoss` differs from `NetIncomeLoss` by noncontrolling interests (Exxon, Tesla, AbbVie, Berkshire, Walmart and Palantir), and 85 are revenue, where total `Revenues` differs from contract revenue (Walmart, Berkshire, Exxon and Mastercard). `UNSUPPORTED_DURATION` warnings rose from 15 to 30 because the new concepts brought their own unusual periods, which are flagged rather than used. Warnings do not change a filing's Gold quality status.
+
+Some gaps remain on purpose. JPMorgan reports no property-and-equipment purchases in a way that fits the capex concepts, as is usual for a bank, so its free cash flow stays empty. Berkshire and Visa report EPS per share class rather than one company-wide figure, so their diluted EPS stays empty. Q4 EPS is never derived.
+
+The rebuilt Gold passed all 571 dbt nodes (562 before, plus the new model, its tests and three unit tests for the new rule), and the offline CI build passed with the same synthetic results as before.
+
 ## Architecture exercised
 
 Historical discovery follows only CIK-specific files referenced by a verified main submissions response. It validates their parallel arrays, source identity, paths, and overlaps before selecting a row. The original bytes, retrieval URL/time, size, and SHA-256 are saved in company run evidence. Filing metadata rechecks the particular listing used for its accession before insertion. This is why older filings get the same verifiable provenance as recent filings.

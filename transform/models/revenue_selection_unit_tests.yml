@@ -94,7 +94,7 @@ unit_tests:
         supporting_occurrence_count: 3
         selection_reason: AGREEING_ELIGIBLE_OCCURRENCES
         period_label: reported_duration
-        selection_rule_version: '2'
+        selection_rule_version: '3'
         value_decimal: '100.000000000000000001'
         raw_value: '100.000000000000000001'
         form: 10-Q
@@ -106,7 +106,7 @@ unit_tests:
         supporting_occurrence_count: 2
         selection_reason: AGREEING_ELIGIBLE_OCCURRENCES
         period_label: reported_duration
-        selection_rule_version: '2'
+        selection_rule_version: '3'
         value_decimal: '100.000000000000000001'
         raw_value: '100.000000000000000001'
         form: 10-K/A
@@ -184,8 +184,6 @@ unit_tests:
             source_occurrence_id: ambiguous-low
             period_start: '2025-04-01'
             value_decimal: '21'
-            concept_priority: 3
-            concept_local_name: Revenues
           - <<: *revenue_occurrence
             source_occurrence_id: amendment
             accession_number: 0000320193-25-000002
@@ -204,7 +202,7 @@ unit_tests:
         supporting_occurrence_count: 1
         selection_reason: SINGLE_ELIGIBLE_OCCURRENCE
         period_label: reported_duration
-        selection_rule_version: '2'
+        selection_rule_version: '3'
         value_decimal: '0'
         period_start: '2025-07-01'
         period_end: '2025-09-30'
@@ -215,7 +213,7 @@ unit_tests:
         supporting_occurrence_count: 1
         selection_reason: SINGLE_ELIGIBLE_OCCURRENCE
         period_label: reported_duration
-        selection_rule_version: '2'
+        selection_rule_version: '3'
         value_decimal: '-10'
         period_start: '2025-01-01'
         period_end: '2025-09-30'
@@ -226,7 +224,7 @@ unit_tests:
         supporting_occurrence_count: 1
         selection_reason: SINGLE_ELIGIBLE_OCCURRENCE
         period_label: reported_duration
-        selection_rule_version: '2'
+        selection_rule_version: '3'
         value_decimal: '25'
         period_start: '2025-07-01'
         period_end: '2025-09-30'
@@ -252,8 +250,6 @@ unit_tests:
             source_occurrence_id: ambiguous-low
             period_start: '2025-04-01'
             value_decimal: '21'
-            concept_priority: 3
-            concept_local_name: Revenues
           - <<: *revenue_occurrence
             source_occurrence_id: amendment
             accession_number: 0000320193-25-000002
@@ -295,8 +291,6 @@ unit_tests:
             source_occurrence_id: value-low
             period_start: '2025-01-01'
             value_decimal: '100.000000000000000002'
-            concept_priority: 2
-            concept_local_name: SalesRevenueNet
             decimals: '0'
           - <<: *revenue_occurrence
             precision: 'INF'
@@ -346,7 +340,7 @@ unit_tests:
         supporting_occurrence_count: 2
         selection_reason: AGREEING_ELIGIBLE_OCCURRENCES
         period_label: reported_duration
-        selection_rule_version: '2'
+        selection_rule_version: '3'
         decimals: null
         precision: 'INF'
         period_start: '2025-05-01'
@@ -365,8 +359,6 @@ unit_tests:
             source_occurrence_id: value-low
             period_start: '2025-01-01'
             value_decimal: '100.000000000000000002'
-            concept_priority: 2
-            concept_local_name: SalesRevenueNet
             decimals: '0'
           - <<: *revenue_occurrence
             precision: 'INF'
@@ -531,7 +523,7 @@ unit_tests:
         supporting_occurrence_count: 1
         selection_reason: SINGLE_ELIGIBLE_OCCURRENCE
         period_label: reported_duration
-        selection_rule_version: '2'
+        selection_rule_version: '3'
   - name: eligibility_excludes_only_from_selection_issues
     model: int_revenue_selection_issues
     description: Ineligible facts remain candidates; invalid identifiers are not repaired into matches.

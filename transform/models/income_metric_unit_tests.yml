@@ -109,7 +109,7 @@ unit_tests:
         - ni-b
         - ni-last
         period_label: reported_duration
-        selection_rule_version: '2'
+        selection_rule_version: '3'
         selection_reason: AGREEING_ELIGIBLE_OCCURRENCES
       - source_occurrence_id: eps-loss
         metric_code: diluted_eps
@@ -121,7 +121,7 @@ unit_tests:
         supporting_occurrence_ids:
         - eps-loss
         period_label: reported_duration
-        selection_rule_version: '2'
+        selection_rule_version: '3'
         selection_reason: SINGLE_ELIGIBLE_OCCURRENCE
       - source_occurrence_id: eps-zero
         metric_code: diluted_eps
@@ -133,7 +133,7 @@ unit_tests:
         supporting_occurrence_ids:
         - eps-zero
         period_label: reported_duration
-        selection_rule_version: '2'
+        selection_rule_version: '3'
         selection_reason: SINGLE_ELIGIBLE_OCCURRENCE
       - source_occurrence_id: ni-zero
         metric_code: net_income
@@ -145,7 +145,7 @@ unit_tests:
         supporting_occurrence_ids:
         - ni-zero
         period_label: reported_duration
-        selection_rule_version: '2'
+        selection_rule_version: '3'
         selection_reason: SINGLE_ELIGIBLE_OCCURRENCE
   - name: metric_units_losses_and_ordered_agreement_issues
     model: int_income_metric_selection_issues
@@ -269,7 +269,7 @@ unit_tests:
         - ni-good
         - ni-good-repeat
         period_label: reported_duration
-        selection_rule_version: '2'
+        selection_rule_version: '3'
         selection_reason: AGREEING_ELIGIBLE_OCCURRENCES
       - source_occurrence_id: eps-good
         metric_code: diluted_eps
@@ -281,7 +281,7 @@ unit_tests:
         supporting_occurrence_ids:
         - eps-good
         period_label: reported_duration
-        selection_rule_version: '2'
+        selection_rule_version: '3'
         selection_reason: SINGLE_ELIGIBLE_OCCURRENCE
   - name: metric_and_duration_conflicts_are_isolated_issues
     model: int_income_metric_selection_issues
@@ -675,7 +675,7 @@ unit_tests:
         supporting_occurrence_ids:
         - ni-valid
         period_label: reported_duration
-        selection_rule_version: '2'
+        selection_rule_version: '3'
         selection_reason: SINGLE_ELIGIBLE_OCCURRENCE
       - source_occurrence_id: eps-valid
         metric_code: diluted_eps
@@ -687,7 +687,7 @@ unit_tests:
         supporting_occurrence_ids:
         - eps-valid
         period_label: reported_duration
-        selection_rule_version: '2'
+        selection_rule_version: '3'
         selection_reason: SINGLE_ELIGIBLE_OCCURRENCE
   - name: eligibility_and_wrong_units_issues
     model: int_income_metric_selection_issues
@@ -775,7 +775,7 @@ unit_tests:
         supporting_occurrence_ids:
         - ni-quarter
         period_label: reported_duration
-        selection_rule_version: '2'
+        selection_rule_version: '3'
         selection_reason: SINGLE_ELIGIBLE_OCCURRENCE
         cik: 0000320193
       - source_occurrence_id: ni-long
@@ -788,7 +788,7 @@ unit_tests:
         supporting_occurrence_ids:
         - ni-long
         period_label: reported_duration
-        selection_rule_version: '2'
+        selection_rule_version: '3'
         selection_reason: SINGLE_ELIGIBLE_OCCURRENCE
         cik: 0000320193
       - source_occurrence_id: eps-quarter
@@ -801,7 +801,7 @@ unit_tests:
         supporting_occurrence_ids:
         - eps-quarter
         period_label: reported_duration
-        selection_rule_version: '2'
+        selection_rule_version: '3'
         selection_reason: SINGLE_ELIGIBLE_OCCURRENCE
         cik: 0000320193
       - source_occurrence_id: eps-long
@@ -814,7 +814,7 @@ unit_tests:
         supporting_occurrence_ids:
         - eps-long
         period_label: reported_duration
-        selection_rule_version: '2'
+        selection_rule_version: '3'
         selection_reason: SINGLE_ELIGIBLE_OCCURRENCE
         cik: 0000320193
       - source_occurrence_id: ni-amendment
@@ -827,7 +827,7 @@ unit_tests:
         supporting_occurrence_ids:
         - ni-amendment
         period_label: reported_duration
-        selection_rule_version: '2'
+        selection_rule_version: '3'
         selection_reason: SINGLE_ELIGIBLE_OCCURRENCE
         cik: 0000320193
       - source_occurrence_id: eps-amendment
@@ -840,7 +840,7 @@ unit_tests:
         supporting_occurrence_ids:
         - eps-amendment
         period_label: reported_duration
-        selection_rule_version: '2'
+        selection_rule_version: '3'
         selection_reason: SINGLE_ELIGIBLE_OCCURRENCE
         cik: 0000320193
       - source_occurrence_id: other-company
@@ -853,7 +853,7 @@ unit_tests:
         supporting_occurrence_ids:
         - other-company
         period_label: reported_duration
-        selection_rule_version: '2'
+        selection_rule_version: '3'
         selection_reason: SINGLE_ELIGIBLE_OCCURRENCE
         cik: '0000000002'
   - name: separate_durations_accessions_and_companies_issues
@@ -940,7 +940,7 @@ unit_tests:
         supporting_occurrence_ids:
         - only-eps
         period_label: reported_duration
-        selection_rule_version: '2'
+        selection_rule_version: '3'
         selection_reason: SINGLE_ELIGIBLE_OCCURRENCE
       - source_occurrence_id: only-ni
         metric_code: net_income
@@ -952,7 +952,7 @@ unit_tests:
         supporting_occurrence_ids:
         - only-ni
         period_label: reported_duration
-        selection_rule_version: '2'
+        selection_rule_version: '3'
         selection_reason: SINGLE_ELIGIBLE_OCCURRENCE
       - source_occurrence_id: eps-independent
         metric_code: diluted_eps
@@ -964,7 +964,7 @@ unit_tests:
         supporting_occurrence_ids:
         - eps-independent
         period_label: reported_duration
-        selection_rule_version: '2'
+        selection_rule_version: '3'
         selection_reason: SINGLE_ELIGIBLE_OCCURRENCE
   - name: missing_metric_and_all_ambiguous_issues
     model: int_income_metric_selection_issues

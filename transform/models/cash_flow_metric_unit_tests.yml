@@ -114,7 +114,7 @@ unit_tests:
         - ocf-b
         - ocf-last
         period_label: reported_duration
-        selection_rule_version: '2'
+        selection_rule_version: '3'
         selection_reason: AGREEING_ELIGIBLE_OCCURRENCES
         raw_value: '-10'
       - source_occurrence_id: capex-loss
@@ -127,7 +127,7 @@ unit_tests:
         supporting_occurrence_ids:
         - capex-loss
         period_label: reported_duration
-        selection_rule_version: '2'
+        selection_rule_version: '3'
         selection_reason: SINGLE_ELIGIBLE_OCCURRENCE
         raw_value: '-0.25'
       - source_occurrence_id: capex-zero
@@ -140,7 +140,7 @@ unit_tests:
         supporting_occurrence_ids:
         - capex-zero
         period_label: reported_duration
-        selection_rule_version: '2'
+        selection_rule_version: '3'
         selection_reason: SINGLE_ELIGIBLE_OCCURRENCE
         raw_value: '0'
       - source_occurrence_id: ocf-zero
@@ -153,7 +153,7 @@ unit_tests:
         supporting_occurrence_ids:
         - ocf-zero
         period_label: reported_duration
-        selection_rule_version: '2'
+        selection_rule_version: '3'
         selection_reason: SINGLE_ELIGIBLE_OCCURRENCE
         raw_value: '0'
       - source_occurrence_id: capex-positive
@@ -166,7 +166,7 @@ unit_tests:
         supporting_occurrence_ids:
         - capex-positive
         period_label: reported_duration
-        selection_rule_version: '2'
+        selection_rule_version: '3'
         selection_reason: SINGLE_ELIGIBLE_OCCURRENCE
         raw_value: '025.000'
   - name: metric_units_losses_and_ordered_agreement_issues
@@ -596,7 +596,7 @@ unit_tests:
         - ocf-good
         - ocf-good-repeat
         period_label: reported_duration
-        selection_rule_version: '2'
+        selection_rule_version: '3'
         selection_reason: AGREEING_ELIGIBLE_OCCURRENCES
       - source_occurrence_id: capex-good
         metric_code: capital_expenditures
@@ -608,7 +608,7 @@ unit_tests:
         supporting_occurrence_ids:
         - capex-good
         period_label: reported_duration
-        selection_rule_version: '2'
+        selection_rule_version: '3'
         selection_reason: SINGLE_ELIGIBLE_OCCURRENCE
   - name: metric_and_duration_conflicts_are_isolated_issues
     model: int_cash_flow_metric_selection_issues
@@ -967,7 +967,7 @@ unit_tests:
         supporting_occurrence_ids:
         - ocf-valid
         period_label: reported_duration
-        selection_rule_version: '2'
+        selection_rule_version: '3'
         selection_reason: SINGLE_ELIGIBLE_OCCURRENCE
       - source_occurrence_id: capex-valid
         metric_code: capital_expenditures
@@ -979,7 +979,7 @@ unit_tests:
         supporting_occurrence_ids:
         - capex-valid
         period_label: reported_duration
-        selection_rule_version: '2'
+        selection_rule_version: '3'
         selection_reason: SINGLE_ELIGIBLE_OCCURRENCE
   - name: eligibility_and_wrong_units_issues
     model: int_cash_flow_metric_selection_issues
@@ -1062,7 +1062,7 @@ unit_tests:
         supporting_occurrence_ids:
         - ocf-quarter
         period_label: reported_duration
-        selection_rule_version: '2'
+        selection_rule_version: '3'
         selection_reason: SINGLE_ELIGIBLE_OCCURRENCE
         cik: 0000320193
       - source_occurrence_id: ocf-long
@@ -1075,7 +1075,7 @@ unit_tests:
         supporting_occurrence_ids:
         - ocf-long
         period_label: reported_duration
-        selection_rule_version: '2'
+        selection_rule_version: '3'
         selection_reason: SINGLE_ELIGIBLE_OCCURRENCE
         cik: 0000320193
       - source_occurrence_id: capex-quarter
@@ -1088,7 +1088,7 @@ unit_tests:
         supporting_occurrence_ids:
         - capex-quarter
         period_label: reported_duration
-        selection_rule_version: '2'
+        selection_rule_version: '3'
         selection_reason: SINGLE_ELIGIBLE_OCCURRENCE
         cik: 0000320193
       - source_occurrence_id: capex-long
@@ -1101,7 +1101,7 @@ unit_tests:
         supporting_occurrence_ids:
         - capex-long
         period_label: reported_duration
-        selection_rule_version: '2'
+        selection_rule_version: '3'
         selection_reason: SINGLE_ELIGIBLE_OCCURRENCE
         cik: 0000320193
       - source_occurrence_id: ocf-amendment
@@ -1114,7 +1114,7 @@ unit_tests:
         supporting_occurrence_ids:
         - ocf-amendment
         period_label: reported_duration
-        selection_rule_version: '2'
+        selection_rule_version: '3'
         selection_reason: SINGLE_ELIGIBLE_OCCURRENCE
         cik: 0000320193
       - source_occurrence_id: capex-amendment
@@ -1127,7 +1127,7 @@ unit_tests:
         supporting_occurrence_ids:
         - capex-amendment
         period_label: reported_duration
-        selection_rule_version: '2'
+        selection_rule_version: '3'
         selection_reason: SINGLE_ELIGIBLE_OCCURRENCE
         cik: 0000320193
       - source_occurrence_id: other-company
@@ -1140,7 +1140,7 @@ unit_tests:
         supporting_occurrence_ids:
         - other-company
         period_label: reported_duration
-        selection_rule_version: '2'
+        selection_rule_version: '3'
         selection_reason: SINGLE_ELIGIBLE_OCCURRENCE
         cik: '0000000002'
   - name: separate_durations_accessions_and_companies_issues
@@ -1225,7 +1225,7 @@ unit_tests:
         supporting_occurrence_ids:
         - only-eps
         period_label: reported_duration
-        selection_rule_version: '2'
+        selection_rule_version: '3'
         selection_reason: SINGLE_ELIGIBLE_OCCURRENCE
       - source_occurrence_id: only-ni
         metric_code: operating_cash_flow
@@ -1237,7 +1237,7 @@ unit_tests:
         supporting_occurrence_ids:
         - only-ni
         period_label: reported_duration
-        selection_rule_version: '2'
+        selection_rule_version: '3'
         selection_reason: SINGLE_ELIGIBLE_OCCURRENCE
       - source_occurrence_id: capex-independent
         metric_code: capital_expenditures
@@ -1249,7 +1249,7 @@ unit_tests:
         supporting_occurrence_ids:
         - capex-independent
         period_label: reported_duration
-        selection_rule_version: '2'
+        selection_rule_version: '3'
         selection_reason: SINGLE_ELIGIBLE_OCCURRENCE
   - name: missing_metric_and_all_ambiguous_issues
     model: int_cash_flow_metric_selection_issues
