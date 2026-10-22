@@ -1,11 +1,12 @@
 # Offline CI and clean-install validation
 
-The workflow in [`.github/workflows/ci.yml`](../../.github/workflows/ci.yml) runs on PRs to `main`, pushes to `main`, and manual dispatch. “Offline” refers to the tests and financial build: they use local fixtures, make no SEC requests, and need no `SEC_USER_AGENT`. Dependency installation still needs network access. The workflow uses Python 3.14, locked uv dependencies, read-only repository permissions, and pinned action commits.
+The workflow in [`.github/workflows/ci.yml`](../../.github/workflows/ci.yml) runs on PRs to `main`, pushes to `main`, and manual dispatch. “Offline” refers to the tests and financial build: they use local fixtures, make no SEC requests, and need no `SEC_USER_AGENT`. Dependency installation still needs network access. The workflow uses Python 3.14 (3.12 for the hosted-demo job), locked uv dependencies, read-only repository permissions, and pinned action commits.
 
 | Job | What it checks |
 | --- | --- |
 | Python checks (Linux and macOS) | Ruff lint/format, mypy, and the full Python suite. A pytest socket guard blocks external connections while allowing local loopback and mocked HTTP. |
 | Offline dbt (Linux) | Synthetic Bronze → Silver → catalog → metadata → one full Gold build, then exact value, warning, ordering, and lineage assertions. |
+| Hosted demo (Linux, Python 3.12) | Installs only `deploy/requirements.txt` and pytest, then checks the committed demo database against its manifest, the pins against `uv.lock`, the export's path and email checks, and that both views open through the hosted entry point. |
 | Built wheel (Linux) | Wheel/sdist build, a fresh core-only install outside the checkout, public imports, relocated CLI help, and reader/inspector checks without dbt or Streamlit. |
 
 The synthetic company is CIK `0000000042`, with Q2, Q3, and annual XML fixtures under `tests/ci/fixtures/`. The fixture builder uses the production extraction, publication, catalog, and metadata APIs. Financial selection and derivation run through the unchanged dbt models. Its saved SEC-shaped URL is evidence for metadata verification; the test never fetches it. The wheel probe uses a serialized Gold fixture with complete ordered records and column types, so it checks packaging and reading independently of dbt.
@@ -35,7 +36,7 @@ test ! -e data
 uv sync --locked --group dev --group dbt --group dashboard
 uv run --no-sync ruff check .
 uv run --no-sync ruff format --check .
-uv run --no-sync mypy src tests
+uv run --no-sync mypy src tests deploy
 env -u SEC_USER_AGENT uv run --no-sync pytest --junitxml="$ci_work/python-junit.xml"
 env -u SEC_USER_AGENT uv run --no-sync python scripts/ci/validate_offline_dbt.py --work-dir "$ci_work/offline-dbt"
 env -u SEC_USER_AGENT uv run --no-sync python scripts/ci/validate_wheel.py --work-dir "$ci_work/wheel"
@@ -53,3 +54,5 @@ An independent Linux run found an out-of-memory failure in `fct_financial_metric
 The warnings are financial evidence, not failed dbt tests: Q2 lacks the Q1 cumulative inputs needed for standalone operating cash flow and capex; one Q2 cash candidate has invalid accuracy. Q3 cash flow/capex and four Q4 metrics derived from compatible inputs. EPS stayed reported and exact. Supporting occurrences and both derived inputs were checked back to Silver. No financial mapping or assertion was weakened for the resource correction.
 
 The corrected workflow passed locally on macOS after the independent Linux failure, and later passed in [GitHub Actions on `main`](https://github.com/dhirajkk91/sec-edgar-financial-data-lakehouse/actions/runs/38617505874) at commit `769828c`: Python checks on Ubuntu and macOS, offline dbt validation on Ubuntu, and built-wheel validation on Ubuntu all completed successfully. The local attempt used a temporary directory, so its artifacts may not be available in another checkout; the scripts and fixtures remain in the repository.
+
+For the hosted demo, the full suite (1,321 tests), Ruff and mypy passed on Linux with Python 3.14. A separate Python 3.12.15 environment with only `deploy/requirements.txt` and pytest passed the 13 hosted-demo and export tests, and both dashboard views were opened in a headless browser through `deploy/streamlit_app.py` against the committed demo database without errors.

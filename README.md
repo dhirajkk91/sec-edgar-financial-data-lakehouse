@@ -12,6 +12,8 @@ The **Trace a filing** view follows any number back to its source. Here, Apple's
 
 ![Trace a filing: a derived Q4 value with its two source inputs and derivation method](docs/images/trace-a-filing.png)
 
+A hosted copy of the dashboard runs on Streamlit Community Cloud from [`deploy/streamlit_app.py`](deploy/streamlit_app.py). It reads [`demo/sec_edgar_demo.duckdb`](demo/), a 3 MB copy of the five Gold tables from the 20-company cohort, so it needs no SEC access, Silver files or dbt. Both views work there; the `silver.facts` queries further down only work on a local build. The [dashboard notes](docs/architectures/dashboard-V1.md#hosted-demo) explain how the copy is made and checked.
+
 ```text
 SEC submissions + filing index
            │
@@ -237,7 +239,8 @@ To trace a displayed metric, copy its CIK, accession, current `source_occurrence
 | `src/sec_edgar_lakehouse/catalog/` and `src/sec_edgar_lakehouse/metadata/` | Active Silver DuckDB views, plus filing/fiscal metadata and company profiles tied to source evidence. |
 | `src/sec_edgar_lakehouse/pipeline/` | Company processing, stage gates, dbt invocation, and run summaries. |
 | `transform/` | dbt concept mappings, reported/derived metric SQL, marts, and tests. |
-| `src/sec_edgar_lakehouse/dashboard/` | Read-only Gold readers, CLI inspector, the Companies view, and the filing explorer. |
+| `src/sec_edgar_lakehouse/dashboard/` | Read-only Gold readers, CLI inspector, the Companies view, the filing explorer, and the demo export. |
+| `deploy/` and `demo/` | Hosted dashboard entry point, its pinned packages, and the Gold-only demo database with its manifest. |
 | `tests/`, `scripts/ci/`, `.github/workflows/` | Python tests, synthetic offline validation, clean wheel checks, and CI. |
 
 For implementation details, see [Bronze](docs/architectures/bronze-ingestion-V1.md), [Silver](docs/architectures/silver-processing-V1.md), the [DuckDB catalog](docs/architectures/duckdb-query-catalog-V1.md), [company processing](docs/architectures/company-pipeline-orchestration-V1.md), the [end-to-end runner](docs/architectures/end-to-end-pipeline-V1.md), [cohort backfill](docs/architectures/cohort-backfill-V1.md), [Gold](docs/architectures/gold-financial-metrics-V1.md), and the [dashboard](docs/architectures/dashboard-V1.md). The [engineering decisions](docs/decisions/engineering-decisions.md) cover the choices and corrections behind them. Results are in the [offline CI](docs/validation/ci-V1.md), [Apple/Microsoft](docs/validation/multi-company-acceptance-V1.md), and [full cohort](docs/validation/cohort-V1.md) reports.
@@ -249,7 +252,7 @@ The offline checks use fixtures and temporary destinations instead of live SEC r
 ```sh
 uv run --no-sync ruff check .
 uv run --no-sync ruff format --check .
-uv run --no-sync mypy src tests
+uv run --no-sync mypy src tests deploy
 env -u SEC_USER_AGENT uv run --no-sync pytest
 uv build --offline
 ci_work=$(mktemp -d "${TMPDIR:-/tmp}/sec-edgar-ci.XXXXXX")
@@ -274,6 +277,6 @@ Use the saved stage evidence before deciding what to rerun. These procedures use
 
 ## Boundaries
 
-The pipeline is local, sequential, and built for one writer. Ordinary company selection uses the main SEC submissions response's `filings.recent`; the cohort planner follows older submission files when that window is too short. The company CLI can retain an amendment when its form is explicitly selected; this cohort selects original `10-K` and `10-Q` filings only. Neither path chooses a company-wide latest value. Gold supports the mapped US-GAAP concepts, not every issuer extension or XBRL taxonomy. It does not convert currencies, reconcile accounting policies, or invent a quarter when predecessor evidence is missing. A catalog transaction does not make Bronze, Silver, metadata, and dbt one atomic publication. Silver views point to absolute local Parquet paths, so copying only the DuckDB file will not reproduce the dataset.
+The pipeline is local, sequential, and built for one writer. Ordinary company selection uses the main SEC submissions response's `filings.recent`; the cohort planner follows older submission files when that window is too short. The company CLI can retain an amendment when its form is explicitly selected; this cohort selects original `10-K` and `10-Q` filings only. Neither path chooses a company-wide latest value. Gold supports the mapped US-GAAP concepts, not every issuer extension or XBRL taxonomy. It does not convert currencies, reconcile accounting policies, or invent a quarter when predecessor evidence is missing. A catalog transaction does not make Bronze, Silver, metadata, and dbt one atomic publication. Silver views point to absolute local Parquet paths, so copying only the DuckDB file will not reproduce the dataset; the hosted demo copies only Gold tables for that reason. It is a read-only snapshot that I re-export after a Gold rebuild, not a deployed pipeline.
 
-A V2 could address scheduling, cloud storage, broader taxonomy coverage, concurrent writers, and deployed dashboard access. Those require new design and validation; they are not part of this finished local V1.
+A V2 could address scheduling, cloud storage, broader taxonomy coverage, and concurrent writers. Those require new design and validation; they are not part of this finished local V1.

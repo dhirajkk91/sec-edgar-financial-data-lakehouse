@@ -89,7 +89,7 @@ The [cohort design](cohort-backfill-V1.md) explains why a fixed 20-issuer plan s
 | Catalog refresh commits its active table, failure table, and fact views together after verification. | It does not freeze external Parquet files against another process modifying them. Use one writer. |
 | Metadata rows keep the first verified SEC and active-document provenance on an identical rerun. | Later conflicting source evidence is reported, not silently substituted. |
 | Selected and derived Gold rows carry current and, where applicable, predecessor occurrence IDs and exact values. | A missing or conflicting predecessor gives an issue, not a fabricated quarter. dbt does not publish all marts atomically. |
-| The dashboard uses a read-only DuckDB connection and keeps full lineage in the detail record. | The database references absolute local Parquet paths; copying only the `.duckdb` file is insufficient. |
+| The dashboard uses a read-only DuckDB connection and keeps full lineage in the detail record. | The database references absolute local Parquet paths; copying only the `.duckdb` file is insufficient. The [hosted demo](dashboard-V1.md#hosted-demo) copies only the Gold tables for that reason. |
 
 ## Where the claims are checked
 

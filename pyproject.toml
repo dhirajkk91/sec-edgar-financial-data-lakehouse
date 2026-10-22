@@ -32,3 +32,8 @@ dbt = [
     "dbt-core>=1.12.5,<1.13",
     "dbt-duckdb>=1.11,<1.12",
 ]
+
+[tool.ruff]
+# The pipeline runs on Python 3.14, but the source stays valid from 3.12 up so the
+# read-only dashboard can run on hosts that do not offer 3.14 yet.
+target-version = "py312"

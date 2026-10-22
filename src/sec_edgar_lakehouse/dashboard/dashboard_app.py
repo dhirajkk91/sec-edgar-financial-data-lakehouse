@@ -389,7 +389,6 @@ def main(*, database_path: Path) -> None:
             "Check the configured database path and finish any pipeline writes first."
         )
         return
-    st.caption(f"Database: {snapshot.database_path}")
     st.caption(
         f"Available coverage: {len(snapshot.available_ciks)} CIKs · "
         f"{len(snapshot.filings.rows)} filings · "
