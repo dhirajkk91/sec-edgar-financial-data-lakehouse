@@ -172,6 +172,16 @@ This file explains the main choices behind the pipeline: what I picked, what I c
 
 **Trade-off:** 254 new warnings, most of them net income differing by minority interests. `ProfitLoss` as a fallback includes minority interests (0.14% of Mastercard's net income), which the docs say. Some gaps stay on purpose: bank capex and EPS for companies with several share classes.
 
+### 17. The live demo reads a Gold-only copy, not the pipeline's database
+
+**Context:** I wanted a link a reviewer can open without installing anything. The cohort database can't simply be uploaded: its Silver views point to absolute Parquet paths on my laptop (decision 6), and `dim_filings` stores those paths as well.
+
+**Decision:** Export only the five Gold tables the dashboard reads into a 3 MB DuckDB file, commit it under `demo/`, and run the unchanged dashboard against it on Streamlit Community Cloud. The export makes paths relative and refuses to publish anything that still looks like a local path or an email address.
+
+**Alternatives:** Run the whole pipeline on a cloud server (ongoing cost and an unattended SEC client, all for a read-only page). Make the Silver views relative and upload the Parquet files (far more data than the dashboard reads). Screenshots only (nobody can click through a trace).
+
+**Trade-off:** The demo is a snapshot that I re-export after each Gold rebuild, and it can't show raw Silver facts. The host may not offer Python 3.14, so the source has to stay valid from 3.12; Ruff's target version enforces that, and a CI job opens the hosted app on 3.12 with only its pinned packages.
+
 ## Bugs that changed the design
 
 - **The complete submission file was in a `colspan` row.** The SEC filing index sometimes merges cells on that row, so normal column mapping missed or misread it. Discovery now finds that row explicitly and requires a `.txt` file name.
@@ -185,6 +195,8 @@ This file explains the main choices behind the pipeline: what I picked, what I c
 - **The dashboard ran out of memory on the full cohort.** Every Gold model was a view, so a page load recomputed everything, and the reader even read `dim_filings` twice. Storing Gold as tables fixed both the memory error and the 34-minute build (decision 15).
 - **dbt ran out of memory, then out of time.** Setting `threads: 1` in dbt still let DuckDB use 8 engine threads, and a lineage test ran out of memory. The offline build also hit its 900-second timeout after 515 of 538 steps. DuckDB now gets 1 thread and a memory limit, and the timeout is 1,500 seconds.
 - **A new dashboard page broke the core-only install.** The Companies view added `company_page`, which imports Streamlit and Altair. The CI wheel check, which imports every module without the optional UI libraries, failed on it. Local tests had passed because Streamlit is installed in the dev environment. I added the module to the UI skip list, and extended the local "works without Streamlit" test to block Streamlit and Altair and import every other module, so the same mistake now fails on my machine first.
+- **The demo export would have published my folder names.** `dim_filings` stores the absolute path of each Silver version, so a plain copy of Gold would have put my home folder on a public site. The export now rewrites those paths and scans every text column before it finishes. The filing explorer also printed the full database path; it now shows only the file name.
+- **Python 3.14 syntax would have broken the hosted app.** Three `except A, B:` clauses without parentheses are valid only from Python 3.14, and Ruff, inferring 3.14 from the project, preferred that form. On 3.12 they are syntax errors. I added the parentheses and set Ruff's target to 3.12 so it can't happen again.
 - **A clean install couldn't read timestamps.** Installing only the wheel showed that DuckDB needs `pytz` for timezone-aware timestamps. I added the dependency and a wheel check in CI.
 
 ## What I would change next
