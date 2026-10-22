@@ -180,7 +180,7 @@ This file explains the main choices behind the pipeline: what I picked, what I c
 
 **Alternatives:** Run the whole pipeline on a cloud server (ongoing cost and an unattended SEC client, all for a read-only page). Make the Silver views relative and upload the Parquet files (far more data than the dashboard reads). Screenshots only (nobody can click through a trace).
 
-**Trade-off:** The demo is a snapshot that I re-export after each Gold rebuild, and it can't show raw Silver facts. The host may not offer Python 3.14, so the source has to stay valid from 3.12; Ruff's target version enforces that, and a CI job opens the hosted app on 3.12 with only its pinned packages.
+**Trade-off:** The demo is a snapshot that I re-export after each Gold rebuild, and it can't show raw Silver facts. While building it I couldn't confirm that the host offered Python 3.14, so I kept the source valid from 3.12. The app ended up deployed on 3.14, but I kept the 3.12 floor so the demo isn't tied to one Python version; Ruff's target version enforces that, and a CI job opens the hosted app on 3.12 with only its pinned packages.
 
 ## Bugs that changed the design
 
@@ -196,7 +196,7 @@ This file explains the main choices behind the pipeline: what I picked, what I c
 - **dbt ran out of memory, then out of time.** Setting `threads: 1` in dbt still let DuckDB use 8 engine threads, and a lineage test ran out of memory. The offline build also hit its 900-second timeout after 515 of 538 steps. DuckDB now gets 1 thread and a memory limit, and the timeout is 1,500 seconds.
 - **A new dashboard page broke the core-only install.** The Companies view added `company_page`, which imports Streamlit and Altair. The CI wheel check, which imports every module without the optional UI libraries, failed on it. Local tests had passed because Streamlit is installed in the dev environment. I added the module to the UI skip list, and extended the local "works without Streamlit" test to block Streamlit and Altair and import every other module, so the same mistake now fails on my machine first.
 - **The demo export would have published my folder names.** `dim_filings` stores the absolute path of each Silver version, so a plain copy of Gold would have put my home folder on a public site. The export now rewrites those paths and scans every text column before it finishes. The filing explorer also printed the full database path; it now shows only the file name.
-- **Python 3.14 syntax would have broken the hosted app.** Three `except A, B:` clauses without parentheses are valid only from Python 3.14, and Ruff, inferring 3.14 from the project, preferred that form. On 3.12 they are syntax errors. I added the parentheses and set Ruff's target to 3.12 so it can't happen again.
+- **Python 3.14-only syntax would have broken the hosted app on an older Python.** Three `except A, B:` clauses without parentheses are valid only from Python 3.14, and Ruff, inferring 3.14 from the project, preferred that form. On 3.12 they are syntax errors. I added the parentheses and set Ruff's target to 3.12 so it can't happen again.
 - **A clean install couldn't read timestamps.** Installing only the wheel showed that DuckDB needs `pytz` for timezone-aware timestamps. I added the dependency and a wheel check in CI.
 
 ## What I would change next
