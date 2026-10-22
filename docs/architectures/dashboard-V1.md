@@ -60,7 +60,7 @@ Tests cover the reader's type and column contract, empty and filtered selections
 
 ## Hosted demo
 
-The public dashboard runs on Streamlit Community Cloud. The host clones the repository, installs [`deploy/requirements.txt`](../../deploy/requirements.txt), and runs [`deploy/streamlit_app.py`](../../deploy/streamlit_app.py). The entry point adds `src/` to the import path instead of installing the package, because the package requires Python 3.14 and the host may not offer it. It opens `demo/sec_edgar_demo.duckdb` unless `SEC_EDGAR_DUCKDB_PATH` names another database, and then calls the same `main` as the local launcher. No reader, query or chart code differs between the hosted and local dashboards.
+The public dashboard, [sec-lakehouse.streamlit.app](https://sec-lakehouse.streamlit.app/), runs on Streamlit Community Cloud with Python 3.14. The host clones the repository, installs [`deploy/requirements.txt`](../../deploy/requirements.txt), and runs [`deploy/streamlit_app.py`](../../deploy/streamlit_app.py). The entry point adds `src/` to the import path instead of installing the package, so the host only needs the pinned packages and never builds the project. It opens `demo/sec_edgar_demo.duckdb` unless `SEC_EDGAR_DUCKDB_PATH` names another database, and then calls the same `main` as the local launcher. No reader, query or chart code differs between the hosted and local dashboards.
 
 The demo database is exported from a built cohort database:
 
@@ -80,6 +80,6 @@ uv run --locked python -m sec_edgar_lakehouse.dashboard.demo_export \
 
 The committed file is about 3 MB: 400 filings, 4,310 financial rows, 557 quality issues, 20 companies and 500 company-period rows. It is a snapshot. After a new Gold build I re-export and commit it; until then the hosted app shows the earlier values.
 
-A separate CI job installs only `deploy/requirements.txt` and pytest on Python 3.12, the oldest version the source supports, and runs [the hosted-demo tests](../../tests/dashboard/test_hosted_demo.py): the committed file must match its manifest and contain only the five Gold tables, every pin must match `uv.lock`, and both views must open without errors. The pins are exported from `uv.lock` with the command at the top of the requirements file. Ruff's `target-version = "py312"` keeps the source free of syntax newer than 3.12.
+A separate CI job installs only `deploy/requirements.txt` and pytest on Python 3.12, the oldest version the source supports (the deployed 3.14 is covered by the main Python checks), and runs [the hosted-demo tests](../../tests/dashboard/test_hosted_demo.py): the committed file must match its manifest and contain only the five Gold tables, every pin must match `uv.lock`, and both views must open without errors. The pins are exported from `uv.lock` with the command at the top of the requirements file. Ruff's `target-version = "py312"` keeps the source free of syntax newer than 3.12.
 
 The demo has no Silver facts, so the `silver.facts` lookups in the README only work on a local build. It has no authentication; everything in it is public SEC data.

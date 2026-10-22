@@ -4,6 +4,8 @@ This local pipeline turns SEC 10-K and 10-Q filings into financial values you ca
 
 It runs with Python, Parquet, DuckDB, dbt, and Streamlit. A dashboard value can be traced back to the filing and the XBRL fact or facts that produced it.
 
+**Live demo: [sec-lakehouse.streamlit.app](https://sec-lakehouse.streamlit.app/)**, the dashboard over the 20-company cohort, with nothing to install.
+
 The dashboard opens on a company comparison: pick companies, a metric, and annual or quarterly periods.
 
 ![Companies view: five years of revenue for five companies, from SEC filings](docs/images/companies.png)
@@ -12,7 +14,7 @@ The **Trace a filing** view follows any number back to its source. Here, Apple's
 
 ![Trace a filing: a derived Q4 value with its two source inputs and derivation method](docs/images/trace-a-filing.png)
 
-A hosted copy of the dashboard runs on Streamlit Community Cloud from [`deploy/streamlit_app.py`](deploy/streamlit_app.py). It reads [`demo/sec_edgar_demo.duckdb`](demo/), a 3 MB copy of the five Gold tables from the 20-company cohort, so it needs no SEC access, Silver files or dbt. Both views work there; the `silver.facts` queries further down only work on a local build. The [dashboard notes](docs/architectures/dashboard-V1.md#hosted-demo) explain how the copy is made and checked.
+The [live demo](https://sec-lakehouse.streamlit.app/) runs on Streamlit Community Cloud with Python 3.14, from [`deploy/streamlit_app.py`](deploy/streamlit_app.py). It reads [`demo/sec_edgar_demo.duckdb`](demo/), a 3 MB copy of the five Gold tables from the 20-company cohort, so it needs no SEC access, Silver files or dbt. Both views work there; the `silver.facts` queries further down only work on a local build. The [dashboard notes](docs/architectures/dashboard-V1.md#hosted-demo) explain how the copy is made and checked.
 
 ```text
 SEC submissions + filing index
