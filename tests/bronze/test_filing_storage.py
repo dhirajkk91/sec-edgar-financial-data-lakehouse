@@ -92,7 +92,7 @@ def test_existing_symlink_is_unchanged(tmp_path: Path, dangling: bool) -> None:
     # Symlink creation needs extra privileges on some Windows test machines.
     try:
         link.symlink_to(target)
-    except OSError, NotImplementedError:
+    except (OSError, NotImplementedError):
         pytest.skip("Symlink creation is unavailable")
     with pytest.raises(StorageError, match="already exists"):
         store_downloaded_file(

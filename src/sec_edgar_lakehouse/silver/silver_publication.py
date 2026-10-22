@@ -288,7 +288,7 @@ def _recoverable_run(
             or not record["failure_reason"].strip()
         ):
             return None
-    except OSError, ValueError, SilverPublicationError:
+    except (OSError, ValueError, SilverPublicationError):
         return None
     return str(original_id)
 

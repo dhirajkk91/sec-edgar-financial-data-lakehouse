@@ -83,7 +83,7 @@ def _retry_after(response: httpx.Response, now: Callable[[], datetime]) -> float
         return float(value)
     try:
         date = parsedate_to_datetime(value)
-    except TypeError, ValueError, OverflowError:
+    except (TypeError, ValueError, OverflowError):
         return None
     if date.tzinfo is None:
         return None
