@@ -81,3 +81,33 @@ def test_hosted_app_opens_both_views_from_the_demo() -> None:
     app.sidebar.radio(key="view").set_value("Trace a filing").run()
     assert not app.exception and not app.error
     assert [title.value for title in app.title] == ["SEC filing explorer"]
+
+
+def test_trace_view_opens_on_the_readme_example() -> None:
+    pytest.importorskip("streamlit")
+    from streamlit.testing.v1 import AppTest
+
+    app = AppTest.from_file(
+        str(ROOT / "deploy" / "streamlit_app.py"), default_timeout=30
+    ).run()
+    app.sidebar.radio(key="view").set_value("Trace a filing").run()
+
+    assert not app.exception and not app.error and not app.warning
+    assert app.sidebar.selectbox(key="company_cik").value == "0000320193"
+    assert [(m.label, m.value) for m in app.metric][-3:] == [
+        ("Operating cash flow", "29,728,000,000"),
+        ("Current input", "111,482,000,000"),
+        ("Predecessor input", "81,754,000,000"),
+    ]
+    assert any("Example filing" in info.value for info in app.info)
+
+    app.sidebar.selectbox(key="company_cik").set_value(None).run()
+
+    assert app.sidebar.selectbox(key="company_cik").value is None
+    assert not any("Example filing" in info.value for info in app.info)
+
+    app.sidebar.radio(key="view").set_value("Companies").run()
+    app.sidebar.radio(key="view").set_value("Trace a filing").run()
+
+    assert app.sidebar.selectbox(key="company_cik").value == "0000320193"
+    assert not app.exception and not app.warning
