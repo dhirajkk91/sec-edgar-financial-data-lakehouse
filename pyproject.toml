@@ -14,6 +14,9 @@ dependencies = [
     "pytz>=2026.4",
 ]
 
+[project.scripts]
+sec-edgar = "sec_edgar_lakehouse.cli:main"
+
 [tool.uv.build-backend]
 module-name = "sec_edgar_lakehouse"
 

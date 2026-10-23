@@ -23,7 +23,7 @@ Those paths are built from verified pointers, not a recursive file search. The v
 Suppose Apple has a good active version and Microsoft has a corrupt pointer. Refresh includes Apple, records Microsoft's path and failure reason, and returns `PARTIAL`. If neither can be verified, it refuses to publish an empty replacement. The transaction makes `active_filings`, `catalog_failures`, and all three views describe the same set of files; counts and fact-to-dimension links are checked before commit. Stored filing/fiscal metadata tables are separate and are not rebuilt from Parquet by this refresh.
 
 ```sh
-uv run --locked python -m sec_edgar_lakehouse.catalog.silver_catalog_refresh \
+uv run --locked sec-edgar catalog-refresh \
   --silver-directory data/silver/sec/filings \
   --database data/query/sec_edgar.duckdb
 ```

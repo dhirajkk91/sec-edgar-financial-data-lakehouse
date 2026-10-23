@@ -17,6 +17,7 @@ import streamlit as st
 from sec_edgar_lakehouse.dashboard import company_page
 from sec_edgar_lakehouse.dashboard.dashboard_read import (
     DashboardReadError,
+    DashboardSnapshot,
     DashboardTable,
     load_company_names,
     load_company_snapshot,
@@ -340,6 +341,53 @@ def _quality_issues(records: list[Record]) -> None:
 
 
 VIEWS = ("Companies", "Trace a filing")
+# The README traces this value. The explorer opens on it when the dataset has it,
+# so a first visit shows a derived number with both inputs instead of an empty page.
+EXAMPLE_CIK = "0000320193"
+EXAMPLE_ACCESSION = "0000320193-25-000079"
+EXAMPLE_METRIC = ("operating_cash_flow", "derived_quarter")
+
+
+def _offer_example(snapshot: DashboardSnapshot) -> None:
+    """Preselect the example record when the explorer opens, if the dataset has it.
+
+    Clearing or changing the company afterwards does not bring the example back
+    until the visitor leaves the explorer and opens it again.
+    The widgets still hold row positions, so this uses the same filtered lists
+    the page builds below.
+    """
+    if st.session_state.get("_example_offered"):
+        return
+    st.session_state["_example_offered"] = True
+    filings = _records(snapshot.filings, cik=EXAMPLE_CIK)
+    filing = next(
+        (
+            index
+            for index, record in enumerate(filings)
+            if record["accession_number"] == EXAMPLE_ACCESSION
+        ),
+        None,
+    )
+    metrics = _records(
+        snapshot.financial_metrics, cik=EXAMPLE_CIK, accession=EXAMPLE_ACCESSION
+    )
+    metric = next(
+        (
+            index
+            for index, record in enumerate(metrics)
+            if (record["metric_code"], record["period_label"]) == EXAMPLE_METRIC
+        ),
+        None,
+    )
+    if filing is None or metric is None:
+        return
+    st.session_state.update(
+        company_cik=EXAMPLE_CIK,
+        _company=EXAMPLE_CIK,
+        filing_record=filing,
+        _filing=EXAMPLE_ACCESSION,
+        metric_record=metric,
+    )
 
 
 def _companies(database_path: Path) -> None:
@@ -367,6 +415,9 @@ def main(*, database_path: Path) -> None:
     view = st.sidebar.radio("View", VIEWS, key="view")
     st.sidebar.caption(f"Database: {database_path.name}")
     if view == "Companies":
+        # Streamlit drops the explorer's widget values while it is hidden, so
+        # offer the example again the next time the explorer opens.
+        st.session_state.pop("_example_offered", None)
         _companies(database_path)
         return
     st.title("SEC filing explorer")
@@ -401,6 +452,7 @@ def main(*, database_path: Path) -> None:
     if not snapshot.available_ciks:
         st.info("No filings are available in this dataset.")
         return
+    _offer_example(snapshot)
     try:
         names = load_company_names(database_path=database_path)
     except DashboardReadError:
@@ -445,6 +497,14 @@ def main(*, database_path: Path) -> None:
             "Choose a filing to inspect its financial results and quality evidence."
         )
         return
+    if cik == EXAMPLE_CIK and accession == EXAMPLE_ACCESSION:
+        st.info(
+            "Example filing: Apple's FY2025 10-K. It reports operating cash flow "
+            "for the full year only, so Gold derives Q4 as the annual value minus "
+            "the Q3 year-to-date value from the previous 10-Q. The metric record "
+            "below shows both inputs and the source facts behind them. Choose "
+            "another company in the sidebar to explore."
+        )
     _filing_details(filings[selected])
     _financial_metrics(
         _records(snapshot.financial_metrics, cik=cik, accession=accession)

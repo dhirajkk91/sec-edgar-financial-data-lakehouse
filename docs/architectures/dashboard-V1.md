@@ -1,6 +1,6 @@
 # Dashboard: company comparison and filing explorer
 
-The dashboard is for inspecting a built dataset, not running the pipeline. It has two views, chosen in the sidebar. **Companies**, the default, compares companies across fiscal years. **Trace a filing** follows one filing's values back to their sources: pick a company, then a filing accession, then an exact metric record. It shows what that filing reported, whether Gold found quality issues, and which source occurrences support a value. Filings with `PARTIAL` or `FAILED` Gold quality remain visible so missing data is not hidden by the UI. The same app also runs as a [hosted demo](#hosted-demo) over a Gold-only copy of the cohort.
+The dashboard is for inspecting a built dataset, not running the pipeline. It has two views, chosen in the sidebar. **Companies**, the default, compares companies across fiscal years. **Trace a filing** follows one filing's values back to their sources: pick a company, then a filing accession, then an exact metric record. It shows what that filing reported, whether Gold found quality issues, and which source occurrences support a value. Filings with `PARTIAL` or `FAILED` Gold quality remain visible so missing data is not hidden by the UI. When the database contains it, the explorer opens on the README's example, Apple's derived FY2025 Q4 operating cash flow, with a short note explaining the derivation. Clearing the company keeps it cleared until the explorer is opened again, and a dataset without that record opens empty as before. The same app also runs as a [hosted demo](#hosted-demo) over a Gold-only copy of the cohort.
 
 ## The boundary
 
@@ -45,7 +45,7 @@ Fiscal years end in different months, so "FY2025 Q1" covers different calendar m
 SEC_EDGAR_DUCKDB_PATH=data/query/sec_edgar.duckdb \
   uv run --locked --group dashboard streamlit run dashboard_app.py
 
-uv run --locked python -m sec_edgar_lakehouse.dashboard.dashboard_inspect \
+uv run --locked sec-edgar inspect \
   --database data/query/sec_edgar.duckdb \
   --cik 0000320193
 ```
@@ -65,7 +65,7 @@ The public dashboard, [sec-lakehouse.streamlit.app](https://sec-lakehouse.stream
 The demo database is exported from a built cohort database:
 
 ```sh
-uv run --locked python -m sec_edgar_lakehouse.dashboard.demo_export \
+uv run --locked sec-edgar export-demo \
   --database data/dashboard-current.duckdb --replace
 ```
 
@@ -83,3 +83,16 @@ The committed file is about 3 MB: 400 filings, 4,310 financial rows, 557 quality
 A separate CI job installs only `deploy/requirements.txt` and pytest on Python 3.12, the oldest version the source supports (the deployed 3.14 is covered by the main Python checks), and runs [the hosted-demo tests](../../tests/dashboard/test_hosted_demo.py): the committed file must match its manifest and contain only the five Gold tables, every pin must match `uv.lock`, and both views must open without errors. The pins are exported from `uv.lock` with the command at the top of the requirements file. Ruff's `target-version = "py312"` keeps the source free of syntax newer than 3.12.
 
 The demo has no Silver facts, so the `silver.facts` lookups in the README only work on a local build. It has no authentication; everything in it is public SEC data.
+
+`make demo` rebuilds the demo file from the local cohort link (`sec-edgar export-demo` under the hood), and `make demo-dashboard` opens it through the hosted entry point.
+
+### Run it in Docker
+
+The [`Dockerfile`](../../Dockerfile) packages the same hosted app: `python:3.14-slim`, the packages from `deploy/requirements.txt`, then only `src/`, the entry point, the demo database and the Streamlit theme. It runs as a non-root user and has a health check on Streamlit's `/_stcore/health`. [`.dockerignore`](../../.dockerignore) keeps `data/` and the other large folders out of the build context.
+
+```sh
+docker build --tag sec-edgar-dashboard .
+docker run --rm --publish 8501:8501 sec-edgar-dashboard
+```
+
+`make docker-run` does both. The image does not run the pipeline: it makes no SEC requests and contains no dbt project or Silver files. A CI job builds it, starts it and waits for the health check.

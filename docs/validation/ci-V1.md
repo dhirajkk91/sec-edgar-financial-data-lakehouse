@@ -7,7 +7,8 @@ The workflow in [`.github/workflows/ci.yml`](../../.github/workflows/ci.yml) run
 | Python checks (Linux and macOS) | Ruff lint/format, mypy, and the full Python suite. A pytest socket guard blocks external connections while allowing local loopback and mocked HTTP. |
 | Offline dbt (Linux) | Synthetic Bronze → Silver → catalog → metadata → one full Gold build, then exact value, warning, ordering, and lineage assertions. |
 | Hosted demo (Linux, Python 3.12) | Installs only `deploy/requirements.txt` and pytest, then checks the committed demo database against its manifest, the pins against `uv.lock`, the export's path and email checks, and that both views open through the hosted entry point. |
-| Built wheel (Linux) | Wheel/sdist build, a fresh core-only install outside the checkout, public imports, relocated CLI help, and reader/inspector checks without dbt or Streamlit. |
+| Built wheel (Linux) | Wheel/sdist build, a fresh core-only install outside the checkout, public imports, relocated CLI help, `--help` for the installed `sec-edgar` command and every subcommand, and reader/inspector checks without dbt or Streamlit. |
+| Dashboard image (Linux) | Builds the Dockerfile, starts the container, waits for Streamlit's health check and records the non-root user ID. |
 
 The synthetic company is CIK `0000000042`, with Q2, Q3, and annual XML fixtures under `tests/ci/fixtures/`. The fixture builder uses the production extraction, publication, catalog, and metadata APIs. Financial selection and derivation run through the unchanged dbt models. Its saved SEC-shaped URL is evidence for metadata verification; the test never fetches it. The wheel probe uses a serialized Gold fixture with complete ordered records and column types, so it checks packaging and reading independently of dbt.
 
@@ -43,6 +44,8 @@ env -u SEC_USER_AGENT uv run --no-sync python scripts/ci/validate_wheel.py --wor
 git diff --check
 ```
 
+`make ci` runs the same Python, dbt and wheel checks, and `make docker-build` builds the dashboard image.
+
 The dbt script runs debug and one full build. Each script keeps failed-attempt diagnostics under its work directory. Hosted jobs upload logs and summaries for seven days. The socket guard applies to pytest; arbitrary child processes are not covered by it.
 
 ## What has been checked locally
@@ -56,3 +59,5 @@ The warnings are financial evidence, not failed dbt tests: Q2 lacks the Q1 cumul
 The corrected workflow passed locally on macOS after the independent Linux failure, and later passed in [GitHub Actions on `main`](https://github.com/dhirajkk91/sec-edgar-financial-data-lakehouse/actions/runs/38617505874) at commit `769828c`: Python checks on Ubuntu and macOS, offline dbt validation on Ubuntu, and built-wheel validation on Ubuntu all completed successfully. The local attempt used a temporary directory, so its artifacts may not be available in another checkout; the scripts and fixtures remain in the repository.
 
 For the hosted demo, the full suite (1,321 tests), Ruff and mypy passed on Linux with Python 3.14. A separate Python 3.12.15 environment with only `deploy/requirements.txt` and pytest passed the 13 hosted-demo and export tests, and both dashboard views were opened in a headless browser through `deploy/streamlit_app.py` against the committed demo database without errors.
+
+For the `sec-edgar` command and Docker image, the full suite (1,341 tests), Ruff, mypy and the core-only wheel validation passed on Linux with Python 3.14; the wheel check ran `--help` through the installed command for all 13 subcommands. Docker Hub was not reachable from that environment, so the image itself was not built there. Instead, the files the Dockerfile copies were placed in an empty folder with a fresh Python 3.14.7 environment holding only `deploy/requirements.txt`, and the image's command ran as a non-root user: the health check returned 200 and the explorer opened on the Apple example in a headless browser. The new CI job is the first full build of the image.

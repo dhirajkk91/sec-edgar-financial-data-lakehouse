@@ -1,0 +1,14 @@
+# Keep the build context small; the image copies only what the dashboard needs.
+.git
+.github
+.venv
+data
+dist
+docs
+tests
+transform
+scripts
+**/__pycache__
+.pytest_cache
+.mypy_cache
+.ruff_cache

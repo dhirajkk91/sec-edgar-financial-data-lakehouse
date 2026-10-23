@@ -10,7 +10,7 @@ The dashboard opens on a company comparison: pick companies, a metric, and annua
 
 ![Companies view: five years of revenue for five companies, from SEC filings](docs/images/companies.png)
 
-The **Trace a filing** view follows any number back to its source. Here, Apple's FY 2025 Q4 operating cash flow is derived from the annual 10-K value minus the Q3 year-to-date value, with both inputs shown:
+The **Trace a filing** view follows any number back to its source. It opens on this example when the dataset contains it: Apple's FY 2025 Q4 operating cash flow, derived from the annual 10-K value minus the Q3 year-to-date value, with both inputs shown:
 
 ![Trace a filing: a derived Q4 value with its two source inputs and derivation method](docs/images/trace-a-filing.png)
 
@@ -79,12 +79,24 @@ Use Python 3.14 and [uv](https://docs.astral.sh/uv/getting-started/installation/
 uv sync --locked --group dev --group dbt --group dashboard
 ```
 
-SEC requests need an identified `SEC_USER_AGENT` in your environment. Use your own application name and contact address; keep the value out of tracked files. The end-to-end CLI processes **one company per invocation**. This example selects up to two Apple 10-K/10-Q filings filed in 2025 and writes to ignored `data/demo/` paths:
+Everyday tasks have short `make` targets; `make` on its own lists them. The pipeline's tools share one command, `sec-edgar`; `uv run sec-edgar --help` lists its subcommands, and `uv run sec-edgar <command> --help` shows each one's options. Each subcommand runs an existing module, so `python -m sec_edgar_lakehouse.<module>` still works and appears in older reports.
+
+| Task | Command |
+| --- | --- |
+| Install the locked dependencies | `make install` |
+| Lint, type-check and run the tests | `make check` |
+| Run everything the Python 3.14 CI jobs run | `make ci` |
+| Open the dashboard on your local database | `make dashboard`, or `make dashboard DATABASE=path/to/sec_edgar.duckdb` |
+| Open the dashboard on the committed demo, as hosted | `make demo-dashboard` |
+| Rebuild the demo database from a built cohort | `make demo` |
+| Serve the dashboard from Docker | `make docker-run`, then open http://localhost:8501 |
+
+SEC requests need an identified `SEC_USER_AGENT` in your environment. Use your own application name and contact address; keep the value out of tracked files. `sec-edgar pipeline` processes **one company per invocation**. This example selects up to two Apple 10-K/10-Q filings filed in 2025 and writes to ignored `data/demo/` paths:
 
 ```sh
 export SEC_USER_AGENT="Your App Name your.email@example.com"
 mkdir -p data/demo/runs/dbt
-uv run --no-sync python -m sec_edgar_lakehouse.pipeline.end_to_end_pipeline_run \
+uv run --no-sync sec-edgar pipeline \
   --cik 0000320193 --forms 10-K 10-Q \
   --filed-on-or-after 2025-01-01 --filed-on-or-before 2025-12-31 --limit 2 \
   --bronze-directory data/demo/bronze/sec/filings \
@@ -98,23 +110,23 @@ uv run --no-sync python -m sec_edgar_lakehouse.pipeline.end_to_end_pipeline_run 
 
 The command prints stage outcomes and paths to its saved summary and dbt artifacts. A rerun needs a **new** run ID and a fresh `--dbt-artifact-directory`; add `--run-id` if you want to name each attempt yourself. The same Bronze, Silver, and DuckDB paths can then be used for a second company. Keep the dashboard and DuckDB UI closed while the pipeline writes.
 
-For the dated 20-issuer backfill, use the cohort runner instead of running the single-company end-to-end CLI 20 times. `plan` makes paced SEC submissions requests and saves its source listings and 400 planned accessions under ignored `data/`. `execute` runs the companies sequentially, refreshing the shared catalog for metadata and building Gold once after the batch. `resume` checks the saved plan and company evidence, skips completed companies, and continues unfinished work. Give every fresh attempt its own data root; do not point this at `data/query/sec_edgar.duckdb`.
+For the dated 20-issuer backfill, use `sec-edgar cohort` instead of running `sec-edgar pipeline` 20 times. `plan` makes paced SEC submissions requests and saves its source listings and 400 planned accessions under ignored `data/`. `execute` runs the companies sequentially, refreshing the shared catalog for metadata and building Gold once after the batch. `resume` checks the saved plan and company evidence, skips completed companies, and continues unfinished work. Give every fresh attempt its own data root; do not point this at `data/query/sec_edgar.duckdb`.
 
 ```sh
 mkdir -p data
 cohort_root=$(mktemp -d data/cohort-v1.XXXXXX)
 manifest=config/cohort-sp500-top20-2026-10-15.json
-uv run --no-sync python -m sec_edgar_lakehouse.pipeline.cohort_run plan \
+uv run --no-sync sec-edgar cohort plan \
   --manifest "$manifest" --data-root "$cohort_root"
 # Review cohort-plan.json and its plan_gaps before downloading filings.
-uv run --no-sync python -m sec_edgar_lakehouse.pipeline.cohort_run execute \
+uv run --no-sync sec-edgar cohort execute \
   --manifest "$manifest" --data-root "$cohort_root" \
   --dbt-timeout-seconds 43200
 # If execution stops, use the same root and manifest:
-uv run --no-sync python -m sec_edgar_lakehouse.pipeline.cohort_run resume \
+uv run --no-sync sec-edgar cohort resume \
   --manifest "$manifest" --data-root "$cohort_root" \
   --dbt-timeout-seconds 43200
-uv run --no-sync python -m sec_edgar_lakehouse.dashboard.dashboard_inspect \
+uv run --no-sync sec-edgar inspect \
   --database "$cohort_root/query/sec_edgar.duckdb"
 SEC_EDGAR_DUCKDB_PATH="$cohort_root/query/sec_edgar.duckdb" \
   uv run --no-sync streamlit run dashboard_app.py
@@ -127,7 +139,7 @@ In this checkout, `uv run streamlit run dashboard_app.py` opens the completed 20
 To inspect an existing database without changing it:
 
 ```sh
-uv run --no-sync python -m sec_edgar_lakehouse.dashboard.dashboard_inspect \
+uv run --no-sync sec-edgar inspect \
   --database data/demo/query/sec_edgar.duckdb
 SEC_EDGAR_DUCKDB_PATH=data/demo/query/sec_edgar.duckdb \
   uv run --no-sync streamlit run dashboard_app.py
@@ -150,10 +162,10 @@ dbt/artifacts-<id>/                         build logs, manifest.json, run_resul
 New company runs load the company profile automatically during the metadata stage. A database built before company profiles existed needs a one-time backfill from the saved run records, then a Gold rebuild:
 
 ```sh
-uv run --no-sync python -m sec_edgar_lakehouse.metadata.company_profile_load \
+uv run --no-sync sec-edgar profiles-load \
   --database "$cohort_root/query/sec_edgar.duckdb" \
   --run-record "$cohort_root"/runs/cik=*/run_id=*/run.json
-uv run --no-sync python -m sec_edgar_lakehouse.pipeline.cohort_run resume \
+uv run --no-sync sec-edgar cohort resume \
   --manifest "$manifest" --data-root "$cohort_root" \
   --build-after-batch --dbt-timeout-seconds 43200
 ```
@@ -240,12 +252,13 @@ To trace a displayed metric, copy its CIK, accession, current `source_occurrence
 | `src/sec_edgar_lakehouse/silver/` | XBRL extraction, exact values, rejected facts, versioned Parquet, and active pointers. |
 | `src/sec_edgar_lakehouse/catalog/` and `src/sec_edgar_lakehouse/metadata/` | Active Silver DuckDB views, plus filing/fiscal metadata and company profiles tied to source evidence. |
 | `src/sec_edgar_lakehouse/pipeline/` | Company processing, stage gates, dbt invocation, and run summaries. |
+| `src/sec_edgar_lakehouse/cli.py`, `Makefile` | The `sec-edgar` command that dispatches to each tool, and short targets for everyday tasks. |
 | `transform/` | dbt concept mappings, reported/derived metric SQL, marts, and tests. |
 | `src/sec_edgar_lakehouse/dashboard/` | Read-only Gold readers, CLI inspector, the Companies view, the filing explorer, and the demo export. |
-| `deploy/` and `demo/` | Hosted dashboard entry point, its pinned packages, and the Gold-only demo database with its manifest. |
+| `deploy/`, `demo/`, `Dockerfile` | Hosted dashboard entry point, its pinned packages, the Gold-only demo database with its manifest, and the dashboard image. |
 | `tests/`, `scripts/ci/`, `.github/workflows/` | Python tests, synthetic offline validation, clean wheel checks, and CI. |
 
-For implementation details, see [Bronze](docs/architectures/bronze-ingestion-V1.md), [Silver](docs/architectures/silver-processing-V1.md), the [DuckDB catalog](docs/architectures/duckdb-query-catalog-V1.md), [company processing](docs/architectures/company-pipeline-orchestration-V1.md), the [end-to-end runner](docs/architectures/end-to-end-pipeline-V1.md), [cohort backfill](docs/architectures/cohort-backfill-V1.md), [Gold](docs/architectures/gold-financial-metrics-V1.md), and the [dashboard](docs/architectures/dashboard-V1.md). The [engineering decisions](docs/decisions/engineering-decisions.md) cover the choices and corrections behind them. Results are in the [offline CI](docs/validation/ci-V1.md), [Apple/Microsoft](docs/validation/multi-company-acceptance-V1.md), and [full cohort](docs/validation/cohort-V1.md) reports.
+For implementation details, see [Bronze](docs/architectures/bronze-ingestion-V1.md), [Silver](docs/architectures/silver-processing-V1.md), the [DuckDB catalog](docs/architectures/duckdb-query-catalog-V1.md), [company processing](docs/architectures/company-pipeline-orchestration-V1.md), the [end-to-end runner](docs/architectures/end-to-end-pipeline-V1.md), [cohort backfill](docs/architectures/cohort-backfill-V1.md), [Gold](docs/architectures/gold-financial-metrics-V1.md), and the [dashboard, hosted demo and Docker image](docs/architectures/dashboard-V1.md). The [engineering decisions](docs/decisions/engineering-decisions.md) cover the choices and corrections behind them. Results are in the [offline CI](docs/validation/ci-V1.md), [Apple/Microsoft](docs/validation/multi-company-acceptance-V1.md), and [full cohort](docs/validation/cohort-V1.md) reports.
 
 ## Checks and recovery
 
@@ -265,11 +278,13 @@ env -u SEC_USER_AGENT uv run --no-sync python scripts/ci/validate_wheel.py \
 git diff --check
 ```
 
+`make ci` runs the same checks, each in a fresh temporary directory.
+
 Use the saved stage evidence before deciding what to rerun. These procedures use the `cohort_root` and `manifest` shell variables from the quickstart:
 
 | Situation | Evidence, reuse, and next step |
 | --- | --- |
-| Process stopped partway through a company | Read `cohort-state.json`, then that company's `runs/cik=<CIK>/run_id=<id>/run.json` and accession outcomes. Run the `cohort_run resume` command above with the same root and manifest. Completed company records are hash-checked before they are skipped. |
+| Process stopped partway through a company | Read `cohort-state.json`, then that company's `runs/cik=<CIK>/run_id=<id>/run.json` and accession outcomes. Run the `sec-edgar cohort resume` command above with the same root and manifest. Completed company records are hash-checked before they are skipped. |
 | HTTP 403, SEC block page, or `Retry-After` beyond the limit | Read the terminal reason and `NOT_ATTEMPTED` accessions. Stop requests and resolve access/contact conditions before `resume`. The coordinator does not bypass a terminal response with another retry loop. |
 | One filing failed or Bronze is unusable | Inspect its Bronze manifest or staging failure and the company record. Other accessions can still complete. `resume` retries unfinished company work, but an existing unverified canonical directory is not overwritten; diagnose it rather than deleting evidence blindly. |
 | Fiscal metadata is partial or conflicting | Inspect the saved SEC listing, active document hash, DEI occurrences/issues, and coverage issue. Matching metadata returns `ALREADY_EXISTS`; a conflict is not replaced. After an evidence or parser correction, add `--ranks <rank> --rerun-complete --build-after-batch` to the full cohort `resume` command above, using the same manifest/root. |
