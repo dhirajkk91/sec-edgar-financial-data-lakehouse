@@ -135,3 +135,26 @@ jobs:
         run: python -m pip install -r deploy/requirements.txt "pytest==9.1.1"
       - name: Open the committed demo with the hosted entry point
         run: env -u SEC_USER_AGENT PYTHONPATH=src python -m pytest tests/dashboard/test_hosted_demo.py tests/dashboard/test_demo_export.py
+
+  dashboard-image:
+    name: Dashboard Docker image
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          persist-credentials: false
+      - name: Build the image
+        run: docker build --tag sec-edgar-dashboard .
+      - name: Serve the demo and wait for Streamlit's health check
+        run: |
+          docker run --detach --name dashboard --publish 8501:8501 sec-edgar-dashboard
+          for attempt in $(seq 30); do
+            if curl --fail --silent http://localhost:8501/_stcore/health; then
+              docker exec dashboard id -u
+              exit 0
+            fi
+            sleep 2
+          done
+          docker logs dashboard
+          exit 1

@@ -78,7 +78,7 @@ A company invocation selects one company's filings, but catalog refresh and dbt 
 | One company to Gold | [`company_run.py`](../../src/sec_edgar_lakehouse/pipeline/company_run.py) saves company evidence; [`end_to_end_pipeline.py`](../../src/sec_edgar_lakehouse/pipeline/end_to_end_pipeline.py) applies stage gates; [`dbt_build.py`](../../src/sec_edgar_lakehouse/pipeline/dbt_build.py) runs one build; [`end_to_end_run.py`](../../src/sec_edgar_lakehouse/pipeline/end_to_end_run.py) saves the final summary. |
 | Gold to a screen | [`dashboard_read.py`](../../src/sec_edgar_lakehouse/dashboard/dashboard_read.py) reads a typed snapshot; [`dashboard_app.py`](../../src/sec_edgar_lakehouse/dashboard/dashboard_app.py) presents it without recalculating metrics. |
 
-The [cohort design](cohort-backfill-V1.md) explains why a fixed 20-issuer plan sits around these same company APIs instead of replacing them. The [Gold note](gold-financial-metrics-V1.md) traces a real metric through this map.
+Each command-line module also runs as a `sec-edgar` subcommand through [`cli.py`](../../src/sec_edgar_lakehouse/cli.py), which forwards the remaining arguments to the module's `main`, so options and exit codes are unchanged. The [cohort design](cohort-backfill-V1.md) explains why a fixed 20-issuer plan sits around these same company APIs instead of replacing them. The [Gold note](gold-financial-metrics-V1.md) traces a real metric through this map.
 
 ## Guarantees and limits
 

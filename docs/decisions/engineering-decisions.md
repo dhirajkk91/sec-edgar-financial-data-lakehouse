@@ -182,6 +182,16 @@ This file explains the main choices behind the pipeline: what I picked, what I c
 
 **Trade-off:** The demo is a snapshot that I re-export after each Gold rebuild, and it can't show raw Silver facts. While building it I couldn't confirm that the host offered Python 3.14, so I kept the source valid from 3.12. The app ended up deployed on 3.14, but I kept the 3.12 floor so the demo isn't tied to one Python version; Ruff's target version enforces that, and a CI job opens the hosted app on 3.12 with only its pinned packages.
 
+### 18. One command that forwards to the existing tools
+
+**Context:** Each stage had its own module run with `python -m sec_edgar_lakehouse.<long.path>`. That worked, but a reviewer had to read the README to find thirteen entry points.
+
+**Decision:** Add a `sec-edgar` console script whose subcommands forward the remaining arguments to each module's existing `main`. A test fails if a new command-line module is not listed. Everyday checks moved behind `make` targets, and the dashboard got a Dockerfile.
+
+**Alternatives:** Rewrite every tool as one Click or Typer app (a large change to working, tested code for no new behavior). Keep only the modules (nothing to change, but harder to discover).
+
+**Trade-off:** Options are still defined in each module, so the subcommands don't share flags such as a common `--data-root`. The Docker image covers only the read-only dashboard; the pipeline still runs locally, because it needs SEC access, a writable data folder and dbt.
+
 ## Bugs that changed the design
 
 - **The complete submission file was in a `colspan` row.** The SEC filing index sometimes merges cells on that row, so normal column mapping missed or misread it. Discovery now finds that row explicitly and requires a `.txt` file name.
@@ -206,5 +216,4 @@ This file explains the main choices behind the pipeline: what I picked, what I c
 - **Replace the active pointer with Iceberg** when moving to cloud storage.
 - **Make the database portable** by not storing absolute Parquet paths in the views.
 - **Decide an amendment policy:** when a 10-K/A should replace the original in trend analysis.
-- **Use one CLI** instead of several runner modules.
 - **Resolve the three JPMorgan trace mismatches** so the cohort can be marked complete.
