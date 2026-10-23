@@ -20,6 +20,7 @@ import duckdb
 
 import sec_edgar_lakehouse
 from sec_edgar_lakehouse import load_dashboard_snapshot
+from sec_edgar_lakehouse.cli import COMMANDS
 
 
 def decode(value: Any, kind: str) -> Any:
@@ -119,6 +120,16 @@ def main() -> None:
                 timeout=30,
                 check=True,
             )
+        # The installed console script must reach every tool without the checkout.
+        script = Path(sys.prefix) / "bin" / "sec-edgar"
+        for command in ([], *([name] for name in sorted(COMMANDS))):
+            subprocess.run(
+                [str(script), *command, "--help"],
+                stdout=log,
+                stderr=subprocess.STDOUT,
+                timeout=30,
+                check=True,
+            )
     fixture = json.loads((work_dir / "gold-reader.json").read_text())
     assert fixture["synthetic"] is True
     database = work_dir / "reader.duckdb"
@@ -213,6 +224,7 @@ def main() -> None:
         "imports": imported,
         "package_path": str(package_path),
         "cli_help_modules": cli_modules,
+        "console_script_commands": sorted(COMMANDS),
         "filings": len(snapshot.filings.rows),
         "financial_metrics": len(snapshot.financial_metrics.rows),
         "issues": len(snapshot.quality_issues.rows),
