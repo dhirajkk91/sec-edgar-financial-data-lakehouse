@@ -82,7 +82,7 @@ The committed file is about 3 MB: 400 filings, 4,310 financial rows, 557 quality
 
 A separate CI job installs only `deploy/requirements.txt` and pytest on Python 3.12, the oldest version the source supports (the deployed 3.14 is covered by the main Python checks), and runs [the hosted-demo tests](../../tests/dashboard/test_hosted_demo.py): the committed file must match its manifest and contain only the five Gold tables, every pin must match `uv.lock`, and both views must open without errors. The pins are exported from `uv.lock` with the command at the top of the requirements file. Ruff's `target-version = "py312"` keeps the source free of syntax newer than 3.12.
 
-The demo has no Silver facts, so the `silver.facts` lookups in the README only work on a local build. It has no authentication; everything in it is public SEC data.
+The demo has no Silver facts, so the `silver.facts` lookups in the [pipeline guide](../guides/running-the-pipeline-V1.md#run-one-company-then-the-20-company-cohort) only work on a local build. It has no authentication; everything in it is public SEC data.
 
 `make demo` rebuilds the demo file from the local cohort link (`sec-edgar export-demo` under the hood), and `make demo-dashboard` opens it through the hosted entry point.
 
