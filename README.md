@@ -22,14 +22,14 @@ Public companies report their financials to the SEC in XBRL, a machine-readable 
 | **Data** | 601,103 XBRL facts extracted into 4,310 financial values (3,576 reported, 734 derived), each linked to its source facts |
 | **Data quality** | 557 issues recorded with a reason instead of a guessed number; every filing gets a quality status |
 | **Performance** | Full Gold rebuild cut from 34 minutes to 18 seconds |
-| **Testing** | 1,341 Python tests, 571 dbt models and tests, five CI jobs on every change |
+| **Testing** | 1,341 Python tests, 571 dbt nodes (models, seed and tests), five CI jobs on every change |
 | **Stack** | Python · Parquet · DuckDB · dbt · Streamlit · Docker · GitHub Actions |
 
 ![Companies view: five years of revenue for five companies, from SEC filings](docs/images/companies.png)
 
 ## The problems it solves
 
-These are real cases from the data, and each one has a test.
+These are real cases from the data. The rule behind each one is covered by dbt unit tests and data tests.
 
 - **One number, two answers.** Walmart's FY2026 10-K reports total revenue of $713.2B and contract revenue of $706.4B. The pipeline picks by a documented priority order, so total revenue wins, and it records a warning that the other figure differs instead of hiding it.
 - **Quarters nobody reported.** Companies report Q4 only inside the full-year total. Apple's FY2025 Q4 operating cash flow, $29.7B, is derived as the annual $111.5B minus the Q3 year-to-date $81.8B, and both source facts stay attached to the result.
@@ -70,7 +70,7 @@ Every value in Gold carries the IDs of the exact facts it came from, and each fa
 
 ![Trace a filing: a derived Q4 value with its two source inputs and derivation method](docs/images/trace-a-filing.png)
 
-The [Gold notes](docs/architectures/gold-financial-metrics-V1.md#trace-one-q4-value-back-to-the-filing) follow the Apple example through every layer, down to the two XML files and their SHA-256 hashes.
+The [Gold notes](docs/architectures/gold-financial-metrics.md#trace-one-q4-value-back-to-the-filing) follow the Apple example through every layer, down to the two XML files and their SHA-256 hashes.
 
 ## Engineering highlights
 
@@ -78,11 +78,11 @@ The [Gold notes](docs/architectures/gold-financial-metrics-V1.md#trace-one-q4-va
 - **Nothing silently disappears.** Silver keeps every numeric fact, including the ones it rejects, and stores values as exact decimals, not floats. ([decision 4](docs/decisions/engineering-decisions.md#4-silver-keeps-every-fact-with-exact-values-and-explicit-rejections))
 - **Safe reprocessing.** Silver is versioned by source checksum and parser version, and an active pointer switches only after the new version is verified. Reruns skip verified work, and an interrupted 20-company run resumes where it stopped. ([decision 5](docs/decisions/engineering-decisions.md#5-silver-is-versioned-and-an-active-pointer-decides-what-readers-see))
 - **Separate identities.** Company, filing, source file, fact, Silver version and run each have their own key, which is what makes lineage and reruns inspectable. ([decision 2](docs/decisions/engineering-decisions.md#2-separate-keys-for-company-filing-fact-and-run))
-- **Business rules in dbt, with tests.** Concept priority, period rules and quarter derivation are SQL models with data tests and unit tests. Priority picks the concept, never the value. ([decision 16](docs/decisions/engineering-decisions.md#16-priority-picks-the-concept-never-the-value))
-- **Two kinds of status.** "Did the pipeline run?" and "Is the data good?" are tracked separately, so a successful run can still report incomplete financials honestly. ([decision 9](docs/decisions/engineering-decisions.md#9-did-the-pipeline-run-and-is-the-data-good-are-separate-statuses))
+- **Business rules in dbt, with tests.** Concept priority, period rules and quarter derivation are SQL models with data tests and unit tests. Priority picks the concept, never the value. ([decision 15](docs/decisions/engineering-decisions.md#15-priority-picks-the-concept-never-the-value))
+- **Two kinds of status.** "Did the pipeline run?" and "Is the data good?" are tracked separately, so a successful run can still report incomplete financials. ([decision 9](docs/decisions/engineering-decisions.md#9-did-the-pipeline-run-and-is-the-data-good-are-separate-statuses))
 - **A polite SEC client.** Requests are paced, identified with a contact User-Agent and stop on a block page or a long `Retry-After` instead of retrying around it. ([decision 11](docs/decisions/engineering-decisions.md#11-being-a-polite-sec-client))
-- **Measured performance work.** Storing Gold as tables instead of views took the full build from 34 minutes to 18 seconds and fixed a dashboard out-of-memory error. ([decision 15](docs/decisions/engineering-decisions.md#15-gold-is-stored-as-tables-staging-stays-as-views))
-- **A safe public demo.** The hosted app reads a 3 MB copy of the Gold tables. The export rewrites local paths and refuses to publish anything that looks like a home folder or an email address. ([decision 17](docs/decisions/engineering-decisions.md#17-the-live-demo-reads-a-gold-only-copy-not-the-pipelines-database))
+- **Measured performance work.** Storing Gold as tables instead of views took the full build from 34 minutes to 18 seconds and fixed a dashboard out-of-memory error. ([decision 14](docs/decisions/engineering-decisions.md#14-gold-is-stored-as-tables-staging-stays-as-views))
+- **A safe public demo.** The hosted app reads a 3 MB copy of the Gold tables. The export rewrites local paths and refuses to publish anything that looks like a home folder or an email address. ([decision 16](docs/decisions/engineering-decisions.md#16-the-live-demo-reads-a-gold-only-copy-not-the-pipelines-database))
 
 ## Results from the 20-company run
 
@@ -99,7 +99,7 @@ The [cohort](config/cohort-sp500-top20-2026-10-15.json) is frozen: the 20 larges
 | Annual revenue coverage | 100 of 100 company-years |
 | dbt build | All 571 nodes passed |
 
-A partial filing still has useful data: Gold withheld one or more of its metrics and kept the rest. Some gaps are deliberate, such as capital expenditures for banks and EPS for companies with several share classes. The run's own status is also partial, honestly: three JPMorgan filings landed, but the SEC history files that listed them didn't match the saved plan exactly, so their planning-to-processing trace is flagged for review. The [full cohort report](docs/validation/cohort-V1.md) has every number, including the before and after of each improvement.
+A partial filing still has useful data: Gold withheld one or more of its metrics and kept the rest. Some gaps are deliberate, such as capital expenditures for banks and EPS for companies with several share classes. The run's own status is also partial: three JPMorgan filings landed, but the SEC history files that listed them didn't match the saved plan exactly, so their planning-to-processing trace is flagged for review. The [full cohort report](docs/validation/cohort.md) has every number, including the before and after of each improvement.
 
 ## Bugs that shaped the design
 
@@ -110,7 +110,7 @@ Some of the most useful work came from things that broke. A few of them:
 - **The dashboard ran out of memory** on the full cohort, because every Gold model was a view that recomputed everything on each page load. That led to storing Gold as tables, and to the 34-minute → 18-second build.
 - **The demo export would have published my folder names,** because Gold stored absolute file paths. The export now rewrites them and checks every text column before it finishes.
 
-The [engineering decisions](docs/decisions/engineering-decisions.md#bugs-that-changed-the-design) list all of them, along with 18 design decisions and their trade-offs.
+The [engineering decisions](docs/decisions/engineering-decisions.md#bugs-that-changed-the-design) list all of them, along with 16 design decisions and their trade-offs.
 
 ## Run it
 
@@ -152,7 +152,7 @@ uv run sec-edgar pipeline \
 make dashboard DATABASE=data/demo/query/sec_edgar.duckdb
 ```
 
-The [pipeline guide](docs/guides/running-the-pipeline-V1.md) covers the 20-company cohort (`sec-edgar cohort plan | execute | resume`), what each output folder holds, SQL to query and trace Gold, how to read each quality issue, and what to do when a run stops partway.
+The [pipeline guide](docs/guides/running-the-pipeline.md) covers the 20-company cohort (`sec-edgar cohort plan | execute | resume`), what each output folder holds, SQL to query and trace Gold, how to read each quality issue, and what to do when a run stops partway.
 
 ## Testing and CI
 
@@ -166,7 +166,7 @@ Every pull request and push to `main` runs five jobs. None of them call the SEC:
 | **Hosted demo** (Python 3.12) | The live app's entry point opens both views with only its pinned packages, and the committed demo matches its checksum |
 | **Dashboard image** | The Docker image builds, starts and passes its health check |
 
-`make ci` runs the same Python, dbt and wheel checks locally. The [CI notes](docs/validation/ci-V1.md) explain what each check is designed to catch.
+`make ci` runs the same Python, dbt and wheel checks locally. The [CI notes](docs/validation/ci.md) explain what each check is designed to catch.
 
 ## Project structure
 
@@ -179,6 +179,8 @@ Every pull request and push to `main` runs five jobs. None of them call the SEC:
 | `transform/` | dbt project: concept mappings, selection and derivation SQL, marts, data tests and unit tests |
 | `src/sec_edgar_lakehouse/dashboard/` | Read-only Gold readers, the two dashboard views, a terminal inspector and the demo export |
 | `src/sec_edgar_lakehouse/cli.py`, `Makefile` | The `sec-edgar` command and shortcuts for everyday tasks |
+| `config/` | The frozen manifest of the 20-company cohort |
+| `dashboard_app.py`, `duckdb_startup.py`, `.streamlit/` | Local launchers for the dashboard and DuckDB's SQL UI, and the dashboard theme |
 | `deploy/`, `demo/`, `Dockerfile` | The hosted app's entry point and pins, the demo database and the dashboard image |
 | `tests/`, `scripts/ci/`, `.github/workflows/` | Tests, synthetic end-to-end validation and CI |
 
@@ -189,17 +191,22 @@ This is a local, single-machine pipeline, built for one writer at a time. It cov
 What I would do next:
 
 - **Scale past 20 companies** by making the fact table incremental, so a new filing doesn't rebuild every Gold table.
-- **Move storage to the cloud** and replace the active-pointer files with an open table format such as Iceberg.
+- **Move to cloud storage and a scheduler,** replacing the active-pointer files with an open table format such as Iceberg and running the cohort on a schedule.
+- **Make the database portable** by not storing absolute Parquet paths in the catalog views.
 - **Handle EPS for companies with several share classes,** such as Berkshire and Visa, by choosing a documented class.
 - **Decide an amendment policy:** when a corrected filing (10-K/A) should replace the original in trends.
 - **Resolve the three flagged JPMorgan traces** so the cohort can be marked complete.
 
 ## Documentation
 
-- **How it works:** [end-to-end pipeline](docs/architectures/end-to-end-pipeline-V1.md) · [Bronze](docs/architectures/bronze-ingestion-V1.md) · [Silver](docs/architectures/silver-processing-V1.md) · [DuckDB catalog](docs/architectures/duckdb-query-catalog-V1.md) · [company runs](docs/architectures/company-pipeline-orchestration-V1.md) · [cohort backfill](docs/architectures/cohort-backfill-V1.md) · [Gold](docs/architectures/gold-financial-metrics-V1.md) · [dashboard, hosted demo and Docker](docs/architectures/dashboard-V1.md)
+- **How it works:** [end-to-end pipeline](docs/architectures/end-to-end-pipeline.md) · [Bronze](docs/architectures/bronze-ingestion.md) · [Silver](docs/architectures/silver-processing.md) · [DuckDB catalog](docs/architectures/duckdb-query-catalog.md) · [company runs](docs/architectures/company-pipeline-orchestration.md) · [cohort backfill](docs/architectures/cohort-backfill.md) · [Gold](docs/architectures/gold-financial-metrics.md) · [dashboard, hosted demo and Docker](docs/architectures/dashboard.md)
 - **Why it works this way:** [engineering decisions and bugs](docs/decisions/engineering-decisions.md)
-- **Evidence:** [20-company cohort](docs/validation/cohort-V1.md) · [Apple and Microsoft acceptance run](docs/validation/multi-company-acceptance-V1.md) · [CI and clean installs](docs/validation/ci-V1.md)
-- **Operating it:** [pipeline guide](docs/guides/running-the-pipeline-V1.md)
+- **Evidence:** [20-company cohort](docs/validation/cohort.md) · [Apple and Microsoft acceptance run](docs/validation/multi-company-acceptance.md) · [CI and clean installs](docs/validation/ci.md)
+- **Operating it:** [pipeline guide](docs/guides/running-the-pipeline.md)
+
+## Author
+
+Built by Dhiraj Karki · [GitHub](https://github.com/dhirajkk91) · [LinkedIn](https://www.linkedin.com/in/dhiraj-karki-331526328/)
 
 ## License
 

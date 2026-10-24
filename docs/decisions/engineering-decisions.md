@@ -1,10 +1,27 @@
 # Engineering decisions
 
-This file explains the main choices behind the pipeline: what I picked, what I considered instead, and what each choice costs. The second half covers the bugs that changed the design. For how the system works, see the [architecture notes](../architectures/end-to-end-pipeline-V1.md). For run results, see the [cohort report](../validation/cohort-V1.md).
+This file explains the main choices behind the pipeline: what I picked, what I considered instead, and what each choice costs. The second half covers the bugs that changed the design. For how the system works, see the [architecture notes](../architectures/end-to-end-pipeline.md). For run results, see the [cohort report](../validation/cohort.md).
 
-- [Decisions](#decisions)
-- [Bugs that changed the design](#bugs-that-changed-the-design)
-- [What I would change next](#what-i-would-change-next)
+| # | Decision | Area |
+| ---: | --- | --- |
+| 1 | [Start from raw SEC filings, not a cleaned dataset](#1-start-from-raw-sec-filings-not-a-cleaned-dataset) | Sources |
+| 2 | [Separate keys for company, filing, fact and run](#2-separate-keys-for-company-filing-fact-and-run) | Identity |
+| 3 | [Bronze is write-once and checked before it counts](#3-bronze-is-write-once-and-checked-before-it-counts) | Bronze |
+| 4 | [Silver keeps every fact, with exact values and explicit rejections](#4-silver-keeps-every-fact-with-exact-values-and-explicit-rejections) | Silver |
+| 5 | [Silver is versioned, and an active pointer decides what readers see](#5-silver-is-versioned-and-an-active-pointer-decides-what-readers-see) | Silver |
+| 6 | [DuckDB is a catalog of views, not a second copy of the data](#6-duckdb-is-a-catalog-of-views-not-a-second-copy-of-the-data) | Catalog |
+| 7 | [Gold logic lives in dbt, and conflicting values are withheld](#7-gold-logic-lives-in-dbt-and-conflicting-values-are-withheld) | Gold |
+| 8 | [Reported and derived values stay separate](#8-reported-and-derived-values-stay-separate) | Gold |
+| 9 | ["Did the pipeline run?" and "Is the data good?" are separate statuses](#9-did-the-pipeline-run-and-is-the-data-good-are-separate-statuses) | Pipeline |
+| 10 | [Local, sequential, with one writer](#10-local-sequential-with-one-writer) | Scope |
+| 11 | [Being a polite SEC client](#11-being-a-polite-sec-client) | Bronze |
+| 12 | [Scaling to 20 companies: plan first, then run, build Gold once](#12-scaling-to-20-companies-plan-first-then-run-build-gold-once) | Pipeline |
+| 13 | [Company tables use only the saved SEC response and rearrange Gold](#13-company-tables-use-only-the-saved-sec-response-and-rearrange-gold) | Gold |
+| 14 | [Gold is stored as tables; staging stays as views](#14-gold-is-stored-as-tables-staging-stays-as-views) | Gold |
+| 15 | [Priority picks the concept, never the value](#15-priority-picks-the-concept-never-the-value) | Gold |
+| 16 | [The live demo reads a Gold-only copy, not the pipeline's database](#16-the-live-demo-reads-a-gold-only-copy-not-the-pipelines-database) | Dashboard |
+
+After the decisions come the [bugs that changed the design](#bugs-that-changed-the-design) and [what I would change next](#what-i-would-change-next).
 
 ## Decisions
 
@@ -57,7 +74,7 @@ This file explains the main choices behind the pipeline: what I picked, what I c
 
 **Context:** I knew I'd fix parser bugs and need to reprocess without breaking anything that reads Silver.
 
-**Decision:** Each parse writes a new version folder of Parquet files. Only after row counts, schema and checksums pass does `active.json` switch to it. Old versions stay on disk. The parser version (now 3) is tracked separately from the storage schema version (still 1). An identical rerun is skipped.
+**Decision:** Each parse writes a new version folder of Parquet files. Only after row counts, schema and checksums pass does `active.json` switch to it. Old versions stay on disk. The parser version is tracked separately from the storage schema version, and both are part of the version's folder name. An identical rerun is skipped.
 
 **Alternatives:** Overwriting in place, where a crash halfway leaves broken data. Or Delta Lake / Iceberg, which solve this properly with snapshots.
 
@@ -75,7 +92,7 @@ This file explains the main choices behind the pipeline: what I picked, what I c
 
 **Context:** Picking "the revenue number" for a filing means filtering on period, unit, dimensions, entity and accuracy, then choosing between the facts that remain.
 
-**Decision:** dbt models (staging → intermediate → marts) do the selection. A [seed file](../../transform/seeds/metric_concept_map.csv) maps 8 metrics to US-GAAP concepts with priorities. Only company-wide facts (no dimensions) with the expected unit are eligible. Priority picks which concept supplies the value (decision 16). The facts of that concept must agree; if they disagree, Gold publishes no value and writes a row to `gold.metric_quality_issues`.
+**Decision:** dbt models (staging → intermediate → marts) do the selection. A [seed file](../../transform/seeds/metric_concept_map.csv) maps 8 metrics to US-GAAP concepts with priorities. Only company-wide facts (no dimensions) with the expected unit are eligible. Priority picks which concept supplies the value (decision 15). The facts of that concept must agree; if they disagree, Gold publishes no value and writes a row to `gold.metric_quality_issues`.
 
 **Alternatives:** Doing the selection in Python, or letting priority (or row order) pick a winner even when values conflict.
 
@@ -97,11 +114,11 @@ This file explains the main choices behind the pipeline: what I picked, what I c
 
 **Trade-off:** Two statuses to explain. The CLI exits with code 2 for `PARTIAL`, so a non-zero exit doesn't mean no data landed.
 
-### 10. V1 is local, sequential, with one writer
+### 10. Local, sequential, with one writer
 
 **Context:** My original plan listed AWS services: S3, Glue, Athena, Spark, Iceberg, Airflow and Terraform.
 
-**Decision:** I narrowed V1 to local Python, Parquet, DuckDB, dbt and Streamlit, and moved the cloud work to V2.
+**Decision:** I narrowed the project to local Python, Parquet, DuckDB, dbt and Streamlit, and left the cloud work for later.
 
 **Why:** The cohort is about 10 GB for 400 filings, which DuckDB handles on a laptop. I wanted correctness, reruns and lineage working before adding cloud infrastructure, and I didn't want tools without a real job.
 
@@ -109,7 +126,7 @@ This file explains the main choices behind the pipeline: what I picked, what I c
 
 ### 11. Being a polite SEC client
 
-**Decision:** Every request goes through one shared pacer (by default 0.5 seconds between requests) and carries a User-Agent with contact details. A request gets at most three attempts, and only for 429/500/502/503/504, honoring `Retry-After`. A 403, an SEC block page or a `Retry-After` over 60 seconds stops the run and marks the remaining filings `NOT_ATTEMPTED`.
+**Decision:** Every request goes through one shared pacer (by default 0.5 seconds between requests) and carries a User-Agent with contact details. The tool refuses a shorter interval. A request gets at most three attempts, and only for network errors, timeouts and 429/500/502/503/504 responses, waiting 1 s and then 2 s unless `Retry-After` asks for longer. A 403, an SEC block page or a `Retry-After` over 60 seconds stops the run and marks the remaining filings `NOT_ATTEMPTED`.
 
 **Alternatives:** Parallel downloads, or retrying through blocks.
 
@@ -129,25 +146,19 @@ This file explains the main choices behind the pipeline: what I picked, what I c
 
 **Trade-off:** Amendments are left out for now. All 400 filings landed, but the cohort is marked `PARTIAL`: for three JPMorgan accessions, the SEC history files they came from didn't match between planning and processing. Their filing data matched; only that source record didn't.
 
-### 13. Company attributes come from the saved SEC response, not a lookup table
+### 13. Company tables use only the saved SEC response and rearrange Gold
 
 **Context:** A company table needs a name, ticker and sector. The quick way is a hand-typed CSV or a call to a market-data site.
 
 **Decision:** `dim_companies` uses only the SEC submissions response that Bronze already saves for each company run, checked against its SHA-256 before loading. Sector is the SEC's own industry office (`ownerOrg`), industry is the SIC description, and an empty SEC field stays NULL. Each distinct response is kept as a snapshot, and the newest one wins.
 
+`fct_company_financials` only rearranges `fct_financial_metrics` into one row per company and fiscal period, adding free cash flow, margins and growth. It never selects or derives a metric, and a reconciliation test checks every value against its source row. All financial rules stay in one place, and a gap in the wide table is the same gap recorded in `metric_quality_issues`.
+
 **Alternatives:** A hand-maintained seed file, or GICS sectors from a market-data provider.
 
 **Trade-off:** The SEC's grouping isn't what investors expect. NVIDIA is "Manufacturing" and Visa is "Trade & Services." Exxon has no ticker because its saved response listed none. In return, every company attribute is traceable to a saved, checksummed SEC file, like every financial value.
 
-### 14. The company financials table only rearranges Gold
-
-**Decision:** `fct_company_financials` pivots `fct_financial_metrics` into one row per company and fiscal period. It adds free cash flow, margins and growth, but never selects or derives a metric. A reconciliation test checks every value against its source row.
-
-**Why:** All financial rules stay in one place. A gap in the wide table is the same gap recorded in `metric_quality_issues`, not a new one.
-
-**Trade-off:** Some rows have holes, for example no Q4 EPS and no free cash flow when capex isn't mapped for a company.
-
-### 15. Gold is stored as tables; staging stays as views
+### 14. Gold is stored as tables; staging stays as views
 
 **Context:** Every dbt model started as a view. That kept the database small, but every test and every dashboard read recomputed the whole chain over about 600,000 Silver facts.
 
@@ -157,7 +168,7 @@ This file explains the main choices behind the pipeline: what I picked, what I c
 
 **Trade-off:** Gold is now a stored snapshot. After a catalog refresh it is stale until dbt runs again, which the pipeline already does right after the refresh.
 
-### 16. Priority picks the concept, never the value
+### 15. Priority picks the concept, never the value
 
 **Context:** The dashboard showed gaps for big companies. Some used XBRL concepts I hadn't mapped (Amazon's capex is `PaymentsToAcquireProductiveAssets`). Others reported two revenue concepts that measure different things: Walmart's total `Revenues` ($713.2B) vs. contract revenue ($706.4B). My old rule required every mapped concept to agree, so it withheld Walmart's and Berkshire's revenue for all five years.
 
@@ -168,11 +179,11 @@ This file explains the main choices behind the pipeline: what I picked, what I c
 
 **Alternatives:** Keep requiring all concepts to agree (safe, but it can never use a fallback: Exxon's `ProfitLoss` differs from its `NetIncomeLoss` by minority interests, so adding it would have erased Exxon's net income). Or pick by priority and say nothing about the disagreement (hides real information).
 
-**How I checked it:** I snapshotted every Gold value before the change and compared after: 295 values gained, 0 changed, 0 lost. Annual revenue coverage went from 88 to 100 of 100 and free cash flow from 75 to 93. The full table is in the [cohort report](../validation/cohort-V1.md#concept-fallbacks-and-priority-selection).
+**How I checked it:** I snapshotted every Gold value before the change and compared after: 295 values gained, 0 changed, 0 lost. Annual revenue coverage went from 88 to 100 of 100 and free cash flow from 75 to 93. The full table is in the [cohort report](../validation/cohort.md#concept-fallbacks).
 
 **Trade-off:** 254 new warnings, most of them net income differing by minority interests. `ProfitLoss` as a fallback includes minority interests (0.14% of Mastercard's net income), which the docs say. Some gaps stay on purpose: bank capex and EPS for companies with several share classes.
 
-### 17. The live demo reads a Gold-only copy, not the pipeline's database
+### 16. The live demo reads a Gold-only copy, not the pipeline's database
 
 **Context:** I wanted a link a reviewer can open without installing anything. The cohort database can't simply be uploaded: its Silver views point to absolute Parquet paths on my laptop (decision 6), and `dim_filings` stores those paths as well.
 
@@ -180,29 +191,19 @@ This file explains the main choices behind the pipeline: what I picked, what I c
 
 **Alternatives:** Run the whole pipeline on a cloud server (ongoing cost and an unattended SEC client, all for a read-only page). Make the Silver views relative and upload the Parquet files (far more data than the dashboard reads). Screenshots only (nobody can click through a trace).
 
-**Trade-off:** The demo is a snapshot that I re-export after each Gold rebuild, and it can't show raw Silver facts. While building it I couldn't confirm that the host offered Python 3.14, so I kept the source valid from 3.12. The app ended up deployed on 3.14, but I kept the 3.12 floor so the demo isn't tied to one Python version; Ruff's target version enforces that, and a CI job opens the hosted app on 3.12 with only its pinned packages.
-
-### 18. One command that forwards to the existing tools
-
-**Context:** Each stage had its own module run with `python -m sec_edgar_lakehouse.<long.path>`. That worked, but a reviewer had to read the README to find thirteen entry points.
-
-**Decision:** Add a `sec-edgar` console script whose subcommands forward the remaining arguments to each module's existing `main`. A test fails if a new command-line module is not listed. Everyday checks moved behind `make` targets, and the dashboard got a Dockerfile.
-
-**Alternatives:** Rewrite every tool as one Click or Typer app (a large change to working, tested code for no new behavior). Keep only the modules (nothing to change, but harder to discover).
-
-**Trade-off:** Options are still defined in each module, so the subcommands don't share flags such as a common `--data-root`. The Docker image covers only the read-only dashboard; the pipeline still runs locally, because it needs SEC access, a writable data folder and dbt.
+**Trade-off:** The demo is a snapshot that I re-export after each Gold rebuild, and it can't show raw Silver facts. The source stays valid from Python 3.12 so the hosted app isn't tied to one Python version, and a CI job checks it on 3.12 with only its pinned packages.
 
 ## Bugs that changed the design
 
 - **The complete submission file was in a `colspan` row.** The SEC filing index sometimes merges cells on that row, so normal column mapping missed or misread it. Discovery now finds that row explicitly and requires a `.txt` file name.
 - **Palantir's XBRL instance "wasn't there."** My readiness check only accepted the label `EXTRACTED XBRL INSTANCE DOCUMENT`, but Palantir's FY2021 Q1 filing used `XBRL INSTANCE DOCUMENT`. Both exact labels are accepted now, and the original bytes were never changed.
-- **A broken fact disappeared instead of being rejected.** A fact without `unitRef` was skipped before the rejection logic ran, so the run reported `COMPLETE` with zero rejections. Now it's counted and rejected as `MISSING_UNIT_REF` (parser revision 2). Lesson: count before you filter.
-- **Prefix parsing accepted a malformed date.** A period `instant` holding a valid date followed by a nested element was accepted. Parser revision 3 checks the whole element, rejects only that fact as `INVALID_PERIOD`, and keeps the valid facts around it.
+- **A broken fact disappeared instead of being rejected.** A fact without `unitRef` was skipped before the rejection logic ran, so the run reported `COMPLETE` with zero rejections. Now it's counted and rejected as `MISSING_UNIT_REF`. Lesson: count before you filter.
+- **Prefix parsing accepted a malformed date.** A period `instant` holding a valid date followed by a nested element was accepted. The parser now checks the whole element, rejects only that fact as `INVALID_PERIOD`, and keeps the valid facts around it.
 - **The XML security check depended on encoding.** A UTF-16 file with a DTD and an entity got past a check that searched raw bytes. The guard now runs inside the parser, after the encoding is known.
 - **Matching garbage counted as agreement.** A revenue candidate with `decimals="not-a-valid-accuracy"` was selected, because identical invalid values "agreed." Gold now validates accuracy before comparing candidates.
-- **Fiscal year was missing for some filings.** Fiscal metadata extraction missed the SEC's `dei/2021q4` namespace. Extraction version 3 recognizes it, as well as `dei/2022q4`.
+- **Fiscal year was missing for some filings.** Fiscal metadata extraction missed the SEC's `dei/2021q4` namespace. The extractor now recognizes it, as well as `dei/2022q4`, and keeps the earlier rows as evidence.
 - **Bad CLI input crashed while writing the run record.** Invalid forms or dates were rejected, but then the wrapper crashed trying to save them, and no `run.json` was written. Inputs are now validated before any file or network work.
-- **The dashboard ran out of memory on the full cohort.** Every Gold model was a view, so a page load recomputed everything, and the reader even read `dim_filings` twice. Storing Gold as tables fixed both the memory error and the 34-minute build (decision 15).
+- **The dashboard ran out of memory on the full cohort.** Every Gold model was a view, so a page load recomputed everything, and the reader even read `dim_filings` twice. Storing Gold as tables fixed both the memory error and the 34-minute build (decision 14).
 - **dbt ran out of memory, then out of time.** Setting `threads: 1` in dbt still let DuckDB use 8 engine threads, and a lineage test ran out of memory. The offline build also hit its 900-second timeout after 515 of 538 steps. DuckDB now gets 1 thread and a memory limit, and the timeout is 1,500 seconds.
 - **A new dashboard page broke the core-only install.** The Companies view added `company_page`, which imports Streamlit and Altair. The CI wheel check, which imports every module without the optional UI libraries, failed on it. Local tests had passed because Streamlit is installed in the dev environment. I added the module to the UI skip list, and extended the local "works without Streamlit" test to block Streamlit and Altair and import every other module, so the same mistake now fails on my machine first.
 - **The demo export would have published my folder names.** `dim_filings` stores the absolute path of each Silver version, so a plain copy of Gold would have put my home folder on a public site. The export now rewrites those paths and scans every text column before it finishes. The filing explorer also printed the full database path; it now shows only the file name.
@@ -211,9 +212,9 @@ This file explains the main choices behind the pipeline: what I picked, what I c
 
 ## What I would change next
 
-- **Handle multi-class EPS** (Berkshire, Visa) by choosing a documented share class instead of leaving EPS empty.
 - **Make the fact table incremental**, so a new filing doesn't rebuild every Gold table. At 18 seconds a full rebuild is fine for 400 filings, but not for the whole S&P 500.
-- **Replace the active pointer with Iceberg** when moving to cloud storage.
+- **Move to cloud storage and a scheduler,** replacing the active pointer with Iceberg and running the cohort on a schedule instead of by hand.
 - **Make the database portable** by not storing absolute Parquet paths in the views.
+- **Handle multi-class EPS** (Berkshire, Visa) by choosing a documented share class instead of leaving EPS empty.
 - **Decide an amendment policy:** when a 10-K/A should replace the original in trend analysis.
 - **Resolve the three JPMorgan trace mismatches** so the cohort can be marked complete.
