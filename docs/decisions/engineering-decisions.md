@@ -209,13 +209,13 @@ After the decisions come the [bugs that changed the design](#bugs-that-changed-t
 
 ### 18. Compute on a free Oracle VM, the lake on AWS
 
-**Context:** The data had to update itself on weeknights and be queryable by someone who isn't me, and the project has to stay up for years on a student budget: an Oracle Always Free VM that already runs another project, and $200 of AWS credits that expire.
+**Context:** The data had to update itself on weeknights and be queryable by someone who isn't me, and the project has to stay up for years on a student budget: an Oracle Always Free VM (2 OCPUs and 12 GB, the whole free Arm allowance) and $200 of AWS credits that expire.
 
 **Decision:** The weeknight job runs in Docker on the Oracle VM under a systemd timer. Its output goes to AWS: S3 for the Bronze archive and the tables, Glue as the catalog, Athena for SQL. Terraform defines the AWS side, including least-privilege keys and a budget alarm that ignores credits.
 
-**Alternatives:** All on AWS with Fargate or Lambda on a schedule (cents a month, but the backfill outlasts Lambda's 15-minute limit, and it's paid compute for something free elsewhere). MWAA for scheduling (hundreds of dollars a month for one job). Everything on the VM with no lake (nothing for anyone else to query, and the data lives or dies with one machine).
+**Alternatives:** A dedicated second Oracle VM (cleaner isolation, but the free allowance is shared across instances, so it would halve the resources available to each). All on AWS with Fargate or Lambda on a schedule (cents a month, but the backfill outlasts Lambda's 15-minute limit, and it's paid compute for something free elsewhere). MWAA for scheduling (hundreds of dollars a month for one job). Everything on the VM with no lake (nothing for anyone else to query, and the data lives or dies with one machine).
 
-**Trade-off:** Two clouds to set up, and the VM uses a long-lived access key instead of an IAM role. In return the bill after the credits is cents a month, uploads into S3 are free, and the lake survives the VM.
+**Trade-off:** Two clouds to set up, the VM uses a long-lived access key instead of an IAM role, and the job shares its machine with other workloads, kept apart by its own container, folders and a 1 CPU / 5 GB cap. In return the bill after the credits is cents a month, uploads into S3 are free, and the lake survives the VM.
 
 ### 19. Iceberg tables written from Python; Gold still built in DuckDB
 
