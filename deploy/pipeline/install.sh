@@ -9,7 +9,8 @@ if [ "$(id -u)" -ne 0 ]; then
     echo "Run with sudo" >&2
     exit 1
 fi
-command -v docker >/dev/null || { echo "Docker is not installed" >&2; exit 1; }
+command -v docker >/dev/null || { echo "Docker is not installed (Ubuntu: apt install docker.io docker-buildx)" >&2; exit 1; }
+docker buildx version >/dev/null 2>&1 || { echo "Docker buildx is missing (Ubuntu: apt install docker-buildx)" >&2; exit 1; }
 cd "$(dirname "$0")/../.."
 
 # Data lives outside the container; the image runs as uid 10001.

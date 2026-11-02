@@ -15,7 +15,7 @@
 
 Nothing to install. **Companies** compares financials across years, **Insights** answers four questions about them, and **Trace a filing** follows a number back to its source.
 
-**Status, November 2026:** the cloud version is built and tested offline, and I'm running the first S&P 500 backfill next. Until it finishes, the live dashboard shows the 20-company snapshot.
+**Status:** deployed; the initial S&P 500 backfill is in progress. Until it completes, the live dashboard shows the 20-company snapshot.
 
 ---
 
@@ -47,7 +47,7 @@ Public companies report their financials to the SEC in XBRL. The raw data is mes
 
 Every weeknight at 11:30 p.m. Central, a container on a free Oracle Cloud VM checks each S&P 500 company's SEC listing, processes only the filings it hasn't done through Bronze, Silver and the DuckDB catalog, and builds Gold once with dbt. Then it publishes to the lake on AWS: new raw files to S3, changed Silver filings and all of Gold as **Apache Iceberg** tables in the **Glue** catalog, and a Gold-only snapshot for the dashboard. Analysts query the lake with **Athena**; every night is an Iceberg snapshot, so "what changed since last week?" is one query.
 
-I put the compute on my free Oracle VM and only the storage and SQL on AWS, where they cost cents at this size ([why](docs/decisions/engineering-decisions.md#18-compute-on-a-free-oracle-vm-the-lake-on-aws)). The AWS side is all [Terraform](infra/aws/).
+Compute runs on a free-tier Oracle VM and only storage and SQL run on AWS, where they cost cents at this size ([why](docs/decisions/engineering-decisions.md#18-compute-on-a-free-oracle-vm-the-lake-on-aws)). The job runs in its own container, capped at 1 CPU and 5 GB. The AWS side is all [Terraform](infra/aws/).
 
 | Layer | What it does | What it guarantees |
 | --- | --- | --- |
@@ -104,6 +104,17 @@ Everything on the Insights view is computed from Gold, so it stays correct as ne
 
 The [engineering decisions](docs/decisions/engineering-decisions.md) also list the bugs that changed the design, such as the broken fact that vanished instead of being rejected (lesson: count before you filter) and the demo export that would have published my folder names.
 
+## First cloud run
+
+Before the backfill, one company was run through the deployed pipeline at 1 CPU ([details](docs/architectures/cloud-lakehouse.md#first-run)):
+
+| Checkpoint | Result |
+| --- | ---: |
+| Apple filings synced | 23 of 23 (5 10-K, 18 10-Q), none failed |
+| Sync and Gold build | 219 seconds |
+| Published to the lake | 23 Bronze filings, 31,198 Silver rows, 325 Gold rows |
+| Read back with Athena | the same 5 + 18 filings, from Iceberg on S3 |
+
 ## Results from the 20-company run
 
 The [cohort](config/cohort-sp500-top20-2026-10-15.json) is the 20 largest S&P 500 issuers by market cap on October 15, 2026, with their original 10-K and 10-Q filings for five completed fiscal years, chosen before any download.
@@ -150,7 +161,7 @@ make dashboard DATABASE=data/demo/query/sec_edgar.duckdb
 make lake-local DATA_ROOT=data/demo
 ```
 
-**4. In the cloud:** [how I deploy it](docs/guides/deploying.md). The [pipeline guide](docs/guides/running-the-pipeline.md) covers running, inspecting and recovering by hand.
+**4. In the cloud:** the [deploy guide](docs/guides/deploying.md). The [pipeline guide](docs/guides/running-the-pipeline.md) covers running, inspecting and recovering by hand.
 
 ## Testing and CI
 

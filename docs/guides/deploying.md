@@ -1,60 +1,102 @@
-# Deploying it
+# Deploying
 
-These are the steps I use to run the pipeline in the cloud: the AWS side from my laptop with Terraform, and the weeknight job on my Oracle Cloud free-tier VM (the same one that runs my Bluesky project). Why it's split this way is in the [cloud notes](../architectures/cloud-lakehouse.md).
+The AWS side is created with Terraform from a workstation; the weeknight job runs on an Oracle Cloud Always Free VM. The reasoning behind the split is in the [cloud architecture](../architectures/cloud-lakehouse.md).
 
-I haven't done the full S&P 500 backfill yet, so I'll add real timings, costs and whatever breaks once I have.
+## 1. AWS
 
-## AWS
+Use an admin IAM user rather than the root account. With `aws login` the CLI gets short-lived credentials, so sign in again if Terraform reports missing credentials:
+
+```sh
+aws login --profile <profile>
+export AWS_PROFILE=<profile>
+aws sts get-caller-identity          # should show the admin user
+```
+
+Then create the resources:
 
 ```sh
 cd infra/aws
-cp terraform.tfvars.example terraform.tfvars   # bucket name and the email for the budget alarm
+cp terraform.tfvars.example terraform.tfvars   # bucket name (globally unique) and alarm email
 terraform init
+terraform plan                                 # 20 resources; check lake_uri shows your bucket
 terraform apply
 ```
 
-AWS sends an email to confirm the budget alarm; it doesn't fire until you click it. The outputs have everything the next two steps need (`terraform output`, and `-raw` for the secret keys). The state file holds those keys, which is why `*.tfstate` is in `.gitignore`.
+Terraform creates two IAM users with their own access keys: `sec-edgar-pipeline` for the VM and `sec-edgar-dashboard` for Streamlit. Read them with `terraform output -raw <name>`. The state file holds those keys, so `*.tfstate` and `terraform.tfvars` are ignored by git; `.terraform.lock.hcl` is committed to pin the provider version.
 
-## The VM
+The budget alarm covers the whole AWS account. If the account runs other workloads, raise `monthly_budget_usd` accordingly.
+
+## 2. The VM
+
+The job is sized for an Ampere A1 with 2 OCPUs and 12 GB, the full Always Free allowance. It runs in its own container capped at 1 CPU and 5 GB, so it can share the VM with other workloads. On Ubuntu, install Docker first; `buildx` is a separate package:
+
+```sh
+sudo apt update
+sudo apt install -y docker.io docker-buildx
+sudo systemctl enable --now docker
+```
+
+Then the project:
 
 ```sh
 git clone https://github.com/dhirajkk91/sec-edgar-financial-data-lakehouse.git
 cd sec-edgar-financial-data-lakehouse
-sudo sh deploy/pipeline/install.sh   # first time: creates /etc/sec-edgar/env and stops
-sudo nano /etc/sec-edgar/env         # SEC_USER_AGENT, the lake URI, the pipeline key
-sudo sh deploy/pipeline/install.sh   # builds the image and turns on the timer
+sudo sh deploy/pipeline/install.sh   # first run: creates /etc/sec-edgar/env and stops
+sudo nano /etc/sec-edgar/env         # SEC_USER_AGENT, lake URI, the pipeline key
+sudo sh deploy/pipeline/install.sh   # builds the image and enables the timer
 ```
 
-Before the full run I check one company with `--dry-run`, which only lists what it would download:
+`systemctl list-timers sec-edgar-nightly.timer` shows the next run in UTC; 11:30 p.m. Central is 05:30 UTC the following day. To change the CPU or memory cap without editing the repository, run `sudo systemctl edit sec-edgar-nightly.service` and set `SEC_EDGAR_CPUS` or `SEC_EDGAR_MEMORY`.
+
+## 3. Test with one company
+
+Run one company through sync and publish before starting the backfill:
 
 ```sh
-sudo docker run --rm --env-file /etc/sec-edgar/env -v /var/lib/sec-edgar:/data \
-  sec-edgar-pipeline sec-edgar sync --universe config/universe-sp500.json \
-  --data-root /data/lake --ciks 0000320193 --dry-run
+sudo docker run --rm --cpus 1 --memory 5g --env-file /etc/sec-edgar/env \
+  -v /var/lib/sec-edgar:/data sec-edgar-pipeline sh -c \
+  "sec-edgar sync --universe config/universe-sp500.json --data-root /data/lake --ciks 0000320193 \
+   && sec-edgar publish-lake --data-root /data/lake"
 ```
 
-Then the first real run, which is the five-year backfill:
+Expected output for Apple:
+
+```text
+  1/1 Apple Inc.: pending=23 done_now=23
+Sync COMPLETE: 1 companies, 23 new filings done, 0 failed, 0 company errors, Gold COMPLETE in 219s
+Lake s3://<bucket>/sec-edgar: 23 Bronze filings, 31,198 Silver rows, 325 Gold rows, snapshot …
+```
+
+Verify in Athena (workgroup `sec-edgar`, catalog `AwsDataCatalog`, database `sec_gold`):
+
+```sql
+SELECT form, count(*) FROM sec_gold.dim_filings GROUP BY form;   -- 10-K: 5, 10-Q: 18
+```
+
+## 4. The backfill
 
 ```sh
 sudo systemctl start --no-block sec-edgar-nightly.service
 journalctl -u sec-edgar-nightly.service -f
 ```
 
-It's safe to stop; the next start picks up from the last company it finished. After that the timer runs it Monday to Friday at 11:30 p.m. Central, and `git pull && sudo sh deploy/pipeline/install.sh` updates it.
+The job logs one line per company. It can be stopped safely; the next start resumes from the last finished company, and systemd won't start a second instance if the timer fires while it's running. The run summary is written to `/var/lib/sec-edgar/lake/sync-runs/latest.json` on completion.
 
-## Dashboard
+## 5. Streamlit
 
-The Streamlit app reads the nightly snapshot once these are in its secrets (use the dashboard key, which can only read the snapshot, not the pipeline key):
+Add the snapshot location and the dashboard key (not the pipeline key) to the app's secrets:
 
 ```toml
-SEC_EDGAR_SNAPSHOT_S3_URI = "s3://<bucket>/sec-edgar/serving/sec_edgar_gold.duckdb"
-AWS_ACCESS_KEY_ID = "..."
-AWS_SECRET_ACCESS_KEY = "..."
-AWS_DEFAULT_REGION = "us-east-1"
+SEC_EDGAR_SNAPSHOT_S3_URI = 's3://<bucket>/sec-edgar/serving/sec_edgar_gold.duckdb'
+AWS_ACCESS_KEY_ID = 'AKIA...'
+AWS_SECRET_ACCESS_KEY = '...'
+AWS_DEFAULT_REGION = 'us-east-1'
 ```
 
-Without them it shows the 20-company demo, as it always has.
+Each value needs exactly one pair of straight quotes. `terraform output` without `-raw` adds its own quotes, which makes the TOML invalid. Single quotes are safest because AWS secrets can contain `+` and `/`. Without these secrets, or if the download fails, the app shows the committed 20-company demo.
 
-## Athena
+## Updating
 
-The `sec-edgar` workgroup has my saved queries from [`infra/aws/queries/`](../../infra/aws/queries/). It cancels anything that would scan more than 1 GiB, so a bad query costs half a cent at most.
+```sh
+git pull && sudo sh deploy/pipeline/install.sh
+```

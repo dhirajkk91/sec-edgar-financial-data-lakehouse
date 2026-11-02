@@ -2,14 +2,16 @@
 
 ## Purpose
 
-Until November 2026 the whole pipeline lived on my laptop and ended in a DuckDB file. That was fine for 20 companies, but it couldn't keep itself up to date, nobody else could query it, and "lakehouse" was a stretch. This version runs on its own: every weeknight it brings the S&P 500 up to date from the SEC and publishes the result to a lake on AWS.
+The first version of the pipeline ran on a laptop and ended in a DuckDB file. That was fine for 20 companies, but it couldn't keep itself up to date, nobody else could query it, and "lakehouse" was a stretch. This version runs on its own: every weeknight it brings the S&P 500 up to date from the SEC and publishes the result to a lake on AWS.
 
 ## What I had to work with
 
-- An Oracle Cloud Always Free VM that already runs my Bluesky project. Free compute that doesn't expire.
+- An Oracle Cloud Always Free VM: an Ampere A1 with 2 OCPUs and 12 GB. Free compute that doesn't expire.
 - $200 of AWS credits that expire next year. Whatever I build on AWS has to be close to free after that, or I'll end up turning it off.
 
 So the rule I followed was: anything that bills by the hour runs on the VM, and AWS only gets the parts that bill by use and cost cents at this size.
+
+Oracle's free Arm allowance is 2 OCPUs and 12 GB in total across all instances, and exceeding it disables every Arm instance on a free account. The job therefore runs on an existing VM rather than a second one, isolated in its own container image, data folder (`/var/lib/sec-edgar`), settings file and systemd timer, and capped at 1 CPU and 5 GB with DuckDB limited to 3 GB. It runs only at night.
 
 ## Design
 
@@ -21,7 +23,20 @@ So the rule I followed was: anything that bills by the hour runs on the VM, and 
 - **Athena.** SQL over those tables, with a 1 GiB cap per query.
 - **Streamlit.** The dashboard downloads a Gold snapshot from S3 instead of reading the committed demo.
 
-Everything on AWS is in [Terraform](../../infra/aws/main.tf). I sized it for about 10,000 filings: roughly 3.5 GB of Bronze before compression plus a few GB of Parquet, which by my estimate is under a dollar a month in S3. I'll update this with real numbers after the backfill.
+Everything on AWS is in [Terraform](../../infra/aws/main.tf): 20 resources. I sized it for about 10,000 filings: roughly 3.5 GB of Bronze before compression plus a few GB of Parquet, which by my estimate is under a dollar a month in S3.
+
+## First run
+
+Before the backfill, Apple was run alone through the deployed pipeline ([commands](../guides/deploying.md#3-test-with-one-company)), capped at 1 CPU:
+
+| | |
+| --- | --- |
+| Filings | 23 (5 10-K, 18 10-Q), none failed |
+| Sync and Gold build | 219 seconds |
+| Published | 23 Bronze filings, 31,198 Silver rows, 325 Gold rows, the dashboard snapshot |
+| Athena | `sec_gold.dim_filings` returned the same 5 + 18 filings straight from S3 |
+
+Backfill duration, lake size and monthly AWS cost will be added once the backfill completes.
 
 I left out Spark, EMR and Airflow on purpose. At about 15 million facts the work fits on one machine, and hosted Airflow alone would cost more per month than the rest of this does in a year.
 
