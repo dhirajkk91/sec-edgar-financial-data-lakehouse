@@ -36,7 +36,8 @@ with periods as (
                 'INVALID_REPORTED_PERIOD', 'MISSING_FISCAL_METADATA',
                 'FISCAL_METADATA_LINEAGE_MISMATCH', 'UNRESOLVED_FISCAL_METADATA',
                 'FISCAL_REPORT_DATE_MISMATCH', 'FISCAL_PERIOD_FORM_MISMATCH',
-                'UNSUPPORTED_DURATION', 'AMBIGUOUS_REPORTED_PERIOD'
+                'UNSUPPORTED_DURATION', 'AMBIGUOUS_REPORTED_PERIOD',
+                'FISCAL_FOCUS_CONFLICT', 'DUPLICATE_FISCAL_PERIOD'
             ))
             or (period_classification in ('annual', 'quarter', 'year_to_date', 'instant')
                 and period_issue_code is null), false)

@@ -143,6 +143,8 @@ unit_tests:
             form: "10-Q"
             report_date: "2026-03-31"
             supporting_occurrence_ids: ["cash-ytd", "cash-ytd-support"]
+      - input: ref('stg_silver_company_profiles')
+        rows: []
       - input: ref('stg_silver_filing_fiscal_metadata')
         rows:
           - &fiscal_period
@@ -403,6 +405,8 @@ unit_tests:
         rows: []
       - input: ref('int_reported_cash_flow_metrics')
         rows: []
+      - input: ref('stg_silver_company_profiles')
+        rows: []
       - input: ref('stg_silver_filing_fiscal_metadata')
         rows:
           - <<: *fiscal_period
@@ -626,6 +630,8 @@ unit_tests:
         rows: []
       - input: ref('int_reported_cash_flow_metrics')
         rows: []
+      - input: ref('stg_silver_company_profiles')
+        rows: []
       - input: ref('stg_silver_filing_fiscal_metadata')
         rows:
           - <<: *fiscal_period
@@ -742,6 +748,8 @@ unit_tests:
         rows: []
       - input: ref('int_reported_cash_flow_metrics')
         rows: []
+      - input: ref('stg_silver_company_profiles')
+        rows: []
       - input: ref('stg_silver_filing_fiscal_metadata')
         rows:
           - <<: *fiscal_period
@@ -753,7 +761,7 @@ unit_tests:
             accession_number: "other-accession"
             form: "10-Q"
             fiscal_year_focus: 2026
-            fiscal_period_focus: "Q2"
+            fiscal_period_focus: "Q1"
           - <<: *fiscal_period
             cik: "0000000002"
             accession_number: "competing"
@@ -783,3 +791,101 @@ unit_tests:
         - {source_occurrence_id: "other-company", period_classification: "quarter",
            period_issue_code: null, supporting_occurrence_ids: ["other-company", "support-company"],
            value_decimal: "100.000000000000000001"}
+  - name: reported_period_fiscal_tags_checked_against_year_end
+    model: int_reported_financial_periods
+    description: "With a December year end on file, a 10-Q tagged with the previous fiscal year or the wrong quarter is withheld as FISCAL_FOCUS_CONFLICT, two consistent filings claiming the same period are both withheld as DUPLICATE_FISCAL_PERIOD, and correctly tagged filings classify as usual."
+    given:
+      - input: ref('int_reported_revenue')
+        rows:
+          - <<: *reported_period
+            accession_number: "fy2024"
+            source_occurrence_id: "fy2024"
+            period_start: "2024-01-01"
+            period_end: "2024-12-31"
+            report_date: "2024-12-31"
+          - <<: *reported_period
+            accession_number: "q1"
+            source_occurrence_id: "q1"
+            period_start: "2025-01-01"
+            period_end: "2025-03-31"
+            report_date: "2025-03-31"
+            form: "10-Q"
+          - <<: *reported_period
+            accession_number: "q1-again"
+            source_occurrence_id: "q1-again"
+            period_start: "2025-01-01"
+            period_end: "2025-03-31"
+            report_date: "2025-03-31"
+            form: "10-Q"
+          - <<: *reported_period
+            accession_number: "stale-year"
+            source_occurrence_id: "stale-year"
+            period_start: "2025-04-01"
+            period_end: "2025-06-30"
+            report_date: "2025-06-30"
+            form: "10-Q"
+          - <<: *reported_period
+            accession_number: "wrong-quarter"
+            source_occurrence_id: "wrong-quarter"
+            period_start: "2025-07-01"
+            period_end: "2025-09-30"
+            report_date: "2025-09-30"
+            form: "10-Q"
+          - <<: *reported_period
+            accession_number: "fy2025"
+            source_occurrence_id: "fy2025"
+      - input: ref('int_reported_income_metrics')
+        rows: []
+      - input: ref('int_reported_balance_sheet_metrics')
+        rows: []
+      - input: ref('int_reported_cash_flow_metrics')
+        rows: []
+      - input: ref('stg_silver_company_profiles')
+        rows:
+          - {cik: "0000320193", fiscal_year_end: "1231", submissions_retrieved_at: "2026-01-01 00:00:00+00"}
+      - input: ref('stg_silver_filing_fiscal_metadata')
+        rows:
+          - <<: *fiscal_period
+            accession_number: "fy2024"
+            report_date: "2024-12-31"
+            fiscal_year_focus: 2024
+            document_period_end_date: "2024-12-31"
+          - <<: *fiscal_period
+            accession_number: "q1"
+            form: "10-Q"
+            report_date: "2025-03-31"
+            fiscal_period_focus: "Q1"
+            document_period_end_date: "2025-03-31"
+          - <<: *fiscal_period
+            accession_number: "q1-again"
+            form: "10-Q"
+            report_date: "2025-03-31"
+            fiscal_period_focus: "Q1"
+            document_period_end_date: "2025-03-31"
+          - <<: *fiscal_period
+            accession_number: "stale-year"
+            form: "10-Q"
+            report_date: "2025-06-30"
+            fiscal_year_focus: 2024
+            fiscal_period_focus: "Q2"
+            document_period_end_date: "2025-06-30"
+          - <<: *fiscal_period
+            accession_number: "wrong-quarter"
+            form: "10-Q"
+            report_date: "2025-09-30"
+            fiscal_period_focus: "Q2"
+            document_period_end_date: "2025-09-30"
+          - <<: *fiscal_period
+            accession_number: "fy2025"
+    expect:
+      rows:
+        - {source_occurrence_id: "fy2024", period_classification: "annual", period_issue_code: null}
+        - {source_occurrence_id: "q1", period_classification: "unclassified",
+           period_issue_code: "DUPLICATE_FISCAL_PERIOD"}
+        - {source_occurrence_id: "q1-again", period_classification: "unclassified",
+           period_issue_code: "DUPLICATE_FISCAL_PERIOD"}
+        - {source_occurrence_id: "stale-year", period_classification: "unclassified",
+           period_issue_code: "FISCAL_FOCUS_CONFLICT"}
+        - {source_occurrence_id: "wrong-quarter", period_classification: "unclassified",
+           period_issue_code: "FISCAL_FOCUS_CONFLICT"}
+        - {source_occurrence_id: "fy2025", period_classification: "annual", period_issue_code: null}

@@ -25,7 +25,7 @@ Public companies report their financials to the SEC in XBRL. The raw data is mes
 
 | If you care about… | Start here |
 | --- | --- |
-| **Data engineering** | The [cloud architecture](docs/architectures/cloud-lakehouse.md) (Oracle compute, S3 + Iceberg + Glue + Athena, Terraform), the [weeknight sync](docs/architectures/end-to-end-pipeline.md), the [Bronze](docs/architectures/bronze-ingestion.md) and [Silver](docs/architectures/silver-processing.md) guarantees, and [21 design decisions with their trade-offs](docs/decisions/engineering-decisions.md) |
+| **Data engineering** | The [cloud architecture](docs/architectures/cloud-lakehouse.md) (Oracle compute, S3 + Iceberg + Glue + Athena, Terraform), the [weeknight sync](docs/architectures/end-to-end-pipeline.md), the [Bronze](docs/architectures/bronze-ingestion.md) and [Silver](docs/architectures/silver-processing.md) guarantees, and [22 design decisions with their trade-offs](docs/decisions/engineering-decisions.md) |
 | **Analytics engineering** | The [dbt project](transform/): concept priority, derived quarters and quality issues as tested SQL, explained in the [Gold notes](docs/architectures/gold-financial-metrics.md) |
 | **Data analysis** | The [written analysis](docs/analysis/what-the-data-shows.md) with SQL and caveats, the [exploratory notebook](notebooks/exploratory-analysis.ipynb), the [Athena queries](infra/aws/queries/) (window functions, time travel) and the dashboard's Insights view |
 
@@ -38,7 +38,7 @@ Public companies report their financials to the SEC in XBRL. The raw data is mes
 | **Data (cohort)** | 601,103 XBRL facts into 4,310 financial values (3,576 reported, 734 derived), each linked to its source facts; 557 quality issues recorded with a reason instead of a guessed number |
 | **Performance** | Full Gold rebuild cut from 34 minutes to 18 seconds; Bronze cut from ~25 MB to ~3.5 MB a filing |
 | **Cost** | Free compute on Oracle's free tier; AWS estimated at under $1 a month after my credits run out, with a budget alarm |
-| **Testing** | 972 Python tests, 592 dbt nodes, six CI jobs on every change, none of which call the SEC |
+| **Testing** | 972 Python tests, 593 dbt nodes, six CI jobs on every change, none of which call the SEC |
 | **Stack** | Python · DuckDB · dbt · Apache Iceberg · S3 · Glue · Athena · Terraform · Docker · systemd · Streamlit · GitHub Actions |
 
 ## Architecture

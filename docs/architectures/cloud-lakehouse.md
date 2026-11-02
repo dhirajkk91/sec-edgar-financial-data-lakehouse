@@ -67,7 +67,7 @@ The bucket is private and encrypted. The VM uses an IAM user that can only touch
 
 ## Trade-offs
 
-- **Gold is built in DuckDB and copied to Iceberg.** I didn't want to rewrite 592 dbt nodes for Athena's SQL dialect and lose the offline CI build. The cost is that Athena reads last night's copy, not the build itself.
+- **Gold is built in DuckDB and copied to Iceberg.** I didn't want to rewrite 593 dbt nodes for Athena's SQL dialect and lose the offline CI build. The cost is that Athena reads last night's copy, not the build itself.
 - **pyiceberg instead of Spark.** No cluster to run, and it works against a local catalog in tests. It can't compact small files yet, so that's an occasional `OPTIMIZE` in Athena.
 - **Checking every company every night** (about 500 requests, four minutes at my pacing) instead of using the SEC's daily index. More requests, but a missed night or a failed filing just gets picked up the next time, without me tracking a watermark.
 - **Two clouds.** More setup, and the VM uses a long-lived access key instead of a role. In exchange, compute is free.

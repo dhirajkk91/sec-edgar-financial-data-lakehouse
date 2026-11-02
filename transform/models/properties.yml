@@ -656,7 +656,8 @@ models:
                 values: [INVALID_REPORTED_PERIOD, MISSING_FISCAL_METADATA,
                   FISCAL_METADATA_LINEAGE_MISMATCH, UNRESOLVED_FISCAL_METADATA,
                   FISCAL_REPORT_DATE_MISMATCH, FISCAL_PERIOD_FORM_MISMATCH,
-                  UNSUPPORTED_DURATION, AMBIGUOUS_REPORTED_PERIOD]
+                  UNSUPPORTED_DURATION, AMBIGUOUS_REPORTED_PERIOD,
+                  FISCAL_FOCUS_CONFLICT, DUPLICATE_FISCAL_PERIOD]
 
   - name: int_derived_quarterly_cash_flow
     description: Standalone Q2/Q3 supplemental cash flow from one compatible cumulative pair; keeps both inputs and their independent accuracy evidence.
