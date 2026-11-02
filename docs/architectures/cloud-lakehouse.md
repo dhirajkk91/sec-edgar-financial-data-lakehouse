@@ -17,7 +17,7 @@ Oracle's free Arm allowance is 2 OCPUs and 12 GB in total across all instances, 
 
 ![Architecture: Oracle VM compute, AWS lake, Streamlit dashboard](../images/architecture.png)
 
-- **Oracle VM.** A Docker container on a systemd timer, Monday to Friday at 11:30 p.m. Central. It runs `sec-edgar sync` (new filings through Bronze, Silver and Gold, see the [pipeline notes](end-to-end-pipeline.md)) and then `sec-edgar publish-lake`.
+- **Oracle VM.** A Docker container on a systemd timer, Monday to Friday at 11:30 p.m. Central. It runs `sec-edgar sync` (new filings through Bronze, Silver and Gold, see the [pipeline notes](end-to-end-pipeline.md)) and then `sec-edgar publish-lake`. During a long backfill the sync also publishes every 25 companies.
 - **S3.** The raw Bronze files, gzipped, and the table files.
 - **Iceberg + Glue.** Silver and Gold are Iceberg tables registered in the Glue catalog.
 - **Athena.** SQL over those tables, with a 1 GiB cap per query.
@@ -42,7 +42,7 @@ I left out Spark, EMR and Airflow on purpose. At about 15 million facts the work
 
 ## Publishing to the lake
 
-[`publish-lake`](../../src/sec_edgar_lakehouse/lake/publish.py) runs after the sync. It tries to only write what changed:
+[`publish-lake`](../../src/sec_edgar_lakehouse/lake/publish.py) runs after the sync, and during a long run after every 25 companies ([checkpoints](end-to-end-pipeline.md#checkpoints-during-a-long-run)). It tries to only write what changed:
 
 1. **Bronze.** Each new filing folder is gzipped and uploaded once. Bronze never changes after it's published, so a local ledger of uploaded filings is enough. Each object keeps the original file's SHA-256 in its metadata, so Bronze can be rebuilt byte for byte from the lake if the VM dies.
 2. **Silver.** `sec_silver.facts`, `fact_dimensions` and `rejected_facts`, partitioned by CIK. Only filings whose active Silver version changed get written: new ones are appended, and a re-parsed filing has its old rows deleted and new ones appended in the same commit.

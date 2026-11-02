@@ -118,12 +118,12 @@ The public app shows the live S&P 500 data when it can and the committed demo wh
 ```mermaid
 flowchart LR
     J["Weeknight job<br/>publish-lake"] --> S3[("S3<br/>serving/sec_edgar_gold.duckdb<br/>+ manifest")]
-    S3 -->|"read-only IAM key,<br/>cached 3 h"| H["deploy/streamlit_app.py<br/>Streamlit Community Cloud"]
+    S3 -->|"read-only IAM key,<br/>cached 1 h"| H["deploy/streamlit_app.py<br/>Streamlit Community Cloud"]
     H -->|"checksum matches?"| V["Live data"]
     D["demo/sec_edgar_demo.duckdb<br/>20 companies, Oct 2026"] -->|"any failure, or no secret set"| H
 ```
 
-With `SEC_EDGAR_SNAPSHOT_S3_URI` and a read-only AWS key in the app's Streamlit secrets, [`deploy/streamlit_app.py`](../../deploy/streamlit_app.py) downloads the snapshot the weeknight job published, checks its SHA-256 against the manifest beside it and keeps it for three hours. Any failure falls back to the committed demo, so the page always opens. The sidebar says which one is showing and when it was published. The IAM key can read exactly those two objects and nothing else ([Terraform](../../infra/aws/main.tf)).
+With `SEC_EDGAR_SNAPSHOT_S3_URI` and a read-only AWS key in the app's Streamlit secrets, [`deploy/streamlit_app.py`](../../deploy/streamlit_app.py) downloads the snapshot the weeknight job published, checks its SHA-256 against the manifest beside it and keeps it for an hour, so new batches from a backfill appear within the hour. Any failure falls back to the committed demo, so the page always opens. The sidebar says which one is showing and when it was published. The IAM key can read exactly those two objects and nothing else ([Terraform](../../infra/aws/main.tf)).
 
 ### The Gold-only copy
 

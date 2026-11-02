@@ -5,7 +5,7 @@ src instead of being installed.
 
 With SEC_EDGAR_SNAPSHOT_S3_URI set (a Streamlit secret on the host), the app
 reads the Gold snapshot the weeknight job publishes to S3. It checks the file
-against the SHA-256 in its manifest, keeps it for a few hours, and falls back to
+against the SHA-256 in its manifest, keeps it for an hour, and falls back to
 the committed demo/sec_edgar_demo.duckdb if anything goes wrong, so the page
 always opens. Without that setting it opens the demo, or SEC_EDGAR_DUCKDB_PATH
 when set; relative paths are resolved from the repository.
@@ -31,7 +31,7 @@ import streamlit as st
 from sec_edgar_lakehouse.dashboard.dashboard_app import main
 
 DEMO_DATABASE = Path("demo/sec_edgar_demo.duckdb")
-SNAPSHOT_HOURS = 3
+SNAPSHOT_HOURS = 1
 
 
 def database_path(configured: str) -> Path:

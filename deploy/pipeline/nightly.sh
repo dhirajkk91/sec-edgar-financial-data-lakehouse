@@ -8,6 +8,8 @@ set -u
 
 DATA_ROOT="${SEC_EDGAR_DATA_ROOT:-/data/lake}"
 UNIVERSE="${SEC_EDGAR_UNIVERSE:-config/universe-sp500.json}"
+# During a long run, rebuild Gold and publish after this many companies with new filings.
+PUBLISH_EVERY="${SEC_EDGAR_PUBLISH_EVERY:-25}"
 
 if [ -z "${SEC_EDGAR_LAKE:-}" ]; then
     echo "FAILED: SEC_EDGAR_LAKE is not set (s3://bucket/prefix)" >&2
@@ -15,7 +17,8 @@ if [ -z "${SEC_EDGAR_LAKE:-}" ]; then
 fi
 
 echo "$(date -u +%FT%TZ) sync start: $UNIVERSE -> $DATA_ROOT"
-sec-edgar sync --universe "$UNIVERSE" --data-root "$DATA_ROOT"
+sec-edgar sync --universe "$UNIVERSE" --data-root "$DATA_ROOT" \
+    --publish-every "$PUBLISH_EVERY" --lake "$SEC_EDGAR_LAKE"
 sync_status=$?
 if [ "$sync_status" -eq 1 ]; then
     echo "$(date -u +%FT%TZ) sync could not start; not publishing" >&2

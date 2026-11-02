@@ -80,6 +80,8 @@ sudo systemctl start --no-block sec-edgar-nightly.service
 journalctl -u sec-edgar-nightly.service -f
 ```
 
+Every 25 companies with new filings the log shows `Checkpoint after … companies: Gold COMPLETE, publish COMPLETE`, and the lake and dashboard include everything finished so far. Set `SEC_EDGAR_PUBLISH_EVERY` in `/etc/sec-edgar/env` to change the batch size.
+
 The job logs one line per company. It can be stopped safely; the next start resumes from the last finished company, and systemd won't start a second instance if the timer fires while it's running. The run summary is written to `/var/lib/sec-edgar/lake/sync-runs/latest.json` on completion.
 
 ## 5. Streamlit
@@ -93,7 +95,7 @@ AWS_SECRET_ACCESS_KEY = '...'
 AWS_DEFAULT_REGION = 'us-east-1'
 ```
 
-Each value needs exactly one pair of straight quotes. `terraform output` without `-raw` adds its own quotes, which makes the TOML invalid. Single quotes are safest because AWS secrets can contain `+` and `/`. Without these secrets, or if the download fails, the app shows the committed 20-company demo.
+Each value needs exactly one pair of straight quotes. `terraform output` without `-raw` adds its own quotes, which makes the TOML invalid. Single quotes are safest because AWS secrets can contain `+` and `/`. The app checks for a new snapshot every hour. Without these secrets, or if the download fails, it shows the committed 20-company demo.
 
 ## Updating
 
