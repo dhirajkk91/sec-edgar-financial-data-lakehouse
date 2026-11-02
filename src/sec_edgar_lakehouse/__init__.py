@@ -57,8 +57,10 @@ from sec_edgar_lakehouse.dashboard.dashboard_read import (
     DashboardReadError,
     DashboardSnapshot,
     DashboardTable,
+    InsightsSnapshot,
     load_company_snapshot,
     load_dashboard_snapshot,
+    load_insights_snapshot,
 )
 from sec_edgar_lakehouse.filing_reference import FilingReference
 from sec_edgar_lakehouse.metadata.company_metadata import (
@@ -113,16 +115,6 @@ from sec_edgar_lakehouse.pipeline.dbt_build import (
     DbtBuildResult,
     run_dbt_build,
 )
-from sec_edgar_lakehouse.pipeline.end_to_end_pipeline import (
-    EndToEndPipelineError,
-    EndToEndPipelineResult,
-    run_end_to_end_pipeline,
-)
-from sec_edgar_lakehouse.pipeline.end_to_end_run import (
-    EndToEndRunError,
-    EndToEndRunResult,
-    execute_end_to_end_pipeline_run,
-)
 from sec_edgar_lakehouse.silver.silver_extraction import (
     SilverExtractionError,
     SilverInputError,
@@ -175,10 +167,6 @@ __all__ = [
     "DownloadError",
     "DownloadFailure",
     "DownloadedFile",
-    "EndToEndPipelineError",
-    "EndToEndPipelineResult",
-    "EndToEndRunError",
-    "EndToEndRunResult",
     "FilingDataFile",
     "FilingDiscovery",
     "FilingDocument",
@@ -195,6 +183,7 @@ __all__ = [
     "FiscalMetadataLoadError",
     "FiscalMetadataOccurrence",
     "IngestionResult",
+    "InsightsSnapshot",
     "InventoryEntry",
     "InventoryError",
     "PublicationError",
@@ -218,7 +207,6 @@ __all__ = [
     "discover_filing",
     "download_filing_file",
     "execute_company_pipeline_run",
-    "execute_end_to_end_pipeline_run",
     "extract_filing_facts",
     "extract_filing_fiscal_metadata",
     "ingest_filing",
@@ -228,13 +216,13 @@ __all__ = [
     "load_dashboard_snapshot",
     "load_filing_fiscal_metadata",
     "load_filing_metadata",
+    "load_insights_snapshot",
     "process_company_filings",
     "publish_filing",
     "publish_silver_extraction",
     "refresh_silver_catalog",
     "run_company_pipeline",
     "run_dbt_build",
-    "run_end_to_end_pipeline",
     "select_company_filings",
     "store_downloaded_file",
     "write_silver_parquet",

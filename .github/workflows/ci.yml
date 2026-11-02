@@ -37,7 +37,7 @@ jobs:
       - name: Install uv and locked test dependencies
         run: |
           python -m pip install "uv==${UV_VERSION}"
-          uv sync --locked --group dev --group dbt --group dashboard
+          uv sync --locked --group dev --group dbt --group dashboard --group analysis --group lake
           test ! -e data
           mkdir -p "${RUNNER_TEMP}/python-results"
       - name: Ruff lint
@@ -158,3 +158,20 @@ jobs:
           done
           docker logs dashboard
           exit 1
+
+  pipeline-image:
+    name: Pipeline Docker image
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          persist-credentials: false
+      - name: Build the weeknight job image
+        run: DOCKER_BUILDKIT=1 docker build --file deploy/pipeline/Dockerfile --tag sec-edgar-pipeline .
+      - name: Check the commands, the Iceberg client and the setup guard
+        run: |
+          docker run --rm sec-edgar-pipeline sec-edgar sync --help
+          docker run --rm sec-edgar-pipeline python -c "import pyiceberg.catalog.glue, boto3, dbt.version"
+          # Without a lake the job must refuse to start rather than run half-configured.
+          if docker run --rm sec-edgar-pipeline; then exit 1; fi

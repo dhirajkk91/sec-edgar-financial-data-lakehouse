@@ -66,7 +66,60 @@ def test_entry_point_resolves_the_demo_database() -> None:
     assert module.database_path("/tmp/x.duckdb") == Path("/tmp/x.duckdb").resolve()
 
 
-def test_hosted_app_opens_both_views_from_the_demo() -> None:
+def hosted_module() -> object:
+    spec = importlib.util.spec_from_file_location(
+        "hosted_app", ROOT / "deploy" / "streamlit_app.py"
+    )
+    assert spec is not None and spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+class FakeS3:
+    """Serves the committed demo as if it were the nightly snapshot."""
+
+    def __init__(self, sha256: str) -> None:
+        self.manifest = json.dumps(
+            {"sha256": sha256, "exported_at": "2026-11-03T04:12:00+00:00"}
+        ).encode()
+
+    def get_object(self, Bucket: str, Key: str) -> dict[str, object]:
+        assert (Bucket, Key) == ("bucket", "sec/serving/sec_edgar_gold.json")
+        return {"Body": __import__("io").BytesIO(self.manifest)}
+
+    def download_file(self, bucket: str, key: str, destination: str) -> None:
+        Path(destination).write_bytes(DEMO.read_bytes())
+
+
+def test_snapshot_download_is_checked_against_its_manifest() -> None:
+    pytest.importorskip("boto3")
+    module = hosted_module()
+    uri = "s3://bucket/sec/serving/sec_edgar_gold.duckdb"
+    good = hashlib.sha256(DEMO.read_bytes()).hexdigest()
+
+    path, exported_at = module.download_snapshot(uri, FakeS3(good))  # type: ignore[attr-defined]
+    assert path.read_bytes() == DEMO.read_bytes()
+    assert exported_at.startswith("2026-11-03")
+    with pytest.raises(ValueError, match="checksum"):
+        module.download_snapshot(uri, FakeS3("0" * 64))  # type: ignore[attr-defined]
+    with pytest.raises(ValueError, match="s3://bucket/key.duckdb"):
+        module.download_snapshot("https://example.com/x", FakeS3(good))  # type: ignore[attr-defined]
+
+
+def test_without_a_snapshot_setting_the_demo_opens(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    pytest.importorskip("streamlit")
+    monkeypatch.delenv("SEC_EDGAR_SNAPSHOT_S3_URI", raising=False)
+    monkeypatch.delenv("SEC_EDGAR_DUCKDB_PATH", raising=False)
+
+    path, note = hosted_module().choose_database()  # type: ignore[attr-defined]
+
+    assert path == DEMO.resolve() and note and note.startswith("Demo snapshot")
+
+
+def test_hosted_app_opens_every_view_from_the_demo() -> None:
     pytest.importorskip("streamlit")
     from streamlit.testing.v1 import AppTest
 
@@ -78,6 +131,11 @@ def test_hosted_app_opens_both_views_from_the_demo() -> None:
     assert [title.value for title in app.title] == [
         "Company financials from SEC filings"
     ]
+    app.sidebar.radio(key="view").set_value("Insights").run()
+    assert not app.exception and not app.error
+    assert [title.value for title in app.title] == ["What the data shows"]
+    # Four headline numbers and four findings, including the cloud capex section.
+    assert len(app.metric) == 4 and len(app.subheader) == 4
     app.sidebar.radio(key="view").set_value("Trace a filing").run()
     assert not app.exception and not app.error
     assert [title.value for title in app.title] == ["SEC filing explorer"]

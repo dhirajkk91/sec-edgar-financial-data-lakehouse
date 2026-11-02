@@ -25,7 +25,6 @@ from sec_edgar_lakehouse import (
     extract_filing_facts,
     write_silver_parquet,
 )
-from sec_edgar_lakehouse.silver.silver_parquet_inspect import main as inspect_main
 from tests.silver.test_silver_extraction import fixture, instant_context, usd_unit, xbrl
 
 REFERENCE = FilingReference("320193", "0000320193-24-000123")
@@ -401,33 +400,3 @@ def test_verification_failure_removes_only_the_new_output(tmp_path: Path) -> Non
 
     assert not output.exists()
     assert sibling.read_text(encoding="utf-8") == "keep"
-
-
-def test_inspection_command_reports_counts_and_dimension_counts(
-    tmp_path: Path, capsys: pytest.CaptureFixture[str]
-) -> None:
-    first = fact("plain", 1, Decimal(10))
-    second = fact("segment", 2, Decimal(10))
-    dimension = SilverDimension(
-        source_occurrence_id="segment",
-        axis_namespace="https://example.com/acme",
-        axis_name="BusinessAxis",
-        member_kind="EXPLICIT",
-        member_value="{https://example.com/acme}ServicesMember",
-        typed_member_xml=None,
-        context_location="SEGMENT",
-    )
-    output = tmp_path / "output"
-    write_silver_parquet(
-        extraction((first, second), dimensions=(dimension,)),
-        output,
-        processing_run_id="run-inspect",
-    )
-
-    assert inspect_main([str(output)]) == 0
-
-    displayed = capsys.readouterr().out
-    assert "facts=2 dimensions=1 rejected=0" in displayed
-    assert "dimensions=0" in displayed
-    assert "dimensions=1" in displayed
-    assert "company total" not in displayed.lower()

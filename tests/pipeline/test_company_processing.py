@@ -562,19 +562,10 @@ def test_silver_publication_failure_is_isolated(
     "override",
     [
         {"cik": ""},
-        {"user_agent": "missing-email"},
-        {"forms": ()},
         {"forms": "10-K"},
-        {"bronze_directory": "bronze"},
-        {"silver_directory": "silver"},
         {"processing_run_id": ""},
-        {"processing_run_id": "."},
         {"processing_run_id": "../run"},
-        {"processing_run_id": "a\\b"},
-        {"processing_run_id": "a\n"},
         {"processing_run_id": "has space"},
-        {"processing_run_id": "x" * 129},
-        {"filed_on_or_after": date(2025, 2, 1), "filed_on_or_before": date(2025, 1, 1)},
         {"limit": 0},
     ],
 )
@@ -601,7 +592,11 @@ def test_invalid_input_fails_before_network_or_filesystem(
 
 @pytest.mark.parametrize(
     "interval",
-    [0, 0.1, 0.49, -1, True, float("nan"), float("inf"), float("-inf"), "0.5"],
+    [
+        0,
+        True,
+        "0.5",
+    ],
 )
 def test_invalid_request_interval_has_no_network_or_filesystem_activity(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, interval: Any

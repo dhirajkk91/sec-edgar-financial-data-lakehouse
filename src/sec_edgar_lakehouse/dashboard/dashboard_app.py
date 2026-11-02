@@ -1,7 +1,8 @@
-"""Two views of the stored Gold results.
+"""Three views of the stored Gold results.
 
-Companies compares companies' financials across fiscal years. Trace a filing
-lets the user follow one filing's values back to their sources.
+Companies compares companies' financials across fiscal years. Insights answers
+four questions about the companies and the data's gaps. Trace a filing lets the
+user follow one filing's values back to their sources.
 
 Each rerun uses one read-only snapshot, then filters it in memory.
 Table labels and shortened number text are only for display. Full detail
@@ -14,7 +15,7 @@ from pathlib import Path
 
 import streamlit as st
 
-from sec_edgar_lakehouse.dashboard import company_page
+from sec_edgar_lakehouse.dashboard import company_page, insights_page
 from sec_edgar_lakehouse.dashboard.dashboard_read import (
     DashboardReadError,
     DashboardSnapshot,
@@ -22,6 +23,7 @@ from sec_edgar_lakehouse.dashboard.dashboard_read import (
     load_company_names,
     load_company_snapshot,
     load_dashboard_snapshot,
+    load_insights_snapshot,
 )
 
 Record = dict[str, object]
@@ -340,7 +342,7 @@ def _quality_issues(records: list[Record]) -> None:
             st.json(_present_record(record))
 
 
-VIEWS = ("Companies", "Trace a filing")
+VIEWS = ("Companies", "Insights", "Trace a filing")
 # The README traces this value. The explorer opens on it when the dataset has it,
 # so a first visit shows a derived number with both inputs instead of an empty page.
 EXAMPLE_CIK = "0000320193"
@@ -404,8 +406,22 @@ def _companies(database_path: Path) -> None:
     company_page.render(snapshot)
 
 
-def main(*, database_path: Path) -> None:
-    """Show the chosen view: company comparison, or the filing explorer.
+def _insights(database_path: Path) -> None:
+    """Render the insights view, or explain why it cannot be shown."""
+    try:
+        snapshot = load_insights_snapshot(database_path=database_path)
+    except DashboardReadError as exc:
+        st.title("What the data shows")
+        st.error(f"Unable to read the insight tables: {exc}")
+        st.info(
+            "Check the configured database path and finish any pipeline writes first."
+        )
+        return
+    insights_page.render(snapshot)
+
+
+def main(*, database_path: Path, source_note: str | None = None) -> None:
+    """Show the chosen view: company comparison, insights, or the filing explorer.
 
     In the explorer, filters use the loaded rows so the page stays consistent
     within a rerun. Changing a parent selection clears its child widgets.
@@ -413,12 +429,15 @@ def main(*, database_path: Path) -> None:
     """
     st.set_page_config(page_title="SEC EDGAR financials", layout="wide")
     view = st.sidebar.radio("View", VIEWS, key="view")
-    st.sidebar.caption(f"Database: {database_path.name}")
-    if view == "Companies":
+    st.sidebar.caption(source_note or f"Database: {database_path.name}")
+    if view != "Trace a filing":
         # Streamlit drops the explorer's widget values while it is hidden, so
         # offer the example again the next time the explorer opens.
         st.session_state.pop("_example_offered", None)
-        _companies(database_path)
+        if view == "Insights":
+            _insights(database_path)
+        else:
+            _companies(database_path)
         return
     st.title("SEC filing explorer")
     _reset_dependents(

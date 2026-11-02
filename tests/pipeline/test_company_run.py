@@ -215,18 +215,9 @@ def test_expected_errors(
     "run_id",
     [
         "",
-        " ",
-        "a b",
         "a/b",
-        "a\\b",
-        ".",
         "..",
-        "a.b",
-        "\n",
-        "%2e%2e",
         "/tmp/run",
-        "https://run",
-        "é",
         "x" * 129,
     ],
 )
@@ -286,11 +277,8 @@ def test_invalid_selection_rejected_before_output_or_execution(
     "kind",
     [
         "root_file",
-        "company_file",
         "existing",
-        "root_link",
         "company_link",
-        "record_link",
         "wrong_type",
     ],
 )

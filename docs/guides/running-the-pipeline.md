@@ -1,11 +1,11 @@
 # Running the pipeline
 
-This is the operating guide: how to run the pipeline, inspect what it produced, and recover when something stops. How each stage works is in the [architecture docs](../architectures/end-to-end-pipeline.md). All paths are relative to the repository root, and everything under `data/` is ignored by git.
+This is the operating guide for running the pipeline on your own machine: syncing companies, publishing a local lake, inspecting the results and recovering when something stops. Running it unattended in the cloud is in the [deploy guide](deploying.md). How each stage works is in the [architecture docs](../architectures/end-to-end-pipeline.md). All paths are relative to the repository root, and everything under `data/` is ignored by git.
 
 ## Prerequisites
 
 - Python 3.14 and [uv](https://docs.astral.sh/uv/getting-started/installation/).
-- The locked dependencies: `make install`, which runs `uv sync --locked --group dev --group dbt --group dashboard`.
+- The locked dependencies: `make install`, which runs `uv sync --locked --group dev --group dbt --group dashboard --group analysis --group lake`.
 - For anything that contacts the SEC, an identified `SEC_USER_AGENT` in your environment, with your own application name and contact address. Keep it out of tracked files. The tests, the checks and the dashboard don't need it.
 
 ## Quick reference
@@ -17,41 +17,45 @@ This is the operating guide: how to run the pipeline, inspect what it produced, 
 | Everything the Python 3.14 CI jobs run | `make ci` |
 | Open the dashboard on a local database | `make dashboard`, or `make dashboard DATABASE=path/to/sec_edgar.duckdb` |
 | Open the dashboard on the committed demo, as hosted | `make demo-dashboard` |
+| Sync companies from the SEC and build Gold | `make sync`, or `uv run sec-edgar sync --help` |
+| Publish a data root to a local Iceberg lake | `make lake-local` |
 | Rebuild the demo database from a built cohort | `make demo` |
+| Re-run the exploratory notebook | `make eda` |
 | Serve the dashboard from Docker | `make docker-run`, then open http://localhost:8501 |
 | List the pipeline commands | `uv run sec-edgar --help` |
 | Show one command's options | `uv run sec-edgar <command> --help` |
 
 Each `sec-edgar` subcommand runs an existing module, so `python -m sec_edgar_lakehouse.<module>` works too.
 
-## Run one company
+## Sync companies
 
-`sec-edgar pipeline` takes one company through Bronze, Silver, the catalog, metadata and Gold. This example selects up to two Apple 10-K or 10-Q filings filed in 2025 and writes under `data/demo/`:
+`sec-edgar sync` brings a universe of companies up to date: for each company it processes the original 10-K and 10-Q filings that aren't done yet, then builds Gold once. Start small. This processes Apple's filings since January 2025 into `data/demo/`:
 
 ```sh
 export SEC_USER_AGENT="Your App Name your.email@example.com"
-mkdir -p data/demo/runs/dbt
-uv run --no-sync sec-edgar pipeline \
-  --cik 0000320193 --forms 10-K 10-Q \
-  --filed-on-or-after 2025-01-01 --filed-on-or-before 2025-12-31 --limit 2 \
-  --bronze-directory data/demo/bronze/sec/filings \
-  --silver-directory data/demo/silver/sec/filings \
-  --database data/demo/query/sec_edgar.duckdb \
-  --run-directory data/demo/runs/company \
-  --end-to-end-run-directory data/demo/runs/end-to-end \
-  --dbt-project-directory transform --dbt-profiles-directory transform \
-  --dbt-artifact-directory data/demo/runs/dbt/apple-first
+uv run --no-sync sec-edgar sync --universe config/universe-sp500.json \
+  --data-root data/demo --ciks 0000320193 --since 2025-01-01 --dry-run   # list only
+uv run --no-sync sec-edgar sync --universe config/universe-sp500.json \
+  --data-root data/demo --ciks 0000320193 --since 2025-01-01
+make dashboard DATABASE=data/demo/query/sec_edgar.duckdb
 ```
 
-It prints each stage's outcome and the paths to its summary and dbt artifacts.
+Run it again and nothing is downloaded: every filing is already done, so Gold isn't rebuilt either. Leave out `--ciks` for the whole S&P 500 (the first run is a five-year backfill that takes most of a night), and `--since` for the default of January 1 five years back.
 
-- **Reruns** need a fresh `--dbt-artifact-directory`. Each run gets a new run ID automatically; pass `--run-id` to name it yourself. Verified work is reused, not downloaded again.
-- **More companies** can use the same Bronze, Silver and DuckDB paths. The catalog and Gold always cover every company in them.
-- **Keep the dashboard and SQL tools closed** while it runs.
+| Goal | Option |
+| --- | --- |
+| See what would be processed, changing nothing | `--dry-run` |
+| A few companies | `--ciks <CIK> ...` or `--max-companies <n>` |
+| Process now, build Gold later | `--no-build` (the next run that processes something builds) |
+| A different list of companies | `--universe <file>` with the same JSON shape |
+
+The exit code is 0 when everything is done, 2 when some filings or companies failed (they retry on the next run), and 1 when the run couldn't start. Read `sync-runs/latest.json` for the counts and `sync-state.json` for each company's last outcomes and errors.
+
+To publish the result to a lake without AWS, run `make lake-local DATA_ROOT=data/demo`. It writes Iceberg tables with a local SQLite catalog under `data/lake-local/`, exactly as the weeknight job writes to S3 and Glue.
 
 ## Run the 20-company cohort
 
-Use `sec-edgar cohort` rather than running `sec-edgar pipeline` 20 times. Give every fresh attempt its own data root, never `data/query/sec_edgar.duckdb`.
+The cohort is the frozen 20-company dataset behind the [notebook and written analysis](../analysis/what-the-data-shows.md): it plans the exact filings first, so the analysis can be reproduced. For keeping data current, use `sync` instead. Give every fresh cohort attempt its own data root.
 
 ```sh
 mkdir -p data
@@ -87,8 +91,9 @@ The command exits with code 2 when the result is `PARTIAL`. That doesn't mean no
 
 ```text
 <data root>/
-├── cohort-plan.json, plan-sources/      frozen filings and the SEC listing bytes
-├── cohort-state.json                    company outcomes and dbt attempts
+├── sync-state.json, sync-runs/          sync: per-company progress and nightly summaries
+├── cohort-plan.json, plan-sources/      cohort: frozen filings and the SEC listing bytes
+├── cohort-state.json                    cohort: company outcomes and dbt attempts
 ├── runs/cik=<CIK>/run_id=<id>/          saved listing, optional history/, run.json
 ├── bronze/cik=<CIK>/accession=<id>/     source files and verified manifest
 ├── silver/cik=<CIK>/accession=<id>/     active.json, versions/, attempt records
@@ -101,13 +106,14 @@ The command exits with code 2 when the result is `PARTIAL`. That doesn't mean no
 Without changing anything:
 
 ```sh
-uv run --no-sync sec-edgar inspect --database "$cohort_root/query/sec_edgar.duckdb"
-make dashboard DATABASE="$cohort_root/query/sec_edgar.duckdb"
+make dashboard DATABASE=data/demo/query/sec_edgar.duckdb
+duckdb -readonly data/demo/query/sec_edgar.duckdb \
+  "select quality_status, count(*) from gold.dim_filings group by 1"
 ```
 
-`duckdb_startup.py` opens DuckDB's browser SQL UI on `data/query/sec_edgar.duckdb`; use it only when that is the database you mean.
+`duckdb_startup.py` opens DuckDB's browser SQL UI on `data/query/sec_edgar.duckdb`; use it only when that is the database you mean. The [Athena queries](../../infra/aws/queries/) run in DuckDB too once `sec_gold.` becomes `gold.`.
 
-**Before using Gold,** check the latest entry in `cohort-state.json` under `dbt_attempts` and its `target/run_results.json`. A database file can exist after a failed model or test.
+**Before using Gold,** check the Gold build in `sync-runs/latest.json` (or the latest `dbt_attempts` entry in `cohort-state.json`) and its `target/run_results.json`. A database file can exist after a failed model or test.
 
 These read-only queries show coverage per company, Apple's filing quality and financial rows, the two source facts behind its Q4 cash flow, five years of annual results by sector, and issue counts:
 
@@ -179,21 +185,6 @@ PY
 
 **To trace a value by hand,** copy its CIK, accession, `current_source_occurrence_id` and any predecessor ID from the dashboard's full record. Find those IDs in `silver.facts`, then compare the company, accession, source document and checksum, exact value, unit and period. Apple's FY2025 Q4 operating cash flow, 29,728,000,000 USD, comes from the annual 111,482,000,000 and the Q3 year to date 81,754,000,000. The [Gold doc](../architectures/gold-financial-metrics.md#trace-one-q4-value-back-to-the-filing) has the full walkthrough, and explains every [quality issue code](../architectures/gold-financial-metrics.md#quality-issues).
 
-## Load company profiles from saved runs
-
-Company runs load their profile automatically. To load profiles into a database from saved run records instead, without contacting the SEC, then rebuild Gold:
-
-```sh
-uv run --no-sync sec-edgar profiles-load \
-  --database "$cohort_root/query/sec_edgar.duckdb" \
-  --run-record "$cohort_root"/runs/cik=*/run_id=*/run.json
-uv run --no-sync sec-edgar cohort resume \
-  --manifest "$manifest" --data-root "$cohort_root" \
-  --build-after-batch --dbt-timeout-seconds 43200
-```
-
-Loading the same saved response twice reports `ALREADY_EXISTS`. A newer response for the same company becomes another snapshot, and `dim_companies` uses the newest.
-
 ## Checks
 
 None of these contact the SEC; they use fixtures and fresh temporary folders. Installing dependencies can still need the network, and `uv build --offline` needs its build dependencies cached.
@@ -216,23 +207,24 @@ git diff --check
 
 ## Troubleshooting
 
-Read the saved evidence before rerunning anything. The commands below use `cohort_root` and `manifest` from the cohort section.
+Read the saved evidence before rerunning anything. For a sync, rerunning is the fix for most failures: done filings are skipped and the rest are retried. The cohort rows use `cohort_root` and `manifest` from the cohort section.
 
 | Symptom | Where to look | What to do |
 | --- | --- | --- |
-| The run stopped partway through a company | `cohort-state.json`, then that company's `runs/cik=<CIK>/run_id=<id>/run.json` | Run `resume` with the same root and manifest. Completed companies are hash-checked before they are skipped |
+| A sync stopped partway | `sync-runs/latest.json`, `sync-state.json` | Run the same `sync` again; it continues from the saved state |
+| A cohort run stopped partway through a company | `cohort-state.json`, then that company's `runs/cik=<CIK>/run_id=<id>/run.json` | Run `resume` with the same root and manifest. Completed companies are hash-checked before they are skipped |
 | HTTP 403, an SEC block page, or a `Retry-After` over 60 seconds | The stop reason and the `NOT_ATTEMPTED` filings in `run.json` | Stop. Fix the access or contact problem before `resume`; the pipeline won't retry around a block |
 | One filing failed, or its Bronze folder is unusable | Its Bronze manifest or staging failure, and the company record | Other filings still complete. `resume` retries unfinished work but never overwrites an existing unverified folder; diagnose it instead of deleting evidence |
 | Fiscal metadata is partial or conflicting | The saved listing, the active document hash, the DEI facts and issues, and the coverage issue | A conflict is never replaced silently. After fixing the evidence or the parser, run `resume --ranks <rank> --rerun-complete --build-after-batch` |
 | dbt failed or timed out | The latest `dbt_attempts` entry: `stdout.log`, `stderr.log`, `target/manifest.json`, `target/run_results.json` | Fix the cause, close readers, then `resume --build-after-batch`. Some Gold tables may have been replaced before the failure |
-| DuckDB is locked | Open connections from the dashboard, the DuckDB UI or the inspector | Close them and rerun the failed stage. The pipeline supports one writer at a time |
+| DuckDB is locked | Open connections from the dashboard or the DuckDB UI | Close them and rerun the failed stage. The pipeline supports one writer at a time |
 | A rerun reports `SKIPPED` or `ALREADY_EXISTS` | Nothing to fix | Expected: verified Bronze, matching active Silver and identical metadata are reused, and the new attempt is recorded separately |
 
 ## Operating rules
 
 - One writer at a time, with the dashboard and SQL tools closed during writes.
-- A new data root for every fresh cohort attempt.
+- A new data root for every fresh cohort attempt; a sync keeps reusing its own.
 - `SEC_USER_AGENT` stays in the environment, never in files.
-- The DuckDB file can't be copied on its own, because its Silver views point to Parquet files by absolute path. To share results, use `make demo`, which copies only the Gold tables.
+- The DuckDB file can't be copied on its own, because its Silver views point to Parquet files by absolute path. To share results, use `make demo` or `publish-lake`, which copy only the Gold tables and rewrite their paths.
 
 Scope limits, such as the eight mapped metrics, no amendment policy and no currency conversion, are listed in the [Gold doc](../architectures/gold-financial-metrics.md#trade-offs-and-limits).

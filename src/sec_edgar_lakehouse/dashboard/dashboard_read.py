@@ -166,6 +166,25 @@ _COMPANY_FINANCIALS_SCHEMA = (
     ("derived_metric_codes", "VARCHAR[]"),
 )
 
+_COMPANY_INSIGHTS_SCHEMA = (
+    ("cik", "VARCHAR"),
+    ("first_fiscal_year", "INTEGER"),
+    ("latest_fiscal_year", "INTEGER"),
+    ("first_revenue", "DECIMAL(38,18)"),
+    ("latest_revenue", "DECIMAL(38,18)"),
+    ("revenue_cagr", "DOUBLE"),
+    ("latest_net_income", "DECIMAL(38,18)"),
+    ("latest_free_cash_flow", "DECIMAL(38,18)"),
+    ("latest_net_margin", "DOUBLE"),
+    ("latest_free_cash_flow_margin", "DOUBLE"),
+    ("cash_conversion", "DOUBLE"),
+    ("metric_values_present", "INTEGER"),
+    ("metric_values_expected", "INTEGER"),
+    ("metric_coverage", "DOUBLE"),
+    ("error_issue_count", "INTEGER"),
+    ("warning_issue_count", "INTEGER"),
+)
+
 
 class DashboardReadError(Exception):
     """Invalid input, unavailable Gold schema, or an expected read failure."""
@@ -186,6 +205,16 @@ class CompanySnapshot:
 
     database_path: Path
     companies: DashboardTable
+    financials: DashboardTable
+
+
+@dataclass(frozen=True, slots=True)
+class InsightsSnapshot:
+    """Company profiles, per-company insights and company financials from one transaction."""
+
+    database_path: Path
+    companies: DashboardTable
+    insights: DashboardTable
     financials: DashboardTable
 
 
@@ -383,8 +412,8 @@ def load_company_snapshot(*, database_path: Path) -> CompanySnapshot:
                 raise DashboardReadError(
                     "This database has no company layer (missing "
                     + ", ".join(f"gold.{name}" for name in missing)
-                    + "). Load company profiles with company_profile_load, "
-                    "then rebuild Gold."
+                    + "). Run sec-edgar sync, which loads company profiles "
+                    "and rebuilds Gold."
                 )
             connection.execute("BEGIN TRANSACTION")
             companies = _read_table(
@@ -405,6 +434,69 @@ def load_company_snapshot(*, database_path: Path) -> CompanySnapshot:
             )
             connection.execute("COMMIT")
             return CompanySnapshot(database, companies, financials)
+        finally:
+            connection.close()
+    except (duckdb.Error, OSError) as exc:
+        raise DashboardReadError(
+            f"Cannot read dashboard database {database}: {exc}"
+        ) from exc
+
+
+def load_insights_snapshot(*, database_path: Path) -> InsightsSnapshot:
+    """Read gold.dim_companies, gold.company_insights and gold.fct_company_financials read-only.
+
+    A database built before the insight models existed is reported with a rebuild
+    hint rather than shown as an empty page.
+    """
+    if not isinstance(database_path, Path):
+        raise DashboardReadError("database_path must be a pathlib.Path")
+    try:
+        database = database_path.resolve(strict=True)
+        if not stat.S_ISREG(database.stat().st_mode):
+            raise DashboardReadError(
+                f"Database must be an existing regular file: {database}"
+            )
+    except (OSError, ValueError) as exc:
+        raise DashboardReadError(
+            f"Cannot access database {database_path}: {exc}"
+        ) from exc
+    tables = (
+        ("dim_companies", _COMPANIES_SCHEMA, "cik ASC"),
+        ("company_insights", _COMPANY_INSIGHTS_SCHEMA, "cik ASC"),
+        (
+            "fct_company_financials",
+            _COMPANY_FINANCIALS_SCHEMA,
+            "cik ASC, fiscal_year ASC, fiscal_period ASC",
+        ),
+    )
+    try:
+        connection = duckdb.connect(
+            str(database), read_only=True, config=_DUCKDB_READ_SETTINGS
+        )
+        try:
+            missing = [
+                name
+                for name, _, _ in tables
+                if connection.execute(
+                    "SELECT 1 FROM information_schema.tables "
+                    "WHERE table_schema='gold' AND table_name=?",
+                    [name],
+                ).fetchone()
+                is None
+            ]
+            if missing:
+                raise DashboardReadError(
+                    "This database has no insight tables (missing "
+                    + ", ".join(f"gold.{name}" for name in missing)
+                    + "). Rebuild Gold to create them."
+                )
+            connection.execute("BEGIN TRANSACTION")
+            read = [
+                _read_table(connection, f"gold.{name}", schema, "", [], order)
+                for name, schema, order in tables
+            ]
+            connection.execute("COMMIT")
+            return InsightsSnapshot(database, read[0], read[1], read[2])
         finally:
             connection.close()
     except (duckdb.Error, OSError) as exc:

@@ -2,26 +2,24 @@
 
 ## Purpose
 
-`sec-edgar pipeline` takes one company's SEC filings through every layer, Bronze, Silver, the DuckDB catalog, metadata and the dbt Gold build, and writes a summary that points back to the evidence from each stage. This document covers how the stages connect and what happens when one of them fails. Each layer has its own document for its internals.
+`sec-edgar sync` keeps a universe of companies current. For each company it finds the original 10-K and 10-Q filings that aren't done yet and takes them through every layer, Bronze, Silver, the DuckDB catalog and metadata, then builds Gold once with dbt. `sec-edgar publish-lake` then puts the result in the lake on AWS. On the Oracle VM both run Monday to Friday nights ([cloud architecture](cloud-lakehouse.md)).
 
-The runner decides order and gates. It contains no financial rules: those live in dbt, so a value is chosen in exactly one place.
-
-The same stages ran the [20-company cohort](../validation/cohort.md): 400 filings and 601,103 XBRL facts on one machine, with a full Gold rebuild taking about 18 seconds.
+This document covers how the stages connect and what happens when one fails. Each layer has its own document for its internals. The runner decides order and gates; it contains no financial rules. Those live in dbt, so a value is chosen in exactly one place.
 
 ## Goals and non-goals
 
 Goals:
 
-- Run each stage at most once per invocation, and only when its input is usable.
+- Process each filing once, and only the filings that aren't done.
 - Keep every stage's evidence, so a result can be traced and a failure diagnosed after the fact.
-- Make reruns safe: verified work is reused, not redone or overwritten.
+- Make reruns safe: verified work is reused, never redone or overwritten. A failed filing is tried again the next night without anyone stepping in.
 - Report whether the run worked separately from whether the financial data is complete.
 
 Non-goals:
 
-- Scheduling, parallel workers or concurrent writers. This is a local, sequential, single-writer pipeline.
+- Parallel workers or concurrent writers. One process writes at a time; the sync takes a lock on its data root.
 - A transaction across files, DuckDB and dbt. Each stage commits on its own (see [Failure handling](#failure-handling)).
-- Choosing a latest filing, resolving amendments or backfilling metadata for companies outside the run.
+- Amendments. 10-K/A and 10-Q/A filings are left out until Gold has a policy for them.
 
 ## Design
 
@@ -31,131 +29,104 @@ flowchart LR
         S1["Submissions listing"]
         S2["Filing index and XBRL files"]
     end
-    B["Bronze<br/>verified source files"]
-    V["Silver<br/>versioned Parquet + active.json"]
-    C["DuckDB catalog<br/>views over active Silver"]
-    M["Metadata<br/>filing, fiscal, company"]
-    G["Gold<br/>dbt, 5 tables"]
-    UI["Dashboard<br/>read-only"]
+    subgraph VM["Oracle VM, weeknights"]
+        B["Bronze<br/>verified XBRL files"]
+        V["Silver<br/>versioned Parquet"]
+        C["DuckDB catalog"]
+        M["Metadata<br/>filing, fiscal, company"]
+        G["Gold<br/>dbt, 7 tables"]
+    end
+    subgraph AWS["AWS lake"]
+        L["S3 + Iceberg + Glue<br/>queried with Athena"]
+        SNAP["Gold snapshot"]
+    end
+    UI["Dashboard<br/>Streamlit Cloud"]
 
-    S2 --> B --> V --> C --> G --> UI
+    S2 --> B --> V --> C --> G
     S1 --> M --> G
     V --> M
+    B --> L
+    V --> L
+    G --> L
+    G --> SNAP --> UI
 ```
 
-A run has four stages. Each one starts only if the previous one produced something usable:
+One weeknight run:
 
 ```mermaid
 sequenceDiagram
     autonumber
-    participant CLI as sec-edgar pipeline
-    participant CR as Company run
-    participant MD as Metadata
-    participant DBT as dbt
-    CLI->>CLI: Check dbt project, profile and a fresh artifact folder
-    CLI->>CR: Select filings
-    CR->>CR: Bronze: verify or download each filing
-    CR->>CR: Silver: extract and activate, or skip if already active
-    CR->>CR: Refresh the catalog once from all active Silver
-    CR-->>CLI: Company result and saved run.json
-    alt usable Silver and catalog COMPLETE or PARTIAL
-        CLI->>MD: Load filing, company and fiscal metadata
-        MD-->>CLI: Per-filing results
-        alt at least one fiscal load succeeded
-            CLI->>DBT: One build against the same database
-            DBT-->>CLI: Status, invocation ID, artifacts
+    participant T as systemd timer
+    participant S as sec-edgar sync
+    participant SEC as SEC EDGAR
+    participant R as Company run
+    participant D as dbt
+    participant P as publish-lake
+    participant L as AWS lake
+
+    T->>S: Mon–Fri 23:30 Central
+    loop each of ~500 companies
+        S->>SEC: submissions listing (paced)
+        S->>S: original 10-K/10-Q since --since, minus done
+        alt new filings
+            S->>R: Bronze → Silver → catalog → metadata
+            R->>SEC: index + XBRL files (paced)
         end
+        S->>S: save sync-state.json
     end
-    CLI->>CLI: Write the summary through a temporary file
+    S->>D: build Gold once, only if something new is done
+    T->>P: after sync
+    P->>L: new Bronze, changed Silver, all Gold, snapshot
 ```
 
-1. **Company run.** [Selects the filings](company-pipeline-orchestration.md), gets each into verified [Bronze](bronze-ingestion.md) and active [Silver](silver-processing.md), then refreshes the [catalog](duckdb-query-catalog.md) once. The selection covers one company, but the catalog refresh and dbt build cover every active filing in the shared roots, so loading Microsoft after Apple keeps Apple's records.
-2. **Metadata.** Loads the form, report date, fiscal period and company profile that Gold needs and the XBRL numbers can't provide (details below). It runs only if this run's catalog refresh was `COMPLETE` or `PARTIAL`; an old database file from an earlier run isn't enough.
-3. **dbt build.** Runs once, against the same database, with a new artifact folder. It runs only if metadata was `COMPLETE` or `PARTIAL` and at least one fiscal load succeeded. The runner records the dbt invocation ID and checks that `manifest.json` and `run_results.json` exist, so the summary can be matched to the build that ran.
-4. **Summary.** Records every stage's status and skip reason.
+### Choosing what to process
 
-Reruns rely on this reuse. In the cohort's latest attempts, 341 filings were processed new and 59 were reused after re-verification, with none failed or left unattempted.
+For each company the sync reads the SEC submissions listing, keeps the original 10-K and 10-Q filings filed on or after `--since` (January 1 five years back by default), and subtracts the ones its state already marks done. A filing counts as done when Bronze, Silver and its fiscal metadata all succeeded, or when an earlier run's verified work was safely reused. Anything else, a failed download, a Silver rejection, missing fiscal metadata, stays pending and is retried the next night. A filing that fails five nights in a row is set aside and listed under `set_aside` in each night's summary, so one filing the parser can't read doesn't keep every night `PARTIAL`.
 
-The same DuckDB path is passed explicitly to the catalog refresh, the metadata loaders and the dbt subprocess. Otherwise it would be easy to refresh one database and build Gold against a different default in `profiles.yml`. SEC retries happen only inside the request layer; no stage is retried by the runner.
+A company's first run reads the SEC's older listing files too, which is the five-year backfill. Once every filing in range is done, only the recent listing is read, about one request per company per night; until then the older files are read again, so a failed old filing can't drop out of view. The universe file groups the public S&P 500 constituents list by CIK, so share classes such as GOOGL and GOOG are one issuer; [`scripts/build_universe.py`](../../scripts/build_universe.py) rebuilds it when the index changes. A universe ticker the SEC doesn't list for that CIK is recorded as a warning, not a failure.
 
-### Metadata
+### Stages per company
 
-| Table | Key | Source |
-| --- | --- | --- |
-| `silver.filing_metadata` | CIK + accession | The saved SEC submissions listing, rechecked against its SHA-256 before insert: form, filing date, report date, primary document |
-| `silver.company_profiles` | CIK + listing SHA-256 | The same listing: name, tickers, SIC industry, SEC office, fiscal year end |
-| `silver.filing_fiscal_metadata` | Filing + active document + extraction version | DEI facts in the verified XBRL file: fiscal year, fiscal period, period end |
+1. **Company run.** [Selects the filings](company-pipeline-orchestration.md), gets each into verified [Bronze](bronze-ingestion.md), extracts it to [Silver](silver-processing.md) and refreshes the [DuckDB catalog](duckdb-query-catalog.md). Verified Bronze and Silver are reused rather than redone. The run's record keeps the exact submissions response it chose from.
+2. **Metadata.** Loads filing metadata from that saved response, fiscal year and period from each filing's own DEI facts, and the company profile. This is the same step the [cohort](cohort-backfill.md) uses.
 
-A fiscal value is used only if its DEI fact belongs to the filing's issuer, has no dimensions, ends on the verified report date and agrees with the form. Values that repeat and agree are fine; values that conflict leave the field unresolved rather than picking one. Each row records the extraction version that produced it, and rows from different versions are kept side by side; Gold uses the newest one for the active document. That is how support for the SEC's `dei/2021q4` and `dei/2022q4` namespaces was added: a 2021 Alphabet filing was reprocessed without overwriting its earlier partial result.
+Gold is built once at the end of the night by [`build_gold`](../../src/sec_edgar_lakehouse/pipeline/dbt_build.py), with a fresh profile and artifact folder per attempt. DuckDB's memory cap comes from `SEC_EDGAR_DUCKDB_MEMORY_LIMIT`, so the build can't starve other work on the VM. With nothing new, Gold isn't rebuilt.
 
-An identical rerun returns `ALREADY_EXISTS` and keeps the first row's provenance. A different listing checksum or active document can't reuse an earlier row. A conflict blocks only the affected filing's fiscal load; a company-profile failure makes the stage `PARTIAL` without blocking fiscal loading.
+### Publishing
 
-## Outcomes
+`publish-lake` writes in four steps, each incremental where it can be: new Bronze filings are gzipped to S3 once, Silver goes to Iceberg only for filings whose active version changed, the seven Gold tables are overwritten (one Iceberg snapshot per night), and the Gold-only snapshot file goes to S3 for the dashboard. The [cloud architecture](cloud-lakehouse.md#publishing-to-the-lake) has the details.
 
-The run reports `COMPLETE`, `PARTIAL` or `FAILED`; individual downstream stages can be `SKIPPED`. This is separate from data quality: a `COMPLETE` run can still have Gold warnings in `gold.dim_filings` and `gold.metric_quality_issues`.
+## Status and evidence
 
-| What happened | Run result | Why |
-| --- | --- | --- |
-| No filings matched the selection | `COMPLETE`, metadata and dbt `SKIPPED` | A recorded no-op is not a failure |
-| No selected filing produced usable Silver | `FAILED`, downstream `SKIPPED` | There is nothing new to build from |
-| Usable Silver, but the catalog refresh failed | `PARTIAL`, downstream `SKIPPED` | Source work is kept; the catalog handoff wasn't verified |
-| Metadata or dbt failed after earlier useful work | `PARTIAL` | Earlier outputs and diagnostics remain; Gold needs its own check |
-| Every stage completed | `COMPLETE` | Gold warnings describe coverage, not a broken run |
+| Where | What it says |
+| --- | --- |
+| `<root>/sync-state.json` | Per company: done accessions, the last run's outcomes and errors, whether the backfill happened |
+| `<root>/sync-runs/<UTC time>.json`, `latest.json` | Per night: companies checked, filings done, failures, company errors, the Gold build, warnings |
+| `<root>/runs/cik=<CIK>/run_id=<id>/run.json` | Per company run: the listing it chose from and each filing's outcome |
+| `<root>/lake/publish-runs/latest.json` | What the last publish wrote; also uploaded to `runs/` in the lake |
 
-A run leaves:
+The night's status is `COMPLETE` when every filing is done and Gold built, `PARTIAL` when some filings or companies failed, and `FAILED` when the run stopped on an SEC block or Gold failed to build. The exit code follows it: 0, 2, and 1 when the run couldn't start (missing `SEC_USER_AGENT`, a bad universe file, another sync holding the lock). A partial night still publishes what succeeded.
 
-```text
-<company-run root>/cik=<CIK>/run_id=<run-id>/{submissions.json, history/, run.json}
-<end-to-end root>/cik=<CIK>/run_id=<run-id>.json
-<dbt-artifact root>/.../{stdout.log, stderr.log, target/manifest.json, target/run_results.json, logs/}
-```
-
-The summary JSON holds each stage's status and skip reason, the path and SHA-256 of the saved company record, and the dbt artifact paths. It hashes the record as saved on disk, not a re-serialized copy, so the hash identifies the actual file. New run IDs and artifact folders never overwrite an earlier attempt.
+These describe execution only. Financial completeness is a separate question answered in Gold by `dim_filings.quality_status` and `metric_quality_issues` ([decision 9](../decisions/engineering-decisions.md#9-did-the-pipeline-run-and-is-the-data-good-are-separate-statuses)).
 
 ## Failure handling
 
-Each stage commits its own output; a later failure doesn't undo an earlier one.
-
-| Stage | What commits as a unit | If a later stage fails |
-| --- | --- | --- |
-| Bronze | One filing directory, moved into place after verification | The filing stays published and is reused next time |
-| Silver | One version, made active by switching `active.json` | The active version stays; readers never see a partial one |
-| Catalog | All catalog tables and views, in one DuckDB transaction | The refreshed catalog stays |
-| Metadata | Each load, in its own DuckDB transaction | Loaded rows stay |
-| dbt | Each model separately | Some Gold tables may be replaced before a later model fails; check the build status and artifacts before using Gold |
-| Summary | The JSON, via a temporary file | A write failure is reported with the earlier stage results; published data is not deleted |
-
-A transaction spanning all of these would need coordination between the filesystem, DuckDB and dbt that a local pipeline doesn't justify. Atomic steps plus recorded status are enough here: a reader never sees a half-written Bronze filing, Silver version or catalog, and the summary says exactly how far a run got. dbt is the exception, which is why its status has to be checked before Gold is used. Connections are closed before dbt opens the database, and the dashboard and SQL tools should stay closed while the pipeline writes.
-
-## Trade-offs and limits
-
-| Choice | Cost |
+| What failed | What happens |
 | --- | --- |
-| Reuse rechecks saved evidence instead of trusting existing files | Reruns do extra hashing; a staged file or inactive version is never treated as published |
-| Silver keeps exact source identity and `DECIMAL(38,18)` values | Gold maps eight metrics, not every taxonomy concept or company extension |
-| The catalog commits its definitions in one transaction | It can't stop another process changing the Parquet files mid-query, hence one writer |
-| Metadata keeps the first verified provenance | Later conflicting evidence is reported, not substituted |
-| Derived quarters need a matching predecessor | A missing predecessor is an issue, not an estimated value |
-| The catalog points at Parquet files by absolute path | Copying only the `.duckdb` file isn't enough; the [hosted demo](dashboard.md#hosted-demo) copies only Gold tables for that reason |
+| One filing's download or parse | Recorded with its reason; the company's other filings go on; retried next night |
+| One company's listing (e.g. a retired CIK) | Recorded as a company error; the run moves to the next company |
+| SEC block page or a long `Retry-After` | The whole run stops, Gold isn't built, state is saved; the next night starts where this one stopped |
+| Gold build | Night is `FAILED`; the lake keeps last night's Gold, since publish copies Gold from the database as it stands |
+| The VM is off on a weeknight | Nothing runs; the next run picks up everything it missed. Weekends are not made up |
 
-The reasoning behind these is in the [engineering decisions](../decisions/engineering-decisions.md), especially decisions 5, 6, 9 and 10. For 20 companies at once, the [cohort backfill](cohort-backfill.md) wraps these same APIs in a frozen plan.
+There is no rollback across stages: published Bronze and Silver stay, and dbt can leave some Gold tables rebuilt and others not. Reruns are the recovery path, which is why every stage is safe to repeat.
 
 ## Code and tests
 
-| Part | Code |
-| --- | --- |
-| Filing selection | [`company_filings.py`](../../src/sec_edgar_lakehouse/bronze/company_filings.py) |
-| Bronze | [`filing_discovery.py`](../../src/sec_edgar_lakehouse/bronze/filing_discovery.py), [`filing_inventory.py`](../../src/sec_edgar_lakehouse/bronze/filing_inventory.py), [`filing_request.py`](../../src/sec_edgar_lakehouse/bronze/filing_request.py), [`filing_publication.py`](../../src/sec_edgar_lakehouse/bronze/filing_publication.py) |
-| Silver | [`silver_extraction.py`](../../src/sec_edgar_lakehouse/silver/silver_extraction.py), [`silver_parquet.py`](../../src/sec_edgar_lakehouse/silver/silver_parquet.py), [`silver_publication.py`](../../src/sec_edgar_lakehouse/silver/silver_publication.py) |
-| Catalog | [`silver_catalog.py`](../../src/sec_edgar_lakehouse/catalog/silver_catalog.py) |
-| Metadata | [`filing_metadata.py`](../../src/sec_edgar_lakehouse/metadata/filing_metadata.py), [`company_profile.py`](../../src/sec_edgar_lakehouse/metadata/company_profile.py), [`filing_fiscal_metadata.py`](../../src/sec_edgar_lakehouse/metadata/filing_fiscal_metadata.py), [`filing_fiscal_metadata_storage.py`](../../src/sec_edgar_lakehouse/metadata/filing_fiscal_metadata_storage.py), joined by [`company_metadata.py`](../../src/sec_edgar_lakehouse/metadata/company_metadata.py) |
-| Stages and gates | [`company_run.py`](../../src/sec_edgar_lakehouse/pipeline/company_run.py), [`end_to_end_pipeline.py`](../../src/sec_edgar_lakehouse/pipeline/end_to_end_pipeline.py), [`dbt_build.py`](../../src/sec_edgar_lakehouse/pipeline/dbt_build.py), [`end_to_end_run.py`](../../src/sec_edgar_lakehouse/pipeline/end_to_end_run.py) |
-| Command line | [`cli.py`](../../src/sec_edgar_lakehouse/cli.py) forwards each `sec-edgar` subcommand to its module's `main` |
-
-| Claim | Automated check | Evidence from a real run |
+| Part | Code | Tests |
 | --- | --- | --- |
-| SEC pacing, terminal blocks, verified Bronze reuse | [Bronze tests](../../tests/bronze/), [company pipeline tests](../../tests/pipeline/test_company_pipeline.py) | [Cohort report](../validation/cohort.md) and each company's `run.json` |
-| Every candidate accepted or rejected, exact decimals, active-version reuse | [Silver tests](../../tests/silver/) | 601,103 accepted facts in the [cohort audit](../validation/cohort.md) |
-| Catalog snapshot and metadata provenance | [Catalog tests](../../tests/catalog/), [metadata tests](../../tests/metadata/) | [Apple and Microsoft run](../validation/multi-company-acceptance.md); 400 active and metadata rows in the cohort |
-| Gold grain, accuracy, periods, derivations, lineage | [dbt tests](../../transform/tests/), [unit tests](../../transform/models/), [offline dbt script](../../scripts/ci/validate_offline_dbt.py) | Synthetic fixture in [CI](../validation/ci.md); 8,406 metric-support references checked back to Silver in the cohort |
-| Read-only dashboard, unchanged source records | [Dashboard tests](../../tests/dashboard/), [wheel probe](../../scripts/ci/wheel_probe.py) | Database checksum unchanged in the [Apple and Microsoft run](../validation/multi-company-acceptance.md) |
+| Nightly sync | [`universe_sync.py`](../../src/sec_edgar_lakehouse/pipeline/universe_sync.py) | [`test_universe_sync.py`](../../tests/pipeline/test_universe_sync.py) |
+| Company run | [`company_run.py`](../../src/sec_edgar_lakehouse/pipeline/company_run.py) | [`test_company_run.py`](../../tests/pipeline/test_company_run.py) |
+| Gold build | [`dbt_build.py`](../../src/sec_edgar_lakehouse/pipeline/dbt_build.py) | [`test_dbt_build.py`](../../tests/pipeline/test_dbt_build.py) |
+| Lake publish | [`lake/publish.py`](../../src/sec_edgar_lakehouse/lake/publish.py) | [`test_publish.py`](../../tests/lake/test_publish.py) |
+| Whole path, synthetic filings | [`validate_offline_dbt.py`](../../scripts/ci/validate_offline_dbt.py) | [CI](../validation/ci.md) |

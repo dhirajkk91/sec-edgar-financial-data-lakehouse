@@ -108,13 +108,7 @@ The metadata tables (`silver.filing_metadata`, `silver.filing_fiscal_metadata`, 
 
 ## Usage
 
-```sh
-uv run --locked sec-edgar catalog-refresh \
-  --silver-directory data/silver/sec/filings \
-  --database data/query/sec_edgar.duckdb
-```
-
-The refresh is explicit: publishing a new Silver version doesn't update DuckDB on its own. The company run refreshes once after processing its filings, and because it scans the whole Silver root, a later company's run includes every earlier company's active filings too. The refresh refuses a database path inside the Silver root, keeping derived state out of the source folder it describes.
+The refresh is explicit: publishing a new Silver version doesn't update DuckDB on its own. The company run calls [`refresh_silver_catalog`](../../src/sec_edgar_lakehouse/catalog/silver_catalog.py) once after processing its filings, and because it scans the whole Silver root, a later company's run includes every earlier company's active filings too. The refresh refuses a database path inside the Silver root, keeping derived state out of the source folder it describes.
 
 ## Failure handling
 
@@ -129,7 +123,7 @@ The refresh is explicit: publishing a new Silver version doesn't update DuckDB o
 | Choice | Cost |
 | --- | --- |
 | Views over Parquet instead of copied tables | Every query reads Parquet. That costs little for staging, and Gold's intermediate models and marts are stored as tables anyway ([decision 14](../decisions/engineering-decisions.md#14-gold-is-stored-as-tables-staging-stays-as-views)) |
-| Views list absolute file paths | The `.duckdb` file isn't portable on its own. If the data moves, refresh from the new Silver root; the [hosted demo](dashboard.md#hosted-demo) copies Gold tables instead |
+| Views list absolute file paths | The `.duckdb` file isn't portable on its own. If the data moves, refresh from the new Silver root; the [Gold-only copy](dashboard.md#the-gold-only-copy) and the [lake](cloud-lakehouse.md) copy Gold tables instead |
 | The transaction covers the catalog definitions | It can't stop another process rewriting Parquet files mid-query. Silver versions are immutable and stages run one at a time, so the rule is one writer, with readers closed during writes |
 | Strict schema, no `union_by_name` | A new Silver row schema needs a catalog change before it can be queried |
 
@@ -137,6 +131,8 @@ See [decision 6](../decisions/engineering-decisions.md#6-duckdb-is-a-catalog-of-
 
 ## Code and tests
 
-[`silver_catalog.py`](../../src/sec_edgar_lakehouse/catalog/silver_catalog.py) owns pointer discovery, verification, the transaction and the checks before commit. [`silver_catalog_refresh.py`](../../src/sec_edgar_lakehouse/catalog/silver_catalog_refresh.py) is its command line. The [catalog tests](../../tests/catalog/) cover bad pointers, partial refreshes, rollback, schema and link checks, and the supported parser versions.
+[`silver_catalog.py`](../../src/sec_edgar_lakehouse/catalog/silver_catalog.py) owns pointer discovery, verification, the transaction and the checks before commit. The [catalog tests](../../tests/catalog/) cover bad pointers, partial refreshes, rollback, schema and link checks, and the supported parser versions.
 
-In the [Apple and Microsoft run](../validation/multi-company-acceptance.md), the shared catalog held both companies' filings after the second run; adding Microsoft didn't remove Apple's records, and a rerun left the catalog rows unchanged.
+In the [cohort run](../validation/cohort.md), the shared catalog held all 400 filings; each company's refresh kept every earlier company's records, and reruns left the catalog rows unchanged.
+
+The catalog is local to the machine that computes. What other people query is the lake: the same Silver rows as Iceberg tables in Glue, read with Athena ([cloud architecture](cloud-lakehouse.md)).

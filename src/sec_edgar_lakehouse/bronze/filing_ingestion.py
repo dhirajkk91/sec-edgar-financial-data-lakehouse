@@ -22,7 +22,6 @@ from sec_edgar_lakehouse.bronze.filing_inventory import build_filing_inventory
 from sec_edgar_lakehouse.bronze.filing_publication import (
     PublicationError,
     PublishedFiling,
-    _primary_document_name,
     _validate_staged_content,
     publish_filing,
 )
@@ -105,7 +104,6 @@ def _ingest_with_client(
         reference, user_agent=user_agent, client=client, _pacer=pacer
     )
     inventory = build_filing_inventory(reference, discovery)
-    primary_name = _primary_document_name(discovery)
 
     contents: dict[str, bytes] = {}
     failed_files: dict[str, str] = {}
@@ -131,7 +129,7 @@ def _ingest_with_client(
             try:
                 # Check content now so a failed required file stops later requests.
                 # Publication still checks the staged bytes after writing them.
-                _validate_staged_content(entry, downloaded.content, primary_name)
+                _validate_staged_content(entry, downloaded.content)
             except ValueError as exc:
                 message = str(exc)
             else:

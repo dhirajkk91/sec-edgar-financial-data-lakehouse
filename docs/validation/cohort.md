@@ -1,6 +1,6 @@
 # 20-company cohort validation
 
-**Result:** all 400 planned filings landed in verified Bronze, active Silver and complete fiscal metadata, and the Gold build passes all 571 dbt nodes. The cohort's own status stays `PARTIAL` for one reason: the SEC listing files behind three JPMorgan filings changed between planning and processing (see [JPMorgan source trace](#jpmorgan-source-trace)). The filings themselves are correct.
+**Result:** all 400 planned filings landed in verified Bronze, active Silver and complete fiscal metadata, and the Gold build passes all 592 dbt nodes. The cohort's own status stays `PARTIAL` for one reason: the SEC listing files behind three JPMorgan filings changed between planning and processing (see [JPMorgan source trace](#jpmorgan-source-trace)). The filings themselves are correct.
 
 | Measure | Result |
 | --- | ---: |
@@ -11,7 +11,7 @@
 | Filings with `COMPLETE` Gold quality | 238 of 400 |
 | Quality issues (errors / warnings) | 557 (240 / 317) |
 | Company-period rows in `fct_company_financials` | 500 |
-| dbt nodes passing | 571 of 571 |
+| dbt nodes passing | 592 of 592 |
 | Full Gold rebuild | about 18 seconds |
 
 ## Scope
@@ -205,6 +205,10 @@ The 295 new values are revenue, net income and capex for Walmart, Berkshire, Mas
 
 The issue mix changed as expected: 85 revenue conflicts disappeared, `NO_ELIGIBLE_METRIC` fell from 325 to 213, and 254 `LOWER_PRIORITY_CONCEPT_DIFFERS` warnings appeared: 169 for net income, where `ProfitLoss` includes noncontrolling interests (Exxon, Tesla, AbbVie, Berkshire, Walmart, Palantir), and 85 for revenue (Walmart, Berkshire, Exxon, Mastercard). `UNSUPPORTED_DURATION` warnings rose from 15 to 30 because the new concepts brought unusual periods, which are flagged rather than used. Some gaps stay on purpose: JPMorgan's capex, since a bank doesn't report it in a way that fits, and Berkshire's and Visa's EPS, reported per share class. The rebuilt Gold passed all 571 dbt nodes, and the CI build gave the same synthetic results as before.
 
+### Insight tables
+
+The Insights view and the exploratory notebook added two Gold tables, `company_insights` and `company_metric_coverage`. Gold was rebuilt with `resume --build-after-batch`, which runs dbt again without reprocessing any company: all 592 nodes passed (29 models, one seed, 452 data tests and 110 unit tests) in 20.4 seconds. The new tables have 20 and 160 rows. In the exported demo, every row of the five existing Gold tables is identical to the previous export, so the rebuild added the two tables and changed nothing else.
+
 ## Evidence
 
 Everything below is under the cohort's ignored data root:
@@ -232,7 +236,7 @@ cohort_root=$(mktemp -d data/cohort.XXXXXX)
 manifest=config/cohort-sp500-top20-2026-10-15.json
 uv run --no-sync sec-edgar cohort plan --manifest "$manifest" --data-root "$cohort_root"
 uv run --no-sync sec-edgar cohort execute --manifest "$manifest" --data-root "$cohort_root" --dbt-timeout-seconds 43200
-uv run --no-sync sec-edgar inspect --database "$cohort_root/query/sec_edgar.duckdb"
+duckdb -readonly "$cohort_root/query/sec_edgar.duckdb" "select quality_status, count(*) from gold.dim_filings group by 1"
 ```
 
 The [pipeline guide](../guides/running-the-pipeline.md) covers resuming, rebuilding Gold and recovery. A new run plans against the SEC listings as they are at that time; if they have changed, its results can differ from this record.

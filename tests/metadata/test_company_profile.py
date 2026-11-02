@@ -16,7 +16,6 @@ from sec_edgar_lakehouse import (
     CompanyProfileError,
     load_company_profile,
 )
-from sec_edgar_lakehouse.metadata import company_profile_load
 
 CIK = "0000320193"
 
@@ -197,20 +196,3 @@ def test_missing_database_and_incompatible_table_fail(tmp_path: Path) -> None:
         connection.execute("CREATE TABLE silver.company_profiles (cik VARCHAR)")
     with pytest.raises(CompanyProfileError, match="Incompatible"):
         load_company_profile(run_record_path=record, database_path=db)
-
-
-def test_cli_loads_each_record_and_reports_failures(
-    tmp_path: Path, capsys: pytest.CaptureFixture[str]
-) -> None:
-    good = run_record(tmp_path)
-    bad = run_record(tmp_path, response(sic="bad"), run_id="run-bad")
-    db = database(tmp_path)
-    code = company_profile_load.main(
-        ["--database", str(db), "--run-record", str(good), str(bad)]
-    )
-    output = capsys.readouterr()
-    assert code == 1
-    assert "INSERTED | 0000320193 | Apple Inc. | 06 Technology" in output.out
-    assert "Loaded 1 of 2 run records" in output.out
-    assert "FAILED" in output.err and "run-bad" in output.err
-    assert len(stored(db)) == 1

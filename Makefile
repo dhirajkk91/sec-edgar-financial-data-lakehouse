@@ -9,13 +9,13 @@ PORT ?= 8501
 IMAGE ?= sec-edgar-dashboard
 
 .DEFAULT_GOAL := help
-.PHONY: help install lint typecheck test check dbt-check wheel-check ci dashboard demo-dashboard demo docker-build docker-run
+.PHONY: help install lint typecheck test check dbt-check wheel-check ci dashboard demo-dashboard demo eda sync lake-local pipeline-image docker-build docker-run
 
 help: ## List the targets
 	@awk 'BEGIN {FS = ":.*## "} /^[a-z-]+:.*## / {printf "  %-15s %s\n", $$1, $$2}' $(MAKEFILE_LIST)
 
-install: ## Install the locked pipeline, dbt, dashboard and check dependencies
-	$(UV) sync --locked --group dev --group dbt --group dashboard
+install: ## Install the locked pipeline, dbt, dashboard, notebook, lake and check dependencies
+	$(UV) sync --locked --group dev --group dbt --group dashboard --group analysis --group lake
 
 lint: ## Ruff lint and format check
 	$(RUN) ruff check .
@@ -47,6 +47,18 @@ demo-dashboard: ## Open the dashboard on the committed demo database, as hosted
 
 demo: ## Rebuild demo/sec_edgar_demo.duckdb from DATABASE (default: the local cohort link)
 	$(RUN) sec-edgar export-demo --database $(or $(DATABASE),data/dashboard-current.duckdb) --replace
+
+sync: ## Weeknight sync on this machine; set UNIVERSE and DATA_ROOT to override
+	$(RUN) sec-edgar sync --universe $(or $(UNIVERSE),config/universe-sp500.json) --data-root $(or $(DATA_ROOT),data/lake)
+
+lake-local: ## Publish DATA_ROOT to a local Iceberg lake in data/lake-local (no AWS)
+	$(RUN) sec-edgar publish-lake --data-root $(or $(DATA_ROOT),data/lake) --lake file://$(CURDIR)/data/lake-local
+
+pipeline-image: ## Build the weeknight job image used on the Oracle VM
+	DOCKER_BUILDKIT=1 docker build --file deploy/pipeline/Dockerfile --tag sec-edgar-pipeline .
+
+eda: ## Re-run the exploratory notebook over the demo database and save its outputs
+	$(RUN) python -c "import nbclient, nbformat; p = 'notebooks/exploratory-analysis.ipynb'; nb = nbformat.read(p, 4); nbclient.NotebookClient(nb, timeout=300, resources={'metadata': {'path': 'notebooks'}}).execute(); nbformat.write(nb, p)"
 
 docker-build: ## Build the dashboard image over the committed demo database
 	docker build --tag $(IMAGE) .

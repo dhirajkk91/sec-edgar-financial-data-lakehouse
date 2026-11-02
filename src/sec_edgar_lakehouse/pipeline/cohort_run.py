@@ -38,7 +38,10 @@ from sec_edgar_lakehouse.pipeline.company_run import (
     _safe_error,
     execute_company_pipeline_run,
 )
-from sec_edgar_lakehouse.pipeline.dbt_build import DbtBuildError, run_dbt_build
+from sec_edgar_lakehouse.pipeline.dbt_build import (
+    DbtBuildError,
+    build_gold,
+)
 
 _ROOT = Path(__file__).resolve().parents[3]
 
@@ -500,47 +503,7 @@ def _company_attempt(
 
 
 def _build(root: Path, timeout: float) -> dict[str, Any]:
-    attempt = uuid4().hex
-    directory = root / "dbt"
-    directory.mkdir(exist_ok=True)
-    profiles = directory / f"profiles-{attempt}"
-    profiles.mkdir()
-    _write_json(
-        profiles / "profiles.yml",
-        {
-            "sec_edgar_gold": {
-                "target": "dev",
-                "outputs": {
-                    "dev": {
-                        "type": "duckdb",
-                        "path": "{{ env_var('SEC_EDGAR_DUCKDB_PATH') }}",
-                        "schema": "gold",
-                        "threads": 1,
-                        "settings": {
-                            "threads": 1,
-                            "memory_limit": "4GB",
-                            "preserve_insertion_order": True,
-                        },
-                    }
-                },
-            }
-        },
-    )
-    result = run_dbt_build(
-        database_path=root / "query" / "sec_edgar.duckdb",
-        project_directory=_ROOT / "transform",
-        profiles_directory=profiles,
-        artifact_directory=directory / f"artifacts-{attempt}",
-        timeout_seconds=timeout,
-    )
-    return {
-        "status": result.status,
-        "artifact_directory": str(result.artifact_directory),
-        "profiles_directory": str(profiles),
-        "invocation_id": result.invocation_id,
-        "node_status_counts": dict(result.node_status_counts),
-        "error_message": result.error_message,
-    }
+    return build_gold(root, timeout_seconds=timeout)
 
 
 def _execute(

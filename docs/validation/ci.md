@@ -8,11 +8,12 @@ Every pull request to `main`, every push to `main` and every manual dispatch run
 
 | Job | Runs on | What it checks |
 | --- | --- | --- |
-| Python checks | Ubuntu and macOS, Python 3.14 | Ruff lint and format, mypy, and the full test suite. A pytest socket guard blocks external connections while allowing loopback and mocked HTTP |
+| Python checks | Ubuntu and macOS, Python 3.14 | Ruff lint and format (notebooks included), mypy, and the full test suite, which also runs the exploratory notebook from top to bottom on the demo database and publishes a small lakehouse to a local Iceberg catalog. A pytest socket guard blocks external connections while allowing loopback and mocked HTTP |
 | Offline dbt | Ubuntu, Python 3.14 | A synthetic company goes through Bronze, Silver, the catalog and metadata into one full dbt build, then exact values, warnings, ordering and lineage are asserted |
-| Built wheel | Ubuntu, Python 3.14 | Builds the wheel and sdist, installs only the core package outside the checkout, then checks public imports, every module's `--help`, the installed `sec-edgar` command and all its subcommands, and the readers, without dbt or Streamlit |
-| Hosted demo | Ubuntu, Python 3.12 | Installs only `deploy/requirements.txt` and pytest, then checks the committed demo database against its manifest, the pins against `uv.lock`, the demo export's path and email checks, and that both views open through the hosted entry point |
+| Built wheel | Ubuntu, Python 3.14 | Builds the wheel and sdist, installs only the core package outside the checkout, then checks public imports, every command module's `--help`, the installed `sec-edgar` command and all its subcommands, and the readers, without dbt, Streamlit or the lake packages |
+| Hosted demo | Ubuntu, Python 3.12 | Installs only `deploy/requirements.txt` and pytest, then checks the committed demo database against its manifest, the pins against `uv.lock`, the demo export's path and email checks, the snapshot download's checksum check, and that all three views open through the hosted entry point |
 | Dashboard image | Ubuntu | Builds the Dockerfile, starts the container, waits for Streamlit's health check and records the container's non-root user ID |
+| Pipeline image | Ubuntu | Builds the weeknight job's image, checks that `sec-edgar sync` and the Iceberg and AWS clients load inside it, and that the job refuses to start without a lake configured |
 
 ## What each check is designed to catch
 
@@ -21,9 +22,10 @@ Every pull request to `main`, every push to `main` and every manual dispatch run
 | The pipeline runs without SEC access | A clean checkout has no `data/` folder and no User-Agent. Synthetic XML goes through the same Bronze and Silver verification and the same catalog and metadata code as a real run; the socket guard catches any accidental external call in pytest |
 | Gold never invents a quarter | The synthetic company has no Q1 on purpose. Q2 year-to-date cash values stay reported, the missing Q1 predecessor becomes an issue, and Q3 and Q4 are derived from exactly the expected two inputs |
 | Values and evidence survive every layer | Assertions compare exact decimal EPS, unit expressions, the order of supporting IDs, current and predecessor occurrence IDs, source ownership and complete mart records, not just row counts |
-| The core package works without optional tools | A fresh environment with only the wheel and its locked runtime dependencies must import every non-UI module and run the readers. Only `dashboard_app` and `company_page`, the Streamlit UI, are skipped |
+| The core package works without optional tools | A fresh environment with only the wheel and its locked runtime dependencies must import every non-UI module and run the readers. Only `dashboard_app`, `company_page` and `insights_page`, the Streamlit UI, are skipped; the lake module imports pyiceberg and boto3 only when it publishes |
 | The build fits a small runner | The dbt profile sets both dbt concurrency and DuckDB's engine limits, and the job records the configured and observed settings |
 | The public app runs where it's hosted | The hosted-demo job runs on the oldest supported Python with only the deployment pins |
+| The lake publish is incremental and keeps history | A local SQLite catalog stands in for Glue: Bronze uploads once, only a re-parsed filing's Silver rows are replaced, and the first night's Gold snapshot is still readable after the second |
 
 ## The synthetic company
 
@@ -37,7 +39,7 @@ The offline dbt script writes a temporary `profiles.yml` in its work folder, wit
 
 ## Run it locally
 
-`make ci` runs the Python, dbt and wheel checks, each in a fresh temporary folder; `make docker-build` builds the image. Run from a clean checkout without a `data/` folder, with Python 3.14 and uv 0.12.15:
+`make ci` runs the Python, dbt and wheel checks, each in a fresh temporary folder; `make docker-build` and `make pipeline-image` build the two images. Run from a clean checkout without a `data/` folder, with Python 3.14 and uv 0.12.15:
 
 ```sh
 python -m pip install uv==0.12.15
@@ -68,11 +70,12 @@ Problems these checks found, or that led to adding one:
 
 ## Recorded results
 
-- **Latest local run** (Linux, Python 3.14): 1,341 tests passed; Ruff, mypy and the core-only wheel check passed. The wheel check ran `--help` through the installed `sec-edgar` command for all 13 subcommands. A separate Python 3.12.15 environment with only the deployment pins passed the 14 hosted-demo and export tests.
+- **Latest local run** (Linux, Python 3.14, November 2026): 968 tests passed; Ruff, mypy, the offline dbt check (592 nodes) and the core-only wheel check passed. The wheel check ran `--help` through the installed `sec-edgar` command for all 4 subcommands. The pipeline image couldn't be built locally (no registry access); the Pipeline image job builds it on GitHub.
+- **Test pruning:** the suite went from 1,356 to 968 tests when the one-company `pipeline` command and the single-stage commands were replaced by `sync`. Most of the removed tests exercised those wrappers through mocks. The Bronze tests were rewritten for the slimmer archive as fewer end-to-end cases, and long input-validation parameter lists were cut to a representative few. Silver, catalog, metadata, Gold and dashboard behaviour tests are unchanged, and the offline dbt check still runs the whole path.
 - **Dashboard image:** built, started and health-checked by the Dashboard image job on GitHub, which passed with the other five jobs on `main` ([latest run](https://github.com/dhirajkk91/sec-edgar-financial-data-lakehouse/actions/runs/40041815797)). Before that job existed, the image's file set and command were checked locally as a non-root user with only the deployment pins: the health check returned 200 and the explorer opened on the Apple example.
 - **Earlier clean-copy run** (macOS, Python 3.14.7, uv 0.12.15): the wheel environment had 11 locked runtime distributions, including DuckDB and pytz, and no dbt, Streamlit or development tools. The readers kept exact decimals, ordered evidence and timezone-aware timestamps, and left the fixture database's checksum unchanged.
 - **First passing run on GitHub Actions:** [run 38617505874](https://github.com/dhirajkk91/sec-edgar-financial-data-lakehouse/actions/runs/38617505874) at commit `769828c`, after the memory fix.
 
 ## Limits
 
-The fixtures catch regressions across layers without depending on a changing SEC response or a saved local database. They can't measure coverage of every company's XBRL, and they don't test concurrent database access. The socket guard covers pytest, not arbitrary child processes. Real filings are checked separately in the [Apple and Microsoft run](multi-company-acceptance.md) and the [20-company cohort](cohort.md).
+The fixtures catch regressions across layers without depending on a changing SEC response or a saved local database. They can't measure coverage of every company's XBRL, and they don't test concurrent database access. The socket guard covers pytest, not arbitrary child processes. Real filings are checked separately in the [20-company cohort](cohort.md). The Terraform isn't applied in CI; `terraform validate` and a first `apply` are part of the [deploy guide](../guides/deploying.md).

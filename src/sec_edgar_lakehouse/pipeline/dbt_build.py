@@ -16,6 +16,7 @@ from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any, Literal
+from uuid import uuid4
 
 _SUCCESS_STATUSES = frozenset({"success", "pass", "warn", "no-op", "reused"})
 
@@ -294,3 +295,63 @@ def run_dbt_build(
             f"dbt build filesystem or process-launch failure: {exc}",
             artifact_directory=created,
         ) from exc
+
+
+_REPOSITORY = Path(__file__).resolve().parents[3]
+
+
+def build_gold(
+    root: Path,
+    *,
+    timeout_seconds: float = 3600.0,
+    memory_limit: str | None = None,
+    threads: int = 1,
+) -> dict[str, Any]:
+    """Build Gold once over ``root/query/sec_edgar.duckdb`` with a fresh profile.
+
+    Each attempt gets its own profile and artifact folders under ``root/dbt``, so
+    a failed build can be inspected next to the one that followed it. DuckDB's
+    memory limit comes from the argument, then SEC_EDGAR_DUCKDB_MEMORY_LIMIT, then
+    4GB; on a shared VM that keeps the build from starving its neighbours.
+    """
+    limit = memory_limit or os.environ.get("SEC_EDGAR_DUCKDB_MEMORY_LIMIT") or "4GB"
+    attempt = uuid4().hex
+    directory = root / "dbt"
+    directory.mkdir(parents=True, exist_ok=True)
+    profiles = directory / f"profiles-{attempt}"
+    profiles.mkdir()
+    profile = {
+        "sec_edgar_gold": {
+            "target": "dev",
+            "outputs": {
+                "dev": {
+                    "type": "duckdb",
+                    "path": "{{ env_var('SEC_EDGAR_DUCKDB_PATH') }}",
+                    "schema": "gold",
+                    "threads": threads,
+                    "settings": {
+                        "threads": threads,
+                        "memory_limit": limit,
+                        "preserve_insertion_order": True,
+                    },
+                }
+            },
+        }
+    }
+    # JSON is valid YAML, and it avoids a YAML dependency for one small file.
+    (profiles / "profiles.yml").write_text(json.dumps(profile, indent=2) + "\n")
+    result = run_dbt_build(
+        database_path=root / "query" / "sec_edgar.duckdb",
+        project_directory=_REPOSITORY / "transform",
+        profiles_directory=profiles,
+        artifact_directory=directory / f"artifacts-{attempt}",
+        timeout_seconds=timeout_seconds,
+    )
+    return {
+        "status": result.status,
+        "artifact_directory": str(result.artifact_directory),
+        "profiles_directory": str(profiles),
+        "invocation_id": result.invocation_id,
+        "node_status_counts": dict(result.node_status_counts),
+        "error_message": result.error_message,
+    }

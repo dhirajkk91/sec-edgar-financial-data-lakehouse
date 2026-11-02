@@ -1666,6 +1666,92 @@ models:
       - name: derived_metric_codes
         data_type: VARCHAR[]
         description: "Metrics in this row that Gold derived rather than read as reported."
+  - name: company_metric_coverage
+    description: >-
+      One row per company and metric: how many of the company's fiscal periods in fct_company_financials have a value.
+      Q4 diluted EPS is not expected, because Gold never derives EPS.
+    columns:
+      - name: cik
+        data_type: VARCHAR
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_companies')
+                field: cik
+      - name: metric_code
+        data_type: VARCHAR
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ["revenue", "net_income", "diluted_eps", "operating_cash_flow", "capital_expenditures", "total_assets", "total_liabilities", "cash_and_equivalents"]
+      - name: periods_expected
+        data_type: INTEGER
+        description: "Fiscal periods (FY and Q1-Q4) in which the metric should have a value."
+        data_tests: [not_null]
+      - name: periods_present
+        data_type: INTEGER
+        description: "Fiscal periods in which Gold published a value."
+        data_tests: [not_null]
+      - name: coverage
+        data_type: DOUBLE
+        description: "periods_present divided by periods_expected."
+        data_tests: [not_null]
+  - name: company_insights
+    description: >-
+      One row per company with revenue growth, profitability, cash conversion and data coverage, for the dashboard's Insights view.
+      Inputs are annual rows of fct_company_financials and counts from company_metric_coverage and metric_quality_issues.
+      Ratios are NULL when an input is missing.
+    columns:
+      - name: cik
+        data_type: VARCHAR
+        data_tests:
+          - not_null
+          - unique
+          - relationships:
+              arguments:
+                to: ref('dim_companies')
+                field: cik
+      - name: first_fiscal_year
+        data_type: INTEGER
+        description: "First fiscal year with positive annual revenue."
+      - name: latest_fiscal_year
+        data_type: INTEGER
+        description: "Latest fiscal year with positive annual revenue; the latest-year figures come from this year."
+      - name: first_revenue
+        data_type: DECIMAL(38,18)
+      - name: latest_revenue
+        data_type: DECIMAL(38,18)
+      - name: revenue_cagr
+        data_type: DOUBLE
+        description: "Compound annual revenue growth from the first to the latest fiscal year; NULL with fewer than two years."
+      - name: latest_net_income
+        data_type: DECIMAL(38,18)
+      - name: latest_free_cash_flow
+        data_type: DECIMAL(38,18)
+      - name: latest_net_margin
+        data_type: DOUBLE
+      - name: latest_free_cash_flow_margin
+        data_type: DOUBLE
+      - name: cash_conversion
+        data_type: DOUBLE
+        description: "Free cash flow divided by net income in the latest year; NULL unless net income is positive and free cash flow exists."
+      - name: metric_values_present
+        data_type: INTEGER
+        data_tests: [not_null]
+      - name: metric_values_expected
+        data_type: INTEGER
+        data_tests: [not_null]
+      - name: metric_coverage
+        data_type: DOUBLE
+        description: "Share of expected metric values that Gold published, across all of the company's fiscal periods."
+      - name: error_issue_count
+        data_type: INTEGER
+        data_tests: [not_null]
+      - name: warning_issue_count
+        data_type: INTEGER
+        data_tests: [not_null]
 seeds:
   - name: metric_concept_map
     description: Approved revenue, income, balance-sheet and cash-flow concept mappings; one row per metric, namespace prefix, concept and period kind. Priority is evidence for later selection.

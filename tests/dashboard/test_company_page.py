@@ -155,7 +155,7 @@ def test_loader_keeps_exact_decimals(database: Path) -> None:
 
 def test_loader_explains_a_database_without_the_company_layer(tmp_path: Path) -> None:
     path = create_database(tmp_path / "old.duckdb")
-    with pytest.raises(DashboardReadError, match="company_profile_load"):
+    with pytest.raises(DashboardReadError, match="sec-edgar sync"):
         load_company_snapshot(database_path=path)
     assert load_company_names(database_path=path) == {}
 
@@ -222,4 +222,4 @@ def test_companies_view_shows_a_clear_error_for_an_old_database(
     monkeypatch.setenv("SEC_EDGAR_DUCKDB_PATH", str(path))
     result = AppTest.from_file(str(ROOT / "dashboard_app.py"), default_timeout=15).run()
     assert not result.exception
-    assert "company_profile_load" in result.error[0].value
+    assert "sec-edgar sync" in result.error[0].value

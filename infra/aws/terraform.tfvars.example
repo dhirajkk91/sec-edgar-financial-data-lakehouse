@@ -1,0 +1,4 @@
+# Copy to terraform.tfvars (ignored by git) and fill in.
+region       = "us-east-1"
+bucket_name  = "sec-edgar-lake-yourname"
+budget_email = "you@example.com"

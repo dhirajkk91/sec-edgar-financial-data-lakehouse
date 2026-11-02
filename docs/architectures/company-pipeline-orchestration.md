@@ -2,7 +2,7 @@
 
 ## Purpose
 
-A Bronze ingest starts from a known filing. The company run starts from a company: given a CIK and a bounded selection, it chooses the filings, gets each one into verified Bronze and active Silver, refreshes the catalog once, and saves a record of the attempt. It handles one company per invocation. The [end-to-end pipeline](end-to-end-pipeline.md) adds metadata and the dbt build after it, and the [cohort backfill](cohort-backfill.md) calls it once per company.
+A Bronze ingest starts from a known filing. The company run starts from a company: given a CIK and a bounded selection, it chooses the filings, gets each one into verified Bronze and active Silver, refreshes the catalog once, and saves a record of the attempt. It handles one company per invocation. The [weeknight sync](end-to-end-pipeline.md) calls it for each company with new filings and adds metadata and one Gold build after the batch; the [cohort backfill](cohort-backfill.md) does the same for the frozen 20 companies.
 
 ## Goals and non-goals
 
@@ -105,6 +105,6 @@ A run ID names an execution, not a filing or a Silver version. Every run gets a 
 | Per-filing processing and outcomes | [`company_processing.py`](../../src/sec_edgar_lakehouse/pipeline/company_processing.py) |
 | Processing plus catalog refresh | [`company_pipeline.py`](../../src/sec_edgar_lakehouse/pipeline/company_pipeline.py) |
 | Run record | [`company_run.py`](../../src/sec_edgar_lakehouse/pipeline/company_run.py) |
-| Command line (`sec-edgar company`) | [`company_pipeline_run.py`](../../src/sec_edgar_lakehouse/pipeline/company_pipeline_run.py) |
+| Callers | [`universe_sync.py`](../../src/sec_edgar_lakehouse/pipeline/universe_sync.py) (weeknights), [`cohort_run.py`](../../src/sec_edgar_lakehouse/pipeline/cohort_run.py) (the frozen cohort) |
 
-The [pipeline tests](../../tests/pipeline/) cover selection, reuse, `NOT_ATTEMPTED` after a stop, catalog gating and record publication. The [Apple and Microsoft run](../validation/multi-company-acceptance.md) processed both companies into shared roots and confirmed that a rerun reused the published work.
+The [pipeline tests](../../tests/pipeline/) cover selection, reuse, `NOT_ATTEMPTED` after a stop, catalog gating and record publication. The [cohort run](../validation/cohort.md) processed 20 companies into shared roots and reused 59 already published filings without changing them.

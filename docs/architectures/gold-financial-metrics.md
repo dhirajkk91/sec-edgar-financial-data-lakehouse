@@ -175,10 +175,14 @@ The [cohort audit](../validation/cohort.md) checked every selected value's suppo
 | `gold.metric_quality_issues` | Issue occurrence | Stage, code, severity, details and the evidence available; repeats are kept |
 | `gold.dim_companies` | Company with active filings | Name, tickers, SIC industry, SEC sector, fiscal year end, filing coverage |
 | `gold.fct_company_financials` | Company, fiscal year and period (FY, Q1–Q4) | Standalone metrics side by side, free cash flow, margins, year-over-year revenue growth |
+| `gold.company_insights` | Company | Revenue growth per year, latest margins, cash conversion, coverage and issue counts |
+| `gold.company_metric_coverage` | Company and metric | Fiscal periods expected, periods with a value, and the share |
 
 **Filing quality.** `dim_filings.gold_quality_status` is `FAILED` when metadata or the report date is missing, the form is unsupported, or no metric was selected. It is `PARTIAL` when a required metric is missing or an error issue exists, and `COMPLETE` otherwise. A `COMPLETE` filing can still carry warnings. This status describes the data; it is separate from whether the pipeline or dbt run succeeded. The cohort has 238 complete and 162 partial filings.
 
 **Company tables.** `dim_companies` reads the newest saved SEC response per company. `sector` is the SEC's own industry office (`06 Technology` becomes sector `Technology`), not a market classification such as GICS, which is why NVIDIA appears under Manufacturing. Empty SEC fields stay null: Exxon's response listed no tickers, so its `primary_ticker` is null and the dashboard shows its name. `fct_company_financials` only rearranges `fct_financial_metrics`: the `annual` row for FY, the `quarter` or `derived_quarter` row for Q1–Q4, and balance-sheet values from the filing's report date. Free cash flow is operating cash flow minus capex, null unless both exist. Margins and growth are floating-point ratios, computed only with positive revenue; the metric values stay exact. Q4 EPS is always null, because EPS is never derived.
+
+**Insight tables.** `company_insights` feeds the dashboard's Insights view and `company_metric_coverage` the [exploratory notebook](../../notebooks/exploratory-analysis.ipynb); neither selects or derives a financial value. [`company_metric_coverage`](../../transform/models/marts/company_metric_coverage.sql) counts, for each company and metric, how many of its fiscal periods in `fct_company_financials` have a value; Q4 EPS isn't expected, since it is never derived. [`company_insights`](../../transform/models/marts/company_insights.sql) reads only FY rows. Revenue growth is the compound annual rate between the first and latest fiscal years with positive revenue, and is null with fewer than two such years. Margins come from that latest year. Cash conversion is free cash flow divided by net income, only when net income is positive. Coverage and error and warning counts are sums of the coverage table and `metric_quality_issues`. A [reconciliation test](../../transform/tests/company_insights_reconciliation.sql) checks each figure against the FY row it came from and that the growth rate compounds back to the latest revenue.
 
 ## Quality issues
 
@@ -191,7 +195,7 @@ Every withheld or questionable value has a row in `metric_quality_issues`. These
 | `UNSUPPORTED_DURATION` | Error / warning | 63 | The reported dates fit no supported fiscal-period window |
 | `NO_ELIGIBLE_REVENUE` | Error | 15 | As above, for revenue |
 | `MISSING_PREVIOUS_CUMULATIVE` | Warning | 6 | A cumulative value is kept, but the standalone quarter can't be derived without its predecessor |
-| `METRIC_VALUE_CONFLICT` | Error | 5 | Occurrences of the same concept disagree, such as Walmart's FY2026 cash balance; the value is withheld |
+| `METRIC_VALUE_CONFLICT` | Error | 5 | Occurrences of the same concept disagree; all five are Walmart's year-end cash balances, one per 10-K. The value is withheld |
 | `METRIC_ACCURACY_UNRESOLVED` | Error | 1 | Accuracy attributes couldn't support a trusted value |
 
 Issue rows describe individual metric choices, not failed filings.
@@ -200,12 +204,12 @@ Issue rows describe individual metric choices, not failed filings.
 
 | Kind | What it checks |
 | --- | --- |
-| 55 SQL data tests in [`transform/tests/`](../../transform/tests/) | Grain and uniqueness of every model, eligibility, absence of ambiguity, lineage back to the active company and accession, issue shape, and reconciliation: every mart row traces to an intermediate row and back |
-| Unit tests in [`transform/models/`](../../transform/models/) | Each rule on small fixed inputs: concept priority, accuracy attributes, period labels, both derivations, filing status and the company tables |
-| 268 schema tests in [`properties.yml`](../../transform/models/properties.yml) | Not-null columns, accepted values for every status and code, relationships between models, and keys |
+| 57 SQL data tests in [`transform/tests/`](../../transform/tests/) | Grain and uniqueness of every model, eligibility, absence of ambiguity, lineage back to the active company and accession, issue shape, and reconciliation: every mart row traces to an intermediate row and back |
+| Unit tests in [`transform/models/`](../../transform/models/) | Each rule on small fixed inputs: concept priority, accuracy attributes, period labels, both derivations, filing status, the company tables and the insight tables (110 in all) |
+| 395 schema tests in [`properties.yml`](../../transform/models/properties.yml) | Not-null columns, accepted values for every status and code, relationships between models, and keys |
 | [Offline dbt check](../../scripts/ci/validate_offline_dbt.py) in CI | A synthetic company built from XML through Gold, with exact values, warnings and lineage asserted |
 
-The full cohort build runs 571 dbt nodes, and all pass.
+The full cohort build runs 592 dbt nodes (29 models, one seed, 452 data tests and 110 unit tests), and all pass.
 
 ## Trade-offs and limits
 

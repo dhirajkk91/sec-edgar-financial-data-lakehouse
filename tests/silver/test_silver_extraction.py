@@ -21,7 +21,6 @@ from sec_edgar_lakehouse import (
     SilverInputError,
     extract_filing_facts,
 )
-from sec_edgar_lakehouse.silver.silver_inspect import main as inspect_main
 
 CIK = "0000320193"
 ACCESSION = "0000320193-24-000123"
@@ -1157,27 +1156,6 @@ def test_extraction_is_read_only_and_immutable(
     assert tree_snapshot(tmp_path) == before
     with pytest.raises(FrozenInstanceError):
         result.status = "PARTIAL"  # type: ignore[misc]
-
-
-def test_read_only_inspection_command_prints_compact_sample(
-    tmp_path: Path, capsys: pytest.CaptureFixture[str]
-) -> None:
-    xml = xbrl(
-        instant_context(),
-        usd_unit(),
-        '<us-gaap:Assets contextRef="instant" unitRef="USD">42</us-gaap:Assets>',
-    )
-    directory, manifest = fixture(tmp_path, xml)
-
-    assert inspect_main([str(directory), str(manifest)]) == 0
-
-    output = capsys.readouterr().out
-    assert "Status: COMPLETE" in output
-    assert "Candidates: 1 | accepted: 1 | rejected: 0" in output
-    assert DOCUMENT_NAME in output
-    assert f"{{{US_GAAP}}}Assets = 42" in output
-    assert "period=2024-09-28" in output
-    assert "dimensions=0" in output
 
 
 def tree_snapshot(root: Path) -> dict[str, bytes | None]:

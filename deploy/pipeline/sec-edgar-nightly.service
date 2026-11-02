@@ -1,0 +1,18 @@
+[Unit]
+Description=SEC EDGAR lakehouse: sync the S&P 500 and publish the lake
+Wants=network-online.target docker.service
+After=network-online.target docker.service
+
+[Service]
+Type=oneshot
+# The first run is the five-year backfill and can take most of a night.
+TimeoutStartSec=infinity
+# Shares the VM with other projects: cap the container and run it at low priority.
+Environment=SEC_EDGAR_MEMORY=6g
+Environment=SEC_EDGAR_CPUS=2
+Nice=10
+ExecStart=/usr/bin/docker run --rm --name sec-edgar-nightly \
+    --memory ${SEC_EDGAR_MEMORY} --cpus ${SEC_EDGAR_CPUS} \
+    --env-file /etc/sec-edgar/env \
+    --volume /var/lib/sec-edgar:/data \
+    sec-edgar-pipeline
