@@ -1,14 +1,16 @@
 {
   "database": "sec_edgar_demo.duckdb",
-  "sha256": "6290aca5f1a330ab42ea0559f6dd82a38716ad98aa984afe21fbf8800f535ab8",
+  "sha256": "e03386a190a39fad6cf56edebffed7be0e019cf843a7e20b9f558a23a1494434",
   "size_bytes": 3158016,
-  "exported_at": "2026-10-22T21:08:23+00:00",
+  "exported_at": "2026-10-27T02:35:25+00:00",
   "source_database": "sec_edgar.duckdb",
   "row_counts": {
     "dim_filings": 400,
     "fct_financial_metrics": 4310,
     "metric_quality_issues": 557,
     "dim_companies": 20,
-    "fct_company_financials": 500
+    "fct_company_financials": 500,
+    "company_insights": 20,
+    "company_metric_coverage": 160
   }
 }

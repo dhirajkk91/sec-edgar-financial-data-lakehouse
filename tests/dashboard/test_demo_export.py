@@ -15,6 +15,7 @@ import pytest
 from sec_edgar_lakehouse.dashboard.dashboard_read import (
     _COMPANIES_SCHEMA,
     _COMPANY_FINANCIALS_SCHEMA,
+    _COMPANY_INSIGHTS_SCHEMA,
     load_company_snapshot,
     load_dashboard_snapshot,
 )
@@ -31,6 +32,14 @@ from tests.dashboard.test_dashboard_read import (
     insert_record,
 )
 
+# The coverage table is copied for the EDA notebook; no dashboard reader reads it.
+METRIC_COVERAGE_SCHEMA = (
+    ("cik", "VARCHAR"),
+    ("metric_code", "VARCHAR"),
+    ("periods_expected", "INTEGER"),
+    ("periods_present", "INTEGER"),
+    ("coverage", "DOUBLE"),
+)
 SILVER = "silver/cik=0000000012/accession=0000000012-25-000002/versions/v1"
 
 
@@ -59,6 +68,8 @@ def build_source(tmp_path: Path) -> Path:
         for name, schema in (
             ("dim_companies", _COMPANIES_SCHEMA),
             ("fct_company_financials", _COMPANY_FINANCIALS_SCHEMA),
+            ("company_insights", _COMPANY_INSIGHTS_SCHEMA),
+            ("company_metric_coverage", METRIC_COVERAGE_SCHEMA),
         ):
             fields = ", ".join(f"{column} {kind}" for column, kind in schema)
             connection.execute(f"CREATE TABLE gold.{name} ({fields})")
@@ -77,6 +88,8 @@ def test_export_copies_gold_tables_with_relative_paths(tmp_path: Path) -> None:
         "metric_quality_issues": 1,
         "dim_companies": 0,
         "fct_company_financials": 0,
+        "company_insights": 0,
+        "company_metric_coverage": 0,
     }
     with duckdb.connect(str(destination), read_only=True) as connection:
         tables = connection.execute(

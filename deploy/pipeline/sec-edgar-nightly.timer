@@ -1,0 +1,14 @@
+[Unit]
+Description=Run the SEC EDGAR sync Monday to Friday nights
+
+[Timer]
+# EDGAR accepts filings until 10 p.m. Eastern (9 p.m. Central), so 11:30 p.m.
+# Central catches the day's filings while the SEC's servers are quiet.
+OnCalendar=Mon..Fri *-*-* 23:30:00 America/Chicago
+RandomizedDelaySec=10min
+# Weeknights only: a run missed while the VM was off is not made up on a weekend;
+# the next run picks up everything it missed.
+Persistent=false
+
+[Install]
+WantedBy=timers.target

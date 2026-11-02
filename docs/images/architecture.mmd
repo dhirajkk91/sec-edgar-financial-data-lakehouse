@@ -1,0 +1,39 @@
+%%{init: {"flowchart": {"defaultRenderer": "elk", "curve": "basis"}, "themeVariables": {"fontSize": "15px"}}}%%
+%% Source of architecture.png: mmdc -i architecture.mmd -o architecture.png -w 1800 -b white
+flowchart LR
+    SEC["SEC EDGAR<br/>listings + XBRL"]
+
+    subgraph OCI["Oracle Cloud Always Free VM  ·  Mon–Fri 23:30 CT"]
+        SYNC["sec-edgar sync<br/>S&amp;P 500, new filings"] --> BR["Bronze<br/>XBRL + SHA-256"] --> SI["Silver<br/>every fact"] --> DBT["dbt Gold<br/>DuckDB, 7 tables"] --> PUB["publish-lake"]
+    end
+
+    subgraph AWS["AWS  ·  under $1 a month"]
+        S3B[("S3<br/>Bronze archive")]
+        ICE[("Iceberg on S3<br/>sec_silver, sec_gold<br/>snapshot per night")]
+        SNAP[("S3<br/>Gold snapshot")]
+        GLUE["Glue catalog"]
+        ATH["Athena SQL"]
+    end
+
+    ST["Streamlit<br/>dashboard"]
+    AN["Analysts"]
+
+    SEC --> SYNC
+    PUB --> S3B
+    PUB --> ICE
+    PUB --> SNAP
+    ICE --- GLUE
+    ATH --> GLUE
+    AN --> ATH
+    SNAP --> ST
+
+    classDef sec fill:#f3f4f6,stroke:#6b7280,color:#111827
+    classDef oci fill:#fff7ed,stroke:#c2410c,color:#7c2d12
+    classDef aws fill:#eff6ff,stroke:#1d4ed8,color:#1e3a8a
+    classDef out fill:#f0fdf4,stroke:#15803d,color:#14532d
+    class SEC sec
+    class SYNC,BR,SI,DBT,PUB oci
+    class S3B,ICE,GLUE,ATH,SNAP aws
+    class ST,AN out
+    style OCI fill:#fffbf5,stroke:#c2410c
+    style AWS fill:#f8fbff,stroke:#1d4ed8

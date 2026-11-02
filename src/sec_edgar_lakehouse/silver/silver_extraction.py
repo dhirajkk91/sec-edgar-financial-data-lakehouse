@@ -18,6 +18,7 @@ from typing import Any, NoReturn, cast
 from urllib.parse import unquote
 from xml.parsers import expat
 
+from sec_edgar_lakehouse.bronze.filing_inventory import INSTANCE_DESCRIPTIONS
 from sec_edgar_lakehouse.filing_reference import FilingReference
 from sec_edgar_lakehouse.silver.silver_models import (
     ContextLocation,
@@ -39,9 +40,7 @@ _UNIT_TAG = f"{{{_XBRLI}}}unit"
 _EXPLICIT_MEMBER_TAG = f"{{{_XBRLDI}}}explicitMember"
 _TYPED_MEMBER_TAG = f"{{{_XBRLDI}}}typedMember"
 _NIL_ATTRIBUTE = f"{{{_XSI}}}nil"
-_INSTANCE_DESCRIPTIONS = frozenset(
-    {"extracted xbrl instance document", "xbrl instance document"}
-)
+_INSTANCE_DESCRIPTIONS = INSTANCE_DESCRIPTIONS
 _SHA256_PATTERN = re.compile(r"[0-9a-f]{64}\Z")
 _DATE_PATTERN = re.compile(r"[0-9]{4}-[0-9]{2}-[0-9]{2}\Z")
 _NUMERIC_PATTERN = re.compile(

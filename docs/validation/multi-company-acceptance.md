@@ -2,7 +2,7 @@
 
 **Result: passed.** Three end-to-end runs on real SEC filings: Apple, then Microsoft into the same Bronze and Silver roots and DuckDB database, then the same Microsoft selection again. Every execution stage returned `COMPLETE`. Gold reported six expected derivation warnings, explained below.
 
-This was the first multi-company test of the pipeline, recorded on October 7, 2026 (Central time; saved timestamps are UTC on October 8). The counts below describe the pipeline on that date, before the company tables and concept fallbacks were added; the [20-company cohort](cohort.md) covers the later pipeline.
+This was the first multi-company test of the pipeline, recorded on October 7, 2026 (Central time; saved timestamps are UTC on October 8). The counts below describe the pipeline on that date, before the company tables and concept fallbacks were added; the [20-company cohort](cohort.md) covers the later pipeline. It used the V1 one-company `sec-edgar pipeline` command, which `sec-edgar sync --ciks` has since replaced, and Bronze still kept every listed file.
 
 ## What it was designed to show
 
@@ -113,6 +113,8 @@ The four-row active catalog and both metadata tables also matched. Each summary'
 This covers four filings and one rerun. It doesn't establish full company history, every taxonomy concept, amendment handling or concurrent writers.
 
 ## Reproduce it
+
+These are the commands as they ran on the V1 code (commit `ce0677d`). On the current code, the same two companies run with `sec-edgar sync --universe config/universe-sp500.json --ciks 0000320193 0000789019 --since 2025-01-01 --data-root <new folder>`.
 
 Set your own `SEC_USER_AGENT` and keep database readers closed while each run writes. Use a fresh folder and a new artifact folder for every run, and snapshot the database between runs to repeat the preservation comparison.
 

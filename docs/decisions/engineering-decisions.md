@@ -20,6 +20,10 @@ This file explains the main choices behind the pipeline: what I picked, what I c
 | 14 | [Gold is stored as tables; staging stays as views](#14-gold-is-stored-as-tables-staging-stays-as-views) | Gold |
 | 15 | [Priority picks the concept, never the value](#15-priority-picks-the-concept-never-the-value) | Gold |
 | 16 | [The live demo reads a Gold-only copy, not the pipeline's database](#16-the-live-demo-reads-a-gold-only-copy-not-the-pipelines-database) | Dashboard |
+| 17 | [Bronze archives what Silver reads, not the whole filing](#17-bronze-archives-what-silver-reads-not-the-whole-filing) | Bronze |
+| 18 | [Compute on a free Oracle VM, the lake on AWS](#18-compute-on-a-free-oracle-vm-the-lake-on-aws) | Cloud |
+| 19 | [Iceberg tables written from Python; Gold still built in DuckDB](#19-iceberg-tables-written-from-python-gold-still-built-in-duckdb) | Cloud |
+| 20 | [A nightly per-company check instead of a watermark](#20-a-nightly-per-company-check-instead-of-a-watermark) | Pipeline |
 
 After the decisions come the [bugs that changed the design](#bugs-that-changed-the-design) and [what I would change next](#what-i-would-change-next).
 
@@ -110,7 +114,7 @@ After the decisions come the [bugs that changed the design](#bugs-that-changed-t
 
 **Decision:** Execution status (`COMPLETE` / `PARTIAL` / `FAILED` for a run; `SKIPPED` and `NOT_ATTEMPTED` for individual filings) is tracked separately from each filing's Gold quality status.
 
-**Why:** In the cohort, all 571 dbt nodes pass and there are still 557 metric issue rows. Both are true, and combining them would hide one of them.
+**Why:** In the cohort, all 592 dbt nodes pass and there are still 557 metric issue rows. Both are true, and combining them would hide one of them.
 
 **Trade-off:** Two statuses to explain. The CLI exits with code 2 for `PARTIAL`, so a non-zero exit doesn't mean no data landed.
 
@@ -118,11 +122,11 @@ After the decisions come the [bugs that changed the design](#bugs-that-changed-t
 
 **Context:** My original plan listed AWS services: S3, Glue, Athena, Spark, Iceberg, Airflow and Terraform.
 
-**Decision:** I narrowed the project to local Python, Parquet, DuckDB, dbt and Streamlit, and left the cloud work for later.
+**Decision:** I built the first version on local Python, Parquet, DuckDB, dbt and Streamlit, and left the cloud for when it had a real job. It got one when the dataset grew to the S&P 500 and needed to update itself (decisions 18 and 19). Spark and Airflow still aren't here, because nothing needs them.
 
-**Why:** The cohort is about 10 GB for 400 filings, which DuckDB handles on a laptop. I wanted correctness, reruns and lineage working before adding cloud infrastructure, and I didn't want tools without a real job.
+**Why:** I wanted correctness, reruns and lineage working before adding infrastructure, and I didn't want tools without a real job.
 
-**Trade-off:** No scheduler, no concurrent writers, no hosted pipeline. There's also no transaction across Bronze, Silver, metadata and dbt; each stage keeps its own verified output.
+**Trade-off:** One writer at a time, and no transaction across Bronze, Silver, metadata and dbt; each stage keeps its own verified output. The weeknight job takes a lock so two runs can't overlap.
 
 ### 11. Being a polite SEC client
 
@@ -152,7 +156,7 @@ After the decisions come the [bugs that changed the design](#bugs-that-changed-t
 
 **Decision:** `dim_companies` uses only the SEC submissions response that Bronze already saves for each company run, checked against its SHA-256 before loading. Sector is the SEC's own industry office (`ownerOrg`), industry is the SIC description, and an empty SEC field stays NULL. Each distinct response is kept as a snapshot, and the newest one wins.
 
-`fct_company_financials` only rearranges `fct_financial_metrics` into one row per company and fiscal period, adding free cash flow, margins and growth. It never selects or derives a metric, and a reconciliation test checks every value against its source row. All financial rules stay in one place, and a gap in the wide table is the same gap recorded in `metric_quality_issues`.
+`fct_company_financials` only rearranges `fct_financial_metrics` into one row per company and fiscal period, adding free cash flow, margins and growth. It never selects or derives a metric, and a reconciliation test checks every value against its source row. All financial rules stay in one place, and a gap in the wide table is the same gap recorded in `metric_quality_issues`. The two insight tables, behind the Insights view and the exploratory notebook, follow the same rule: they summarize Gold values and never choose one.
 
 **Alternatives:** A hand-maintained seed file, or GICS sectors from a market-data provider.
 
@@ -187,11 +191,51 @@ After the decisions come the [bugs that changed the design](#bugs-that-changed-t
 
 **Context:** I wanted a link a reviewer can open without installing anything. The cohort database can't simply be uploaded: its Silver views point to absolute Parquet paths on my laptop (decision 6), and `dim_filings` stores those paths as well.
 
-**Decision:** Export only the five Gold tables the dashboard reads into a 3 MB DuckDB file, commit it under `demo/`, and run the unchanged dashboard against it on Streamlit Community Cloud. The export makes paths relative and refuses to publish anything that still looks like a local path or an email address.
+**Decision:** Export only the Gold tables the dashboard reads into a 3 MB DuckDB file, commit it under `demo/`, and run the unchanged dashboard against it on Streamlit Community Cloud. The export makes paths relative and refuses to publish anything that still looks like a local path or an email address.
 
 **Alternatives:** Run the whole pipeline on a cloud server (ongoing cost and an unattended SEC client, all for a read-only page). Make the Silver views relative and upload the Parquet files (far more data than the dashboard reads). Screenshots only (nobody can click through a trace).
 
 **Trade-off:** The demo is a snapshot that I re-export after each Gold rebuild, and it can't show raw Silver facts. The source stays valid from Python 3.12 so the hosted app isn't tied to one Python version, and a CI job checks it on 3.12 with only its pinned packages.
+
+### 17. Bronze archives what Silver reads, not the whole filing
+
+**Context:** The cohort kept every file the SEC listed: the filing HTML, exhibits, images, every linkbase and the complete submission text, about 25 MB a filing and 9.5 GB for 400 filings. At the S&P 500 scale that would be about 240 GB, more than the free tiers hold. I measured where the bytes went: the complete submission text alone was 63%, and it repeats every other file.
+
+**Decision:** Bronze archives the extracted XBRL instance (required), its schema and its calculation linkbase (optional), under a named policy, `xbrl-v1`, recorded in every manifest. Everything else stays listed in the saved index page and `discovery.json`, so it's visible and can be fetched again by URL.
+
+**Alternatives:** Keep everything and pay for it. Keep everything but compress it (the images and HTML don't compress much, and it's still 10× more than anything reads). Drop Bronze and parse straight from the SEC (no evidence to trace back to).
+
+**Trade-off:** About 3.5 MB a filing. Bronze is no longer a full mirror of the filing, so a future feature that needs the HTML text has to fetch it. The cohort's earlier filings keep their full folders, and Silver reads both shapes the same way.
+
+### 18. Compute on a free Oracle VM, the lake on AWS
+
+**Context:** The data had to update itself on weeknights and be queryable by someone who isn't me, and the project has to stay up for years on a student budget: an Oracle Always Free VM that already runs another project, and $200 of AWS credits that expire.
+
+**Decision:** The weeknight job runs in Docker on the Oracle VM under a systemd timer. Its output goes to AWS: S3 for the Bronze archive and the tables, Glue as the catalog, Athena for SQL. Terraform defines the AWS side, including least-privilege keys and a budget alarm that ignores credits.
+
+**Alternatives:** All on AWS with Fargate or Lambda on a schedule (cents a month, but the backfill outlasts Lambda's 15-minute limit, and it's paid compute for something free elsewhere). MWAA for scheduling (hundreds of dollars a month for one job). Everything on the VM with no lake (nothing for anyone else to query, and the data lives or dies with one machine).
+
+**Trade-off:** Two clouds to set up, and the VM uses a long-lived access key instead of an IAM role. In return the bill after the credits is cents a month, uploads into S3 are free, and the lake survives the VM.
+
+### 19. Iceberg tables written from Python; Gold still built in DuckDB
+
+**Context:** A lake of plain Parquet files has no atomic swaps or history, which is why Silver had its own active-pointer files (decision 5). The lake needed a table format. The Gold rules are 592 dbt nodes written and tested in DuckDB SQL.
+
+**Decision:** `publish-lake` writes Iceberg tables with pyiceberg into the Glue catalog. Silver is published per filing: appended when new, deleted and appended in one commit when re-parsed, partitioned by CIK. Gold is still built in DuckDB on the VM, then each table is overwritten in Iceberg, so every night is a snapshot Athena can time-travel to.
+
+**Alternatives:** Port the dbt project to Athena (dbt-athena): Gold would be built where it's queried, but the SQL differs and the offline CI, one of the project's strongest checks, can't call Athena. Spark for the writes (a cluster for a few GB). Delta Lake (Athena reads it, but Glue and Athena are built around Iceberg).
+
+**Trade-off:** Gold exists twice, built locally and published nightly, and pyiceberg can't compact files yet, so compaction is an Athena `OPTIMIZE`. The same publish code runs against a local SQLite catalog, which is how it's tested without AWS.
+
+### 20. A nightly per-company check instead of a watermark
+
+**Context:** The weeknight run has to find new filings for 500 companies. The SEC publishes a daily index of every filing, which would need one request a day, but using it means keeping a watermark and replaying missed days correctly.
+
+**Decision:** Each night the sync reads every company's submissions listing (about 500 paced requests) and compares it with the filings its state marks done. Failed filings simply stay pending.
+
+**Alternatives:** The daily index with a watermark. RSS feeds (no history if the VM is off).
+
+**Trade-off:** About four minutes of requests a night, in exchange for no watermark and no replay logic: a missed night, a VM rebuild or a failed filing all fix themselves on the next run.
 
 ## Bugs that changed the design
 
@@ -212,8 +256,8 @@ After the decisions come the [bugs that changed the design](#bugs-that-changed-t
 
 ## What I would change next
 
-- **Make the fact table incremental**, so a new filing doesn't rebuild every Gold table. At 18 seconds a full rebuild is fine for 400 filings, but not for the whole S&P 500.
-- **Move to cloud storage and a scheduler,** replacing the active pointer with Iceberg and running the cohort on a schedule instead of by hand.
+- **Measure the Gold build at S&P 500 scale,** and make the fact table incremental only if the full rebuild gets too slow for a nightly window. At 18 seconds for 400 filings, a 25× larger build should still fit.
+- **Refresh the catalog once per night** instead of once per company, which matters during the backfill.
 - **Make the database portable** by not storing absolute Parquet paths in the views.
 - **Handle multi-class EPS** (Berkshire, Visa) by choosing a documented share class instead of leaving EPS empty.
 - **Decide an amendment policy:** when a 10-K/A should replace the original in trend analysis.

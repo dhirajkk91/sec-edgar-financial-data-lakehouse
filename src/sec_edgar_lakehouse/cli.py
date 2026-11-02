@@ -25,60 +25,20 @@ class Command:
 
 GROUPS: dict[str, dict[str, Command]] = {
     "Run the pipeline": {
+        "sync": Command(
+            "pipeline.universe_sync",
+            "Process new 10-K/10-Q filings for a universe, then build Gold once.",
+        ),
         "cohort": Command(
             "pipeline.cohort_run",
-            "Plan, execute or resume the fixed issuer cohort.",
-        ),
-        "pipeline": Command(
-            "pipeline.end_to_end_pipeline_run",
-            "Run one company from SEC filings through Gold, with a final summary.",
-        ),
-        "company": Command(
-            "pipeline.company_pipeline_run",
-            "Run one company through Bronze, Silver and the DuckDB catalog.",
-        ),
-    },
-    "Run one stage": {
-        "silver-publish": Command(
-            "silver.silver_publish",
-            "Extract one verified Bronze filing and publish it to Silver.",
-        ),
-        "catalog-refresh": Command(
-            "catalog.silver_catalog_refresh",
-            "Refresh the DuckDB catalog over active Silver filings.",
-        ),
-        "metadata-load": Command(
-            "metadata.filing_metadata_load",
-            "Load filing metadata from a company-run record.",
-        ),
-        "fiscal-load": Command(
-            "metadata.filing_fiscal_metadata_load",
-            "Load fiscal year and period metadata into the catalog.",
-        ),
-        "profiles-load": Command(
-            "metadata.company_profile_load",
-            "Load company profiles from saved company-run records.",
-        ),
-    },
-    "Inspect, read only": {
-        "inspect": Command(
-            "dashboard.dashboard_inspect",
-            "Print a Gold snapshot and a small exact financial sample.",
-        ),
-        "silver-inspect": Command(
-            "silver.silver_inspect",
-            "Extract one Bronze filing in memory and print a few facts.",
-        ),
-        "parquet-inspect": Command(
-            "silver.silver_parquet_inspect",
-            "Summarize one Silver Parquet output folder.",
-        ),
-        "fiscal-inspect": Command(
-            "metadata.filing_fiscal_metadata_inspect",
-            "Print fiscal metadata and its source evidence without saving it.",
+            "Plan, execute or resume the frozen 20-company analysis cohort.",
         ),
     },
     "Share": {
+        "publish-lake": Command(
+            "lake.publish",
+            "Publish Bronze, Silver and Gold to S3 and Iceberg (or a local lake).",
+        ),
         "export-demo": Command(
             "dashboard.demo_export",
             "Copy the Gold tables into the portable demo database.",

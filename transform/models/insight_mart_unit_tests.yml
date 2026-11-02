@@ -1,0 +1,53 @@
+unit_tests:
+  - name: company_metric_coverage_counts_present_values
+    model: company_metric_coverage
+    description: "Each metric is expected once per fiscal period, except Q4 diluted EPS; a NULL is a missing value."
+    given:
+      - input: ref('fct_company_financials')
+        rows:
+          - {cik: "0000000001", fiscal_year: 2025, fiscal_period: "FY", revenue: 400, net_income: 100, diluted_eps: 2, operating_cash_flow: null, capital_expenditures: null, total_assets: 1000, total_liabilities: 600, cash_and_equivalents: 50}
+          - {cik: "0000000001", fiscal_year: 2025, fiscal_period: "Q4", revenue: 100, net_income: null, diluted_eps: null, operating_cash_flow: 30, capital_expenditures: null, total_assets: 1000, total_liabilities: 600, cash_and_equivalents: 50}
+    expect:
+      rows:
+        - {cik: "0000000001", metric_code: "revenue", periods_expected: 2, periods_present: 2, coverage: 1.0}
+        - {cik: "0000000001", metric_code: "net_income", periods_expected: 2, periods_present: 1, coverage: 0.5}
+        - {cik: "0000000001", metric_code: "diluted_eps", periods_expected: 1, periods_present: 1, coverage: 1.0}
+        - {cik: "0000000001", metric_code: "operating_cash_flow", periods_expected: 2, periods_present: 1, coverage: 0.5}
+        - {cik: "0000000001", metric_code: "capital_expenditures", periods_expected: 2, periods_present: 0, coverage: 0.0}
+        - {cik: "0000000001", metric_code: "total_assets", periods_expected: 2, periods_present: 2, coverage: 1.0}
+        - {cik: "0000000001", metric_code: "total_liabilities", periods_expected: 2, periods_present: 2, coverage: 1.0}
+        - {cik: "0000000001", metric_code: "cash_and_equivalents", periods_expected: 2, periods_present: 2, coverage: 1.0}
+
+  - name: company_insights_growth_profit_and_cash
+    model: company_insights
+    description: "Growth compounds between the first and latest years with revenue; conversion needs positive net income; one year of revenue gives no growth rate; a company without revenue keeps NULLs and zero counts."
+    given:
+      - input: ref('dim_companies')
+        rows:
+          - {cik: "0000000001"}
+          - {cik: "0000000002"}
+          - {cik: "0000000003"}
+      - input: ref('fct_company_financials')
+        rows:
+          # Revenue quadruples over two years: 100% a year. Net income 100, FCF 150.
+          - {cik: "0000000001", fiscal_year: 2023, fiscal_period: "FY", revenue: 100, net_income: 10, free_cash_flow: 5, net_margin: 0.1, free_cash_flow_margin: 0.05}
+          - {cik: "0000000001", fiscal_year: 2024, fiscal_period: "FY", revenue: 200, net_income: 40, free_cash_flow: 50, net_margin: 0.2, free_cash_flow_margin: 0.25}
+          - {cik: "0000000001", fiscal_year: 2025, fiscal_period: "FY", revenue: 400, net_income: 100, free_cash_flow: 150, net_margin: 0.25, free_cash_flow_margin: 0.375}
+          - {cik: "0000000001", fiscal_year: 2025, fiscal_period: "Q4", revenue: 120, net_income: 30, free_cash_flow: 40}
+          # One year only, and a loss: no growth rate and no conversion.
+          - {cik: "0000000002", fiscal_year: 2025, fiscal_period: "FY", revenue: 50, net_income: -5, free_cash_flow: 10, net_margin: -0.1, free_cash_flow_margin: 0.2}
+      - input: ref('company_metric_coverage')
+        rows:
+          - {cik: "0000000001", metric_code: "revenue", periods_expected: 4, periods_present: 4}
+          - {cik: "0000000001", metric_code: "diluted_eps", periods_expected: 4, periods_present: 2}
+          - {cik: "0000000002", metric_code: "revenue", periods_expected: 1, periods_present: 1}
+      - input: ref('metric_quality_issues')
+        rows:
+          - {cik: "0000000001", severity: "ERROR"}
+          - {cik: "0000000001", severity: "WARNING"}
+          - {cik: "0000000001", severity: "WARNING"}
+    expect:
+      rows:
+        - {cik: "0000000001", first_fiscal_year: 2023, latest_fiscal_year: 2025, first_revenue: 100, latest_revenue: 400, revenue_cagr: 1.0, latest_net_income: 100, latest_free_cash_flow: 150, latest_net_margin: 0.25, latest_free_cash_flow_margin: 0.375, cash_conversion: 1.5, metric_values_present: 6, metric_values_expected: 8, metric_coverage: 0.75, error_issue_count: 1, warning_issue_count: 2}
+        - {cik: "0000000002", first_fiscal_year: 2025, latest_fiscal_year: 2025, first_revenue: 50, latest_revenue: 50, revenue_cagr: null, latest_net_income: -5, latest_free_cash_flow: 10, latest_net_margin: -0.1, latest_free_cash_flow_margin: 0.2, cash_conversion: null, metric_values_present: 1, metric_values_expected: 1, metric_coverage: 1.0, error_issue_count: 0, warning_issue_count: 0}
+        - {cik: "0000000003", first_fiscal_year: null, latest_fiscal_year: null, first_revenue: null, latest_revenue: null, revenue_cagr: null, latest_net_income: null, latest_free_cash_flow: null, latest_net_margin: null, latest_free_cash_flow_margin: null, cash_conversion: null, metric_values_present: 0, metric_values_expected: 0, metric_coverage: null, error_issue_count: 0, warning_issue_count: 0}

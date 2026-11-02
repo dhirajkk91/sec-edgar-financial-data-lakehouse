@@ -87,6 +87,7 @@ def main() -> None:
         if module.name in {
             "sec_edgar_lakehouse.dashboard.dashboard_app",
             "sec_edgar_lakehouse.dashboard.company_page",
+            "sec_edgar_lakehouse.dashboard.insights_page",
         }:
             continue
         value = importlib.import_module(module.name)
@@ -100,16 +101,10 @@ def main() -> None:
         Path(sys.prefix).resolve()
     ) and not package_path.is_relative_to(checkout)
     cli_modules = (
-        "catalog.silver_catalog_refresh",
-        "dashboard.dashboard_inspect",
-        "metadata.filing_metadata_load",
-        "metadata.filing_fiscal_metadata_load",
-        "metadata.filing_fiscal_metadata_inspect",
-        "silver.silver_inspect",
-        "silver.silver_parquet_inspect",
-        "silver.silver_publish",
-        "pipeline.company_pipeline_run",
-        "pipeline.end_to_end_pipeline_run",
+        "pipeline.universe_sync",
+        "pipeline.cohort_run",
+        "lake.publish",
+        "dashboard.demo_export",
     )
     with (work_dir / "cli-help.log").open("w", encoding="utf-8") as log:
         for module in cli_modules:
@@ -185,35 +180,8 @@ def main() -> None:
         and timestamp.tzinfo is not None
         and timestamp.utcoffset() is not None
     )
-    with (
-        (work_dir / "inspector.stdout.log").open("w", encoding="utf-8") as stdout,
-        (work_dir / "inspector.stderr.log").open("w", encoding="utf-8") as stderr,
-    ):
-        subprocess.run(
-            [
-                sys.executable,
-                "-I",
-                "-m",
-                "sec_edgar_lakehouse.dashboard.dashboard_inspect",
-                "--database",
-                str(database),
-                "--cik",
-                "0000000042",
-            ],
-            stdout=stdout,
-            stderr=stderr,
-            timeout=30,
-            check=True,
-        )
-    output = (work_dir / "inspector.stdout.log").read_text()
-    assert (
-        "Filings: 1" in output
-        and "Financial metrics: 9" in output
-        and "Quality issues: 3" in output
-    )
-    assert "1.230000000000000001" in output
     after = hashlib.sha256(database.read_bytes()).hexdigest()
-    assert before == after, "Read-only reader/inspector changed the database"
+    assert before == after, "The read-only reader changed the database"
     summary = {
         "status": "COMPLETE",
         "synthetic": True,

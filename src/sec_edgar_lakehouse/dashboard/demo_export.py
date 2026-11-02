@@ -1,8 +1,8 @@
 """Build a small, portable demo database for the hosted dashboard.
 
-The dashboard reads only five Gold tables. This copies exactly those tables from
-a built database into a new DuckDB file. Silver views are not copied, so the
-file works on any machine. Absolute local paths are rewritten to paths relative
+The dashboard and the exploratory notebook read seven Gold tables. This copies
+exactly those tables from a built database into a new DuckDB file. Silver views
+are not copied, so the file works on any machine. Absolute local paths are rewritten to paths relative
 to the data root, and the export refuses to finish if any absolute path is left.
 """
 
@@ -23,6 +23,7 @@ from sec_edgar_lakehouse.dashboard.dashboard_read import (
     DashboardReadError,
     load_company_snapshot,
     load_dashboard_snapshot,
+    load_insights_snapshot,
 )
 
 DEMO_TABLES = (
@@ -31,6 +32,8 @@ DEMO_TABLES = (
     "metric_quality_issues",
     "dim_companies",
     "fct_company_financials",
+    "company_insights",
+    "company_metric_coverage",
 )
 # Silver publication paths: keep the part from the layer folder onward.
 PATH_COLUMNS = {"dim_filings": ("version_path", "publication_path")}
@@ -146,10 +149,10 @@ def _check_published_text(
 def export_demo_database(
     *, source: Path, destination: Path, replace: bool = False
 ) -> DemoExportResult:
-    """Copy the five Gold tables into a new portable DuckDB file.
+    """Copy the seven Gold tables into a new portable DuckDB file.
 
     The file is built beside the destination and only moved into place after
-    the path check passes and both dashboard readers can read it. The source
+    the path check passes and every dashboard reader can read it. The source
     database is opened read-only. A JSON manifest with the checksum and row
     counts is written next to the database.
     """
@@ -188,9 +191,10 @@ def export_demo_database(
                         raise DemoExportError(f"Row count changed for gold.{table}")
                     counts[table] = int(copied[0])
             connection.execute("CHECKPOINT")
-        # Both readers must accept the file exactly as the hosted app will open it.
+        # Every reader must accept the file exactly as the hosted app will open it.
         load_dashboard_snapshot(database_path=partial)
         load_company_snapshot(database_path=partial)
+        load_insights_snapshot(database_path=partial)
         os.replace(partial, destination)
     except (duckdb.Error, DashboardReadError, OSError, DemoExportError) as exc:
         # A failed cleanup must not hide the error that stopped the export.

@@ -21,3 +21,9 @@ dist/
 /transform/logs/
 /transform/dbt_packages/
 /transform/.user.yml
+
+# Terraform state holds the generated access keys; never commit it
+infra/aws/.terraform/
+infra/aws/*.tfstate
+infra/aws/*.tfstate.*
+infra/aws/terraform.tfvars

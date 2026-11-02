@@ -2,15 +2,16 @@
 
 ## Purpose
 
-Bronze downloads a filing's source files from SEC EDGAR and keeps them exactly as received, together with the evidence of how they were obtained. Nothing here interprets a financial value. Silver reads only what Bronze has verified and published, so every later number can be traced back to these bytes.
+Bronze downloads the files Silver reads from SEC EDGAR and keeps them exactly as received, together with the evidence of how they were obtained. Nothing here interprets a financial value. Silver reads only what Bronze has verified and published, so every later number can be traced back to these bytes.
 
-In the [20-company cohort](../validation/cohort.md), Bronze published 400 filings, each with a verified manifest.
+In the [20-company cohort](../validation/cohort.md), Bronze published 400 filings, each with a verified manifest. That run kept every listed file, about 25 MB a filing. Bronze now archives only the XBRL files (about 3.5 MB a filing), which is what makes the S&P 500 fit in free storage ([decision 17](../decisions/engineering-decisions.md#17-bronze-archives-what-silver-reads-not-the-whole-filing)).
 
 ## Goals and non-goals
 
 Goals:
 
-- Keep the original bytes of every required file, with size and SHA-256 recorded and rechecked after writing.
+- Keep the original bytes of every archived file, with size and SHA-256 recorded and rechecked after writing.
+- Record every file the SEC lists, including the ones not archived, so the gap is visible and each can be fetched again by URL.
 - Never expose a half-downloaded or unverified filing as published.
 - Never overwrite a published filing; reuse it only after verifying it again.
 - Be a polite SEC client: identified, paced, and quick to stop when the SEC says so.
@@ -29,7 +30,7 @@ A filing is identified by the issuer's CIK, normalized to 10 digits, and its acc
 
 ```mermaid
 flowchart TD
-    A["Filing index page"] --> B["Inventory<br/>submitted documents, submission .txt, XBRL data files"]
+    A["Filing index page"] --> B["Inventory<br/>XBRL instance (required), schema and<br/>calculation linkbase (optional)"]
     A --> E["Keep the exact index response<br/>+ discovery.json"]
     B --> C["Download each file"]
     C --> D{"Response valid?<br/>host, status, no redirect,<br/>not a block page, structure"}
@@ -44,7 +45,7 @@ flowchart TD
 ```
 
 1. **Discover.** The ingester reads the filing's SEC index page once and saves that exact response with `discovery.json`. The file inventory and the saved evidence come from the same response; fetching the index again could give a list that doesn't match the saved bytes. File names come from the SEC inventory and are checked as safe local names. A missing primary document is never guessed.
-2. **Download and validate.** Each file must come from the expected filing on an allowed SEC host, without a redirect, and be non-empty. Validation then depends on the file type: XML must be well formed, the primary HTML needs document markup, and the complete submission text needs SEC submission markers. A checksum alone can't tell an SEC error page from the real document, so content is checked too.
+2. **Download and validate.** Each file must come from the expected filing on an allowed SEC host, without a redirect, and be non-empty. Every archived file is XML, so it must be well formed and must not be an SEC block page. A checksum alone can't tell an SEC error page from the real document, so content is checked too.
 3. **Stage and verify.** Bytes are written to a staging folder on the same filesystem as the destination, then reopened and checked for size and SHA-256. A response that validated in memory hasn't proven what landed on disk. `Content-Length` is compared only when it describes the bytes the client exposes, since compressed transfers report a different length.
 4. **Publish.** A verified staging folder is moved into place with one rename, so readers see either the whole filing or nothing. A failure leaves the staging folder and a failed manifest for diagnosis and publishes nothing.
 
@@ -52,15 +53,23 @@ flowchart TD
 
 ```text
 <bronze root>/cik=<CIK>/accession=<accession>/
-├── submitted/                 documents the company filed
-├── submission-package/        the complete submission .txt
-├── sec-derived/               SEC data files, including the XBRL instance
+├── sec-derived/               the XBRL instance, schema and calculation linkbase
 ├── metadata/filing-index.html the exact index response
-├── metadata/discovery.json
+├── metadata/discovery.json    archived inventory, plus every listed file not archived
 └── manifests/run_id=<run-id>.json
 ```
 
-The manifest lists every expected file with its outcome, byte count, SHA-256, number of attempts and whether it was required. Separating required from optional files keeps a missing supporting file from looking like an incomplete source archive.
+What Bronze archives is a named policy, `xbrl-v1`, recorded in every manifest and `discovery.json`:
+
+| Listed file | Archived | Why |
+| --- | --- | --- |
+| Extracted XBRL instance | Required | Silver's only input |
+| XBRL schema (`EX-101.SCH`), calculation linkbase (`EX-101.CAL`) | Optional | Small; they define company-specific concepts and how totals add up |
+| Filing HTML, exhibits, images, label/presentation/definition linkbases, complete submission `.txt` | No | Nothing reads them; together they were 86% of the bytes. Their names stay in `discovery.json` |
+
+Filings in the 20-company cohort were archived before this policy and keep their full folders (`submitted/`, `submission-package/`); Silver reads them the same way.
+
+The manifest lists every archived file with its outcome, byte count, SHA-256, number of attempts and whether it was required. Separating required from optional files keeps a missing supporting file from looking like an incomplete source archive.
 
 Two readiness checks answer different questions:
 
@@ -69,8 +78,8 @@ Two readiness checks answer different questions:
 
 | Status | Meaning |
 | --- | --- |
-| `COMPLETE` | Every required and optional file verified and published |
-| `PARTIAL` | Required files verified and published; at least one optional data file failed |
+| `COMPLETE` | Every archived file verified and published |
+| `PARTIAL` | The instance verified and published; the schema or calculation linkbase failed |
 | `FAILED` | A required file failed verification or publication; nothing was published |
 
 ## Talking to the SEC
@@ -95,11 +104,11 @@ flowchart LR
 - **Bounded retries.** Connect and read timeouts are 10 and 30 seconds. Network errors, timeouts, 429 and selected 5xx responses get at most three attempts. Other HTTP errors and invalid content are recorded, not retried, because asking again won't change them.
 - **Stops on a block.** A 403, a recognised SEC block page (including the rate-limit page the SEC sometimes returns with status 200; with a 429, its `Retry-After` is honoured first), or a `Retry-After` over 60 seconds stops every remaining request in the run, even for optional files. Continuing after a block would make it worse. Redirects are never followed.
 
-The cohort runs companies one at a time and waits between them. It adds no outer retry loop around this one.
+The sync and the cohort run companies one at a time and wait between them. Neither adds an outer retry loop around this one; the sync simply tries a failed filing again the next weeknight.
 
 ## Finding older filings
 
-Company discovery normally reads `filings.recent` from the SEC submissions response. Five years of 10-Qs can go past that window for frequent filers, so the cohort planner also follows the older files listed in `filings.files` when needed. Before using a row from an older file, it checks the parallel arrays, row count, accession identity, dates and document path. An identical overlap uses the recent copy; a conflicting overlap stops discovery. The older files carry no top-level CIK, so they are tied to the company by their CIK-specific file name in the verified main response and its SEC URL. Each listing's bytes, URL, retrieval time, size and checksum are saved under `history/` next to `submissions.json`.
+Company discovery normally reads `filings.recent` from the SEC submissions response. Five years of 10-Qs can go past that window for frequent filers, so the cohort planner, and the sync on a company's first run, also follow the older files listed in `filings.files`. Before using a row from an older file, it checks the parallel arrays, row count, accession identity, dates and document path. An identical overlap uses the recent copy; a conflicting overlap stops discovery. The older files carry no top-level CIK, so they are tied to the company by their CIK-specific file name in the verified main response and its SEC URL. Each listing's bytes, URL, retrieval time, size and checksum are saved under `history/` next to `submissions.json`.
 
 The SEC's declared `filingFrom` and `filingTo` range is checked too. Some live files contain rows just outside it; the planner records the disagreement and flags any selected filing it affects, without shifting dates or swapping filings. One JPMorgan filing in the cohort was flagged this way, and two more because they sat in different history files at planning and at processing time. All three were ingested correctly; only their source trace is flagged.
 
@@ -118,10 +127,10 @@ One real case shaped these checks: Palantir's FY2021 Q1 filing labelled its XBRL
 | --- | --- |
 | Submissions listing and filing selection | [`company_filings.py`](../../src/sec_edgar_lakehouse/bronze/company_filings.py) |
 | Filing index | [`filing_discovery.py`](../../src/sec_edgar_lakehouse/bronze/filing_discovery.py) |
-| File classification | [`filing_inventory.py`](../../src/sec_edgar_lakehouse/bronze/filing_inventory.py) |
+| What gets archived | [`filing_inventory.py`](../../src/sec_edgar_lakehouse/bronze/filing_inventory.py) |
 | Pacing, retries and stop conditions | [`filing_request.py`](../../src/sec_edgar_lakehouse/bronze/filing_request.py) |
 | Response validation | [`filing_download.py`](../../src/sec_edgar_lakehouse/bronze/filing_download.py) |
 | Staging, verification and publication | [`filing_publication.py`](../../src/sec_edgar_lakehouse/bronze/filing_publication.py), [`filing_storage.py`](../../src/sec_edgar_lakehouse/bronze/filing_storage.py) |
 | One filing end to end | [`filing_ingestion.py`](../../src/sec_edgar_lakehouse/bronze/filing_ingestion.py) |
 
-The [Bronze tests](../../tests/bronze/) cover the request policy, index inventory, invalid content, optional-file failures and safe reuse, all without network access. The [Apple and Microsoft run](../validation/multi-company-acceptance.md) ingested four real filings into a shared root, and a Microsoft rerun reused the published files without changing them. [CI](../validation/ci.md) runs the same path with synthetic filings.
+The [Bronze tests](../../tests/bronze/) cover the archive policy, the request policy, invalid content, optional-file failures and never replacing a published filing, all without network access. The [cohort run](../validation/cohort.md) ingested 400 real filings and safely reused 59 already published. [CI](../validation/ci.md) runs the same path with synthetic filings.

@@ -8,7 +8,6 @@ Having complete source files and having usable XBRL are separate results.
 import hashlib
 import json
 import os
-import re
 import tempfile
 import xml.etree.ElementTree as ET
 from collections.abc import Mapping
@@ -21,9 +20,12 @@ from uuid import uuid4
 from sec_edgar_lakehouse.bronze.filing_discovery import FilingDiscovery
 from sec_edgar_lakehouse.bronze.filing_download import DownloadedFile
 from sec_edgar_lakehouse.bronze.filing_inventory import (
+    ARCHIVE_POLICY,
     ArtifactSection,
     FilingInventory,
     InventoryEntry,
+    archived_data_files,
+    is_instance,
 )
 from sec_edgar_lakehouse.bronze.filing_request import (
     sec_access_block_reason as _sec_access_block_reason,
@@ -34,15 +36,7 @@ from sec_edgar_lakehouse.bronze.filing_storage import (
     store_downloaded_file,
 )
 
-_SECTION_DIRECTORIES = {
-    ArtifactSection.SUBMITTED: "submitted",
-    ArtifactSection.SUBMISSION_PACKAGE: "submission-package",
-    ArtifactSection.DATA_FILE: "sec-derived",
-}
-_PRIMARY_DOCUMENT_TYPES = frozenset({"10-K", "10-Q", "10-K/A", "10-Q/A"})
-_INSTANCE_DESCRIPTIONS = frozenset(
-    {"extracted xbrl instance document", "xbrl instance document"}
-)
+_SECTION_DIRECTORIES = {ArtifactSection.DATA_FILE: "sec-derived"}
 
 
 class PublicationError(Exception):
@@ -97,7 +91,6 @@ def publish_filing(
         raise PublicationError(
             "Network attempts must identify requested inventory files"
         )
-    primary_name = _primary_document_name(discovery)
     failed_files = {} if failed_files is None else failed_files
     reference = inventory.reference
     bronze_directory = bronze_directory.resolve()
@@ -207,7 +200,7 @@ def publish_filing(
             content = _verify_staged_file(staged_file)
             if record["section"] != "metadata":
                 entry = inventory_entries[(record["section"], record["document_name"])]
-                _validate_staged_content(entry, content, primary_name)
+                _validate_staged_content(entry, content)
         except (OSError, ValueError) as exc:
             record["status"] = "FAILED"
             record["error"] = str(exc)
@@ -329,20 +322,6 @@ def _validate_inputs(
     """Require a usable source inventory and reject bytes or failures for unknown files."""
     if not isinstance(inventory, FilingInventory):
         raise PublicationError("Inventory must be a FilingInventory")
-    if not any(
-        entry.section is ArtifactSection.SUBMITTED and entry.required_for_source
-        for entry in inventory.entries
-    ):
-        raise PublicationError("Inventory needs at least one required submitted file")
-    required_packages = sum(
-        entry.section is ArtifactSection.SUBMISSION_PACKAGE
-        and entry.required_for_source
-        for entry in inventory.entries
-    )
-    if required_packages != 1:
-        raise PublicationError(
-            "Inventory needs exactly one required submission package"
-        )
     if not isinstance(discovery, FilingDiscovery):
         raise PublicationError("Discovery evidence must be a FilingDiscovery")
     if not isinstance(bronze_directory, Path):
@@ -375,35 +354,40 @@ def _discovery_json(inventory: FilingInventory, discovery: FilingDiscovery) -> b
 
     discovered = [
         (
-            ArtifactSection.SUBMITTED,
-            document.document_name,
-            document.description,
-            document.sequence,
-            document.document_type,
-            True,
-        )
-        for document in discovery.submitted_documents
-    ]
-    discovered.append(
-        (
-            ArtifactSection.SUBMISSION_PACKAGE,
-            discovery.complete_submission.document_name,
-            None,
-            None,
-            None,
-            True,
-        )
-    )
-    discovered.extend(
-        (
             ArtifactSection.DATA_FILE,
             document.document_name,
             document.description,
             document.sequence,
             document.document_type,
-            False,
+            required,
         )
-        for document in discovery.data_files
+        for document, required in archived_data_files(discovery)
+    ]
+    archived = {name for _, name, *_ in discovered}
+    # The index lists more than Bronze keeps; record those names so the gap is visible.
+    not_archived = [
+        {
+            "section": "submitted",
+            "document_name": d.document_name,
+            "document_type": d.document_type,
+        }
+        for d in discovery.submitted_documents
+    ]
+    not_archived.append(
+        {
+            "section": "submission-package",
+            "document_name": discovery.complete_submission.document_name,
+            "document_type": None,
+        }
+    )
+    not_archived.extend(
+        {
+            "section": "data-file",
+            "document_name": d.document_name,
+            "document_type": d.document_type,
+        }
+        for d in discovery.data_files
+        if d.document_name not in archived
     )
     if len(discovered) != len(inventory.entries):
         raise ValueError("Discovery and inventory entries do not match")
@@ -436,7 +420,9 @@ def _discovery_json(inventory: FilingInventory, discovery: FilingDiscovery) -> b
         "accession_number": inventory.reference.accession_number,
         "index_url": discovery.index_url,
         "retrieved_at": discovery.retrieved_at.isoformat(),
+        "archive_policy": ARCHIVE_POLICY,
         "inventory": normalized,
+        "not_archived": not_archived,
     }
     return (json.dumps(record, indent=2, ensure_ascii=False) + "\n").encode("utf-8")
 
@@ -453,49 +439,15 @@ def _verify_staged_file(stored: StoredFile) -> bytes:
     return content
 
 
-def _validate_staged_content(
-    entry: InventoryEntry, content: bytes, primary_name: str | None
-) -> None:
-    """Check the document format and look for SEC block pages before publishing."""
+def _validate_staged_content(entry: InventoryEntry, content: bytes) -> None:
+    """Reject SEC block pages and malformed XML before publishing."""
     if block_reason := _sec_access_block_reason(content):
         raise ValueError(block_reason)
-    lower_name = entry.document_name.lower()
-    if entry.section is ArtifactSection.SUBMISSION_PACKAGE:
-        upper = content.upper()
-        if b"<SEC-DOCUMENT" not in upper or not (
-            b"<SEC-HEADER" in upper or b"<DOCUMENT>" in upper
-        ):
-            raise ValueError("Complete submission is missing SEC submission markers")
-    elif lower_name.endswith((".xml", ".xsd")):
+    if entry.document_name.lower().endswith((".xml", ".xsd")):
         try:
             ET.fromstring(content)
         except ET.ParseError as exc:
             raise ValueError(f"Malformed XML: {exc}") from exc
-    elif (
-        entry.section is ArtifactSection.SUBMITTED
-        and entry.document_name == primary_name
-        and re.search(
-            rb"<!doctype\s+html\b|<html(?:\s|>)|<ix:html(?:\s|>)",
-            content[:8192],
-            re.IGNORECASE,
-        )
-        is None
-    ):
-        raise ValueError("Primary filing HTML lacks recognizable document markup")
-
-
-def _primary_document_name(discovery: FilingDiscovery) -> str | None:
-    """Find the filing document by its form type; table position is not reliable."""
-    matches = [
-        document.document_name
-        for document in discovery.submitted_documents
-        if (document.document_type or "").strip().upper() in _PRIMARY_DOCUMENT_TYPES
-    ]
-    if len(matches) > 1:
-        raise PublicationError(
-            f"Multiple primary 10-K/10-Q submitted documents were listed: {matches!r}"
-        )
-    return matches[0] if matches else None
 
 
 def _parser_readiness(
@@ -503,10 +455,7 @@ def _parser_readiness(
 ) -> tuple[bool, str | None]:
     """Check for one listed, verified XBRL instance that Silver can read."""
     candidates = [
-        file.document_name
-        for file in discovery.data_files
-        if (file.description or "").strip().casefold() in _INSTANCE_DESCRIPTIONS
-        and file.document_name.lower().endswith(".xml")
+        file.document_name for file in discovery.data_files if is_instance(file)
     ]
     if not candidates:
         return False, "No XBRL instance document XML file was listed"
@@ -617,6 +566,7 @@ def _manifest(
     """Keep source completeness, parser readiness and execution status as separate fields."""
     manifest: dict[str, Any] = {
         "run_id": run_id,
+        "archive_policy": ARCHIVE_POLICY,
         "status": status,
         "source_complete": source_complete,
         "parser_ready": parser_ready,

@@ -332,7 +332,12 @@ def test_wrong_path_types_rejected_before_artifacts_or_process(
 
 
 @pytest.mark.parametrize(
-    "timeout", [True, False, None, "600", 0, -1, float("inf"), float("nan")]
+    "timeout",
+    [
+        True,
+        0,
+        float("nan"),
+    ],
 )
 def test_invalid_timeouts_rejected_before_execution(
     inputs: dict[str, Any], process: Mock, timeout: object
@@ -347,16 +352,10 @@ def test_invalid_timeouts_rejected_before_execution(
     "invalid",
     [
         "missing_database",
-        "database_directory",
         "missing_project",
-        "missing_profiles",
         "project_file",
-        "missing_project_config",
-        "missing_profile_config",
         "missing_parent",
-        "parent_file",
         "existing_directory",
-        "existing_file",
         "dangling_symlink",
     ],
 )

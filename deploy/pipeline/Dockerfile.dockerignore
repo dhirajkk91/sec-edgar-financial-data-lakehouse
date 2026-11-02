@@ -1,0 +1,17 @@
+# Build context for the pipeline image; the dashboard image has its own list.
+.git
+.github
+.venv
+data
+dist
+demo
+docs
+notebooks
+tests
+infra
+**/__pycache__
+.pytest_cache
+.mypy_cache
+.ruff_cache
+transform/target
+transform/logs

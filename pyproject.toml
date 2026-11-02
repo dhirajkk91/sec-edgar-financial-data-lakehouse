@@ -23,7 +23,16 @@ sec-edgar = "sec_edgar_lakehouse.cli:main"
 module-name = "sec_edgar_lakehouse"
 
 [dependency-groups]
+analysis = [
+    "ipykernel>=7",
+    "matplotlib>=3.10",
+    "nbclient>=0.10",
+    "nbformat>=5.10",
+    "pandas>=2.3",
+]
+
 dashboard = [
+    "boto3>=1.40",
     "streamlit>=1.65,<2",
 ]
 
@@ -36,6 +45,10 @@ dev = [
 dbt = [
     "dbt-core>=1.12.5,<1.13",
     "dbt-duckdb>=1.11,<1.12",
+]
+lake = [
+    "boto3>=1.40",
+    "pyiceberg[glue,pyarrow,sql-sqlite]>=0.10",
 ]
 
 [tool.ruff]

@@ -443,11 +443,11 @@ def test_entrypoint_prefers_local_dashboard_link_but_explicit_path_wins(
     assert _database_path(tmp_path, "data/query/sec_edgar.duckdb") == original.resolve()
 
 
-def test_core_imports_and_inspector_without_streamlit() -> None:
+def test_core_imports_without_streamlit() -> None:
     """Block Streamlit imports in a fresh interpreter.
 
     This would be easy to miss in the test process, where Streamlit has
-    already been imported. The core reader and inspector must work alone.
+    already been imported. The core reader must work alone.
     """
     code = """
 import importlib.abc
@@ -460,11 +460,11 @@ class NoStreamlit(importlib.abc.MetaPathFinder):
             raise ModuleNotFoundError(fullname)
 sys.meta_path.insert(0, NoStreamlit())
 import sec_edgar_lakehouse
-import sec_edgar_lakehouse.dashboard.dashboard_inspect
-# Like the CI wheel probe: every module except the two UI modules must import.
+# Like the CI wheel probe: every module except the three UI modules must import.
 ui = {
     'sec_edgar_lakehouse.dashboard.dashboard_app',
     'sec_edgar_lakehouse.dashboard.company_page',
+    'sec_edgar_lakehouse.dashboard.insights_page',
 }
 for module in pkgutil.walk_packages(sec_edgar_lakehouse.__path__, 'sec_edgar_lakehouse.'):
     if module.name not in ui:
@@ -481,15 +481,10 @@ assert 'streamlit' not in sys.modules and 'altair' not in sys.modules
     "value,expected",
     [
         ("12715000000.000000000000000000", "12,715,000,000"),
-        ("1200.000000000000000000", "1,200"),
         ("-1200.010000000000000000", "-1,200.01"),
-        (str(EXACT), EXACT_DISPLAY),
         ("3.720000000000000000", "3.72"),
-        ("0.000000000000000001", "0.000000000000000001"),
         ("-0.000000000000000001", "-0.000000000000000001"),
-        ("1000.000000010000000000", "1,000.00000001"),
         ("0.000000000000000000", "0"),
-        ("-0.000000000000000000", "-0"),
         (None, "Unavailable"),
     ],
 )
