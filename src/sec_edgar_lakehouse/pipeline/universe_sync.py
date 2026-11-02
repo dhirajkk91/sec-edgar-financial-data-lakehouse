@@ -10,7 +10,10 @@ when something new landed. The first run for a company also reads the SEC's olde
 listing files (the backfill); later runs read just the recent listing.
 
 State is saved after every company, so an interrupted run picks up where it
-stopped and a failed filing is simply tried again the next night. A SEC block
+stopped and a failed filing is simply tried again the next night. With
+``--publish-every N`` and a lake, Gold is rebuilt and published after every N
+companies that got new filings, so a long backfill shows up in the lake and on
+the dashboard batch by batch instead of only at the end. A SEC block
 page or long Retry-After stops the whole run. Each run writes a summary to
 ``<data-root>/sync-runs/``. Exit code 0 means every filing is done, 2 means some
 failed or Gold didn't build, 1 means the run couldn't start.
@@ -267,6 +270,32 @@ def sync_company(
     return result
 
 
+def _checkpoint(
+    root: Path,
+    builder: Callable[..., dict[str, Any]],
+    publisher: Callable[[], dict[str, Any]],
+    dbt_timeout: float,
+    user_agent: str,
+) -> dict[str, Any]:
+    """Build Gold, then publish it if the build succeeded. Never raises."""
+    result: dict[str, Any] = {"gold_status": "FAILED", "publish_status": "SKIPPED"}
+    try:
+        gold = builder(root, timeout_seconds=dbt_timeout)
+        result["gold_status"] = gold["status"]
+    except (DbtBuildError, OSError, ValueError) as exc:
+        result["error"] = _safe_error(str(exc), user_agent)
+        return result
+    if gold["status"] != "COMPLETE":
+        return result
+    try:
+        publisher()
+        result["publish_status"] = "COMPLETE"
+    except Exception as exc:  # noqa: BLE001  # A failed publish must not stop the sync.
+        result["publish_status"] = "FAILED"
+        result["error"] = _safe_error(str(exc), user_agent)
+    return result
+
+
 def run_sync(
     issuers: Sequence[Issuer],
     *,
@@ -278,8 +307,15 @@ def run_sync(
     dbt_timeout: float = 3600.0,
     client_factory: Callable[[], httpx.Client] = httpx.Client,
     builder: Callable[..., dict[str, Any]] = build_gold,
+    publish_every: int = 0,
+    publisher: Callable[[], dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
-    """Sync every issuer in order, saving state after each one, then build Gold."""
+    """Sync every issuer in order, saving state after each one, then build Gold.
+
+    With ``publish_every`` and a ``publisher``, Gold is also built and published
+    after every that many companies with new filings. A failed checkpoint is
+    recorded and the run goes on; the final build and publish still happen.
+    """
     started = datetime.now(UTC)
     state = _read_state(root)
     companies: dict[str, Any] = state["companies"]
@@ -287,6 +323,9 @@ def run_sync(
     totals = {"companies": 0, "new_done": 0, "failed": 0, "errors": 0, "set_aside": 0}
     warnings: list[str] = []
     stopped: str | None = None
+    checkpoints: list[dict[str, Any]] = []
+    companies_since_checkpoint = 0
+    filings_since_build = 0
     with client_factory() as client:
         for issuer in issuers:
             entry = companies.get(issuer.cik, {})
@@ -322,7 +361,10 @@ def run_sync(
                 updated.pop("error", None)
             companies[issuer.cik] = updated
             totals["companies"] += 1
-            totals["new_done"] += len(set(updated.get("done", [])) - before)
+            new_here = len(set(updated.get("done", [])) - before)
+            totals["new_done"] += new_here
+            filings_since_build += new_here
+            companies_since_checkpoint += 1 if new_here else 0
             totals["failed"] += sum(
                 1 for o in updated.get("last_outcomes", {}).values() if o not in DONE
             )
@@ -342,11 +384,33 @@ def run_sync(
             )
             if stopped:
                 break
+            if (
+                publisher is not None
+                and publish_every > 0
+                and build
+                and not dry_run
+                and companies_since_checkpoint >= publish_every
+            ):
+                checkpoint = _checkpoint(
+                    root, builder, publisher, dbt_timeout, user_agent
+                )
+                checkpoint["after_companies"] = totals["companies"]
+                checkpoints.append(checkpoint)
+                print(
+                    f"Checkpoint after {totals['companies']} companies: Gold "
+                    f"{checkpoint['gold_status']}, publish {checkpoint['publish_status']}",
+                    flush=True,
+                )
+                companies_since_checkpoint = 0
+                if checkpoint["gold_status"] == "COMPLETE":
+                    filings_since_build = 0
     gold: dict[str, Any] = {"status": "SKIPPED", "reason": "no new filings"}
     if dry_run:
         gold = {"status": "SKIPPED", "reason": "dry run"}
     elif stopped:
         gold = {"status": "SKIPPED", "reason": "run stopped early"}
+    elif build and totals["new_done"] and not filings_since_build:
+        gold = {"status": "COMPLETE", "reason": "built at the last checkpoint"}
     elif build and totals["new_done"]:
         try:
             gold = builder(root, timeout_seconds=dbt_timeout)
@@ -373,6 +437,7 @@ def run_sync(
         "gold": gold,
         "stopped": stopped,
         "warnings": warnings,
+        "checkpoints": checkpoints,
         "set_aside": {
             cik: entry["set_aside"]
             for cik, entry in companies.items()
@@ -404,6 +469,18 @@ def main(arguments: Sequence[str] | None = None) -> int:
         "--dry-run", action="store_true", help="List pending filings; change nothing"
     )
     parser.add_argument("--dbt-timeout-seconds", type=float, default=3600)
+    parser.add_argument(
+        "--publish-every",
+        type=int,
+        default=0,
+        metavar="N",
+        help="Build Gold and publish to --lake after every N companies with new filings",
+    )
+    parser.add_argument(
+        "--lake",
+        default=os.environ.get("SEC_EDGAR_LAKE"),
+        help="Lake for --publish-every: s3://bucket/prefix or file:///path (default: SEC_EDGAR_LAKE)",
+    )
     args = parser.parse_args(arguments)
     user_agent = os.environ.get("SEC_USER_AGENT", "")
     if not user_agent.strip():
@@ -411,6 +488,10 @@ def main(arguments: Sequence[str] | None = None) -> int:
         return 1
     if args.max_companies is not None and args.max_companies <= 0:
         parser.error("--max-companies must be positive")
+    if args.publish_every < 0:
+        parser.error("--publish-every must be zero or positive")
+    if args.publish_every and not args.lake:
+        parser.error("--publish-every needs --lake or SEC_EDGAR_LAKE")
     try:
         _, issuers = load_universe(args.universe)
         if args.ciks:
@@ -430,6 +511,18 @@ def main(arguments: Sequence[str] | None = None) -> int:
                 print(f"FAILED: another sync holds {root}", file=sys.stderr)
                 return 1
             started = time.monotonic()
+            publisher = None
+            if args.publish_every:
+                lake = str(args.lake)
+
+                def publisher() -> dict[str, Any]:
+                    from sec_edgar_lakehouse.lake.publish import (
+                        open_target,
+                        run_publish,
+                    )
+
+                    return run_publish(root, open_target(lake))
+
             summary = run_sync(
                 issuers,
                 root=root,
@@ -438,6 +531,8 @@ def main(arguments: Sequence[str] | None = None) -> int:
                 build=not args.no_build,
                 dry_run=args.dry_run,
                 dbt_timeout=args.dbt_timeout_seconds,
+                publish_every=args.publish_every,
+                publisher=publisher,
             )
     except (
         OSError,

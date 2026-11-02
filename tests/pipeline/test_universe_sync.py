@@ -284,3 +284,98 @@ def test_cli_needs_a_user_agent(
     code = sync.main(["--universe", "u.json", "--data-root", str(tmp_path)])
 
     assert code == 1 and "SEC_USER_AGENT" in capsys.readouterr().err
+
+
+ISSUERS = [
+    ISSUER,
+    sync.Issuer("0000789019", "Microsoft", ("MSFT",)),
+    sync.Issuer("0001045810", "NVIDIA", ("NVDA",)),
+]
+
+
+def test_publish_every_n_companies_during_a_long_run(
+    tmp_path: Path, fakes: Fakes
+) -> None:
+    published: list[int] = []
+
+    def publish() -> dict[str, object]:
+        published.append(fakes.builds)
+        return {}
+
+    summary = sync.run_sync(
+        ISSUERS,
+        root=tmp_path,
+        user_agent="Tests contact@example.org",
+        since=SINCE,
+        builder=fakes.build,
+        publish_every=2,
+        publisher=publish,
+    )
+
+    # One checkpoint after the second company, then the final build for the third.
+    assert published == [1]
+    assert fakes.builds == 2
+    assert summary["checkpoints"] == [
+        {"gold_status": "COMPLETE", "publish_status": "COMPLETE", "after_companies": 2}
+    ]
+    assert summary["gold"]["status"] == "COMPLETE"
+
+
+def test_no_second_build_when_the_last_checkpoint_covered_everything(
+    tmp_path: Path, fakes: Fakes
+) -> None:
+    summary = sync.run_sync(
+        ISSUERS[:2],
+        root=tmp_path,
+        user_agent="Tests contact@example.org",
+        since=SINCE,
+        builder=fakes.build,
+        publish_every=2,
+        publisher=dict,
+    )
+
+    assert fakes.builds == 1
+    assert summary["gold"] == {
+        "status": "COMPLETE",
+        "reason": "built at the last checkpoint",
+    }
+
+
+def test_a_failed_publish_is_recorded_and_the_run_goes_on(
+    tmp_path: Path, fakes: Fakes
+) -> None:
+    def broken() -> dict[str, object]:
+        raise RuntimeError("S3 unreachable")
+
+    summary = sync.run_sync(
+        ISSUERS,
+        root=tmp_path,
+        user_agent="Tests contact@example.org",
+        since=SINCE,
+        builder=fakes.build,
+        publish_every=1,
+        publisher=broken,
+    )
+
+    assert summary["totals"]["companies"] == 3
+    assert [c["publish_status"] for c in summary["checkpoints"]] == ["FAILED"] * 3
+    assert summary["checkpoints"][0]["error"] == "S3 unreachable"
+
+
+def test_publish_every_needs_a_lake(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("SEC_USER_AGENT", "Tests contact@example.org")
+    monkeypatch.delenv("SEC_EDGAR_LAKE", raising=False)
+
+    with pytest.raises(SystemExit):
+        sync.main(
+            [
+                "--universe",
+                "u.json",
+                "--data-root",
+                str(tmp_path),
+                "--publish-every",
+                "5",
+            ]
+        )

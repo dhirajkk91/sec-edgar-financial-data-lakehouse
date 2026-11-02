@@ -2,7 +2,7 @@
 
 ## Purpose
 
-`sec-edgar sync` keeps a universe of companies current. For each company it finds the original 10-K and 10-Q filings that aren't done yet and takes them through every layer, Bronze, Silver, the DuckDB catalog and metadata, then builds Gold once with dbt. `sec-edgar publish-lake` then puts the result in the lake on AWS. On the Oracle VM both run Monday to Friday nights ([cloud architecture](cloud-lakehouse.md)).
+`sec-edgar sync` keeps a universe of companies current. For each company it finds the original 10-K and 10-Q filings that aren't done yet and takes them through every layer, Bronze, Silver, the DuckDB catalog and metadata, then builds Gold once with dbt. `sec-edgar publish-lake` then puts the result in the lake on AWS. During a long run, such as the first backfill, the sync also builds Gold and publishes every 25 companies, so the lake and the dashboard fill in batch by batch. On the Oracle VM both run Monday to Friday nights ([cloud architecture](cloud-lakehouse.md)).
 
 This document covers how the stages connect and what happens when one fails. Each layer has its own document for its internals. The runner decides order and gates; it contains no financial rules. Those live in dbt, so a value is chosen in exactly one place.
 
@@ -73,8 +73,12 @@ sequenceDiagram
             R->>SEC: index + XBRL files (paced)
         end
         S->>S: save sync-state.json
+        opt every 25 companies with new filings
+            S->>D: build Gold
+            S->>L: publish (checkpoint)
+        end
     end
-    S->>D: build Gold once, only if something new is done
+    S->>D: final Gold build, if anything is new since the last checkpoint
     T->>P: after sync
     P->>L: new Bronze, changed Silver, all Gold, snapshot
 ```
@@ -90,7 +94,11 @@ A company's first run reads the SEC's older listing files too, which is the five
 1. **Company run.** [Selects the filings](company-pipeline-orchestration.md), gets each into verified [Bronze](bronze-ingestion.md), extracts it to [Silver](silver-processing.md) and refreshes the [DuckDB catalog](duckdb-query-catalog.md). Verified Bronze and Silver are reused rather than redone. The run's record keeps the exact submissions response it chose from.
 2. **Metadata.** Loads filing metadata from that saved response, fiscal year and period from each filing's own DEI facts, and the company profile. This is the same step the [cohort](cohort-backfill.md) uses.
 
-Gold is built once at the end of the night by [`build_gold`](../../src/sec_edgar_lakehouse/pipeline/dbt_build.py), with a fresh profile and artifact folder per attempt. DuckDB's memory cap comes from `SEC_EDGAR_DUCKDB_MEMORY_LIMIT`, so the build can't starve other work on the VM. With nothing new, Gold isn't rebuilt.
+Gold is built at the end of the run by [`build_gold`](../../src/sec_edgar_lakehouse/pipeline/dbt_build.py), with a fresh profile and artifact folder per attempt. DuckDB's memory cap comes from `SEC_EDGAR_DUCKDB_MEMORY_LIMIT`, so the build can't starve other work on the VM. With nothing new, Gold isn't rebuilt.
+
+### Checkpoints during a long run
+
+With `--publish-every N` and a lake (the weeknight script uses 25 and `SEC_EDGAR_LAKE`), the sync builds Gold and runs the same publish as `publish-lake` after every N companies that got new filings. Without this, a five-year backfill of the S&P 500 would show nothing in the lake or on the dashboard for days, then everything at once. A checkpoint only publishes after a successful build, and a failed build or publish is recorded and the run continues. If the last checkpoint already covered every new filing, the final build is skipped. On a normal weeknight, with a handful of companies filing, no checkpoint is reached and the run behaves as before ([decision 21](../decisions/engineering-decisions.md#21-publish-in-batches-during-a-long-run)).
 
 ### Publishing
 
@@ -101,7 +109,7 @@ Gold is built once at the end of the night by [`build_gold`](../../src/sec_edgar
 | Where | What it says |
 | --- | --- |
 | `<root>/sync-state.json` | Per company: done accessions, the last run's outcomes and errors, whether the backfill happened |
-| `<root>/sync-runs/<UTC time>.json`, `latest.json` | Per night: companies checked, filings done, failures, company errors, the Gold build, warnings |
+| `<root>/sync-runs/<UTC time>.json`, `latest.json` | Per run: companies checked, filings done, failures, company errors, each checkpoint, the Gold build, warnings |
 | `<root>/runs/cik=<CIK>/run_id=<id>/run.json` | Per company run: the listing it chose from and each filing's outcome |
 | `<root>/lake/publish-runs/latest.json` | What the last publish wrote; also uploaded to `runs/` in the lake |
 
@@ -117,6 +125,7 @@ These describe execution only. Financial completeness is a separate question ans
 | One company's listing (e.g. a retired CIK) | Recorded as a company error; the run moves to the next company |
 | SEC block page or a long `Retry-After` | The whole run stops, Gold isn't built, state is saved; the next night starts where this one stopped |
 | Gold build | Night is `FAILED`; the lake keeps last night's Gold, since publish copies Gold from the database as it stands |
+| A checkpoint's build or publish | Recorded under `checkpoints` in the run summary; the run goes on, and the final build and publish still happen |
 | The VM is off on a weeknight | Nothing runs; the next run picks up everything it missed. Weekends are not made up |
 
 There is no rollback across stages: published Bronze and Silver stay, and dbt can leave some Gold tables rebuilt and others not. Reruns are the recovery path, which is why every stage is safe to repeat.

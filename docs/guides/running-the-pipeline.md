@@ -47,6 +47,7 @@ Run it again and nothing is downloaded: every filing is already done, so Gold is
 | See what would be processed, changing nothing | `--dry-run` |
 | A few companies | `--ciks <CIK> ...` or `--max-companies <n>` |
 | Process now, build Gold later | `--no-build` (the next run that processes something builds) |
+| Publish in batches during a long run | `--publish-every 25 --lake file:///path` (or `s3://…`) |
 | A different list of companies | `--universe <file>` with the same JSON shape |
 
 The exit code is 0 when everything is done, 2 when some filings or companies failed (they retry on the next run), and 1 when the run couldn't start. Read `sync-runs/latest.json` for the counts and `sync-state.json` for each company's last outcomes and errors.

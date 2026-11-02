@@ -25,7 +25,7 @@ Public companies report their financials to the SEC in XBRL. The raw data is mes
 
 | If you care about… | Start here |
 | --- | --- |
-| **Data engineering** | The [cloud architecture](docs/architectures/cloud-lakehouse.md) (Oracle compute, S3 + Iceberg + Glue + Athena, Terraform), the [weeknight sync](docs/architectures/end-to-end-pipeline.md), the [Bronze](docs/architectures/bronze-ingestion.md) and [Silver](docs/architectures/silver-processing.md) guarantees, and [20 design decisions with their trade-offs](docs/decisions/engineering-decisions.md) |
+| **Data engineering** | The [cloud architecture](docs/architectures/cloud-lakehouse.md) (Oracle compute, S3 + Iceberg + Glue + Athena, Terraform), the [weeknight sync](docs/architectures/end-to-end-pipeline.md), the [Bronze](docs/architectures/bronze-ingestion.md) and [Silver](docs/architectures/silver-processing.md) guarantees, and [21 design decisions with their trade-offs](docs/decisions/engineering-decisions.md) |
 | **Analytics engineering** | The [dbt project](transform/): concept priority, derived quarters and quality issues as tested SQL, explained in the [Gold notes](docs/architectures/gold-financial-metrics.md) |
 | **Data analysis** | The [written analysis](docs/analysis/what-the-data-shows.md) with SQL and caveats, the [exploratory notebook](notebooks/exploratory-analysis.ipynb), the [Athena queries](infra/aws/queries/) (window functions, time travel) and the dashboard's Insights view |
 
@@ -38,14 +38,14 @@ Public companies report their financials to the SEC in XBRL. The raw data is mes
 | **Data (cohort)** | 601,103 XBRL facts into 4,310 financial values (3,576 reported, 734 derived), each linked to its source facts; 557 quality issues recorded with a reason instead of a guessed number |
 | **Performance** | Full Gold rebuild cut from 34 minutes to 18 seconds; Bronze cut from ~25 MB to ~3.5 MB a filing |
 | **Cost** | Free compute on Oracle's free tier; AWS estimated at under $1 a month after my credits run out, with a budget alarm |
-| **Testing** | 968 Python tests, 592 dbt nodes, six CI jobs on every change, none of which call the SEC |
+| **Testing** | 972 Python tests, 592 dbt nodes, six CI jobs on every change, none of which call the SEC |
 | **Stack** | Python · DuckDB · dbt · Apache Iceberg · S3 · Glue · Athena · Terraform · Docker · systemd · Streamlit · GitHub Actions |
 
 ## Architecture
 
 ![Architecture: Oracle VM compute, AWS lake, Streamlit dashboard](docs/images/architecture.png)
 
-Every weeknight at 11:30 p.m. Central, a container on a free Oracle Cloud VM checks each S&P 500 company's SEC listing, processes only the filings it hasn't done through Bronze, Silver and the DuckDB catalog, and builds Gold once with dbt. Then it publishes to the lake on AWS: new raw files to S3, changed Silver filings and all of Gold as **Apache Iceberg** tables in the **Glue** catalog, and a Gold-only snapshot for the dashboard. Analysts query the lake with **Athena**; every night is an Iceberg snapshot, so "what changed since last week?" is one query.
+Every weeknight at 11:30 p.m. Central, a container on a free Oracle Cloud VM checks each S&P 500 company's SEC listing, processes only the filings it hasn't done through Bronze, Silver and the DuckDB catalog, and builds Gold once with dbt. Then it publishes to the lake on AWS: new raw files to S3, changed Silver filings and all of Gold as **Apache Iceberg** tables in the **Glue** catalog, and a Gold-only snapshot for the dashboard. Analysts query the lake with **Athena**; every night is an Iceberg snapshot, so "what changed since last week?" is one query. During a long backfill it publishes every 25 companies, so the dashboard fills in as it goes.
 
 Compute runs on a free-tier Oracle VM and only storage and SQL run on AWS, where they cost cents at this size ([why](docs/decisions/engineering-decisions.md#18-compute-on-a-free-oracle-vm-the-lake-on-aws)). The job runs in its own container, capped at 1 CPU and 5 GB. The AWS side is all [Terraform](infra/aws/).
 
@@ -169,7 +169,7 @@ Every pull request and push to `main` runs six jobs. None of them call the SEC: 
 
 | Job | What it proves |
 | --- | --- |
-| **Python checks** (Linux and macOS) | Ruff, mypy and all 968 tests pass, including the notebook run and a publish to a local Iceberg catalog |
+| **Python checks** (Linux and macOS) | Ruff, mypy and all 972 tests pass, including the notebook run and a publish to a local Iceberg catalog |
 | **Offline dbt** | A synthetic company goes from XML files through Bronze, Silver and the catalog to a full dbt build, and the exact Gold values, warnings and lineage match |
 | **Built wheel** | The package installs and works without dbt, Streamlit or the lake packages, outside the checkout, and every `sec-edgar` command starts |
 | **Hosted demo** (Python 3.12) | The live app's entry point opens all three views with only its pinned packages, the committed demo matches its checksum, and a downloaded snapshot is checked against its manifest |

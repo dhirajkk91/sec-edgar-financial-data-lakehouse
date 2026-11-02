@@ -24,6 +24,7 @@ This file explains the main choices behind the pipeline: what I picked, what I c
 | 18 | [Compute on a free Oracle VM, the lake on AWS](#18-compute-on-a-free-oracle-vm-the-lake-on-aws) | Cloud |
 | 19 | [Iceberg tables written from Python; Gold still built in DuckDB](#19-iceberg-tables-written-from-python-gold-still-built-in-duckdb) | Cloud |
 | 20 | [A nightly per-company check instead of a watermark](#20-a-nightly-per-company-check-instead-of-a-watermark) | Pipeline |
+| 21 | [Publish in batches during a long run](#21-publish-in-batches-during-a-long-run) | Pipeline |
 
 After the decisions come the [bugs that changed the design](#bugs-that-changed-the-design) and [what I would change next](#what-i-would-change-next).
 
@@ -236,6 +237,16 @@ After the decisions come the [bugs that changed the design](#bugs-that-changed-t
 **Alternatives:** The daily index with a watermark. RSS feeds (no history if the VM is off).
 
 **Trade-off:** About four minutes of requests a night, in exchange for no watermark and no replay logic: a missed night, a VM rebuild or a failed filing all fix themselves on the next run.
+
+### 21. Publish in batches during a long run
+
+**Context:** The first S&P 500 backfill runs for two to three days at 1 CPU, about 3 to 6 minutes per company and up to 19 for insurers and asset managers, whose XBRL filings are much larger. The sync only published at the end, so the lake and the dashboard showed nothing new for the whole run. Measuring it also ruled out the first suspect: rebuilding the DuckDB catalog takes about 8 seconds for 400 filings, so it isn't what makes companies slow.
+
+**Decision:** `sync --publish-every N --lake …` builds Gold and publishes after every N companies with new filings. The weeknight script uses 25. A checkpoint publishes only after a successful build; a failed checkpoint is recorded in the run summary and the run continues. The dashboard checks for a new snapshot every hour instead of every three.
+
+**Alternatives:** Publish after every company (500 Gold builds, each over everything loaded so far). A separate timer that publishes while the sync runs (DuckDB allows one writer, so it would collide with the sync). Wait for the end (simplest, but days with nothing to see).
+
+**Trade-off:** Each checkpoint rebuilds Gold over everything loaded so far, so about 20 extra builds add roughly two hours to a backfill. On a normal weeknight the threshold is never reached, so nothing changes.
 
 ## Bugs that changed the design
 
