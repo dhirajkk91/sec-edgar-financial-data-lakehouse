@@ -131,6 +131,8 @@ A reported value is labelled `annual`, `quarter`, `year_to_date` or `instant` us
 
 The windows are checked only **after** form, fiscal focus, lineage and report date agree. An instant must fall on the report date. Two eligible periods competing for the same label are reported as ambiguous, and a value whose dates fit no window becomes `UNSUPPORTED_DURATION`.
 
+The fiscal tags themselves are checked too, because filers sometimes leave last year's fiscal year or the wrong quarter in a 10-Q. From the period end and the fiscal year end in the company's SEC profile, Gold works out which fiscal year and quarter the filing should be. A filing that disagrees, allowing for how the company usually names its years, gets `FISCAL_FOCUS_CONFLICT`; two filings that still claim the same period both get `DUPLICATE_FISCAL_PERIOD`. Their values are withheld, so `fct_company_financials` never has two rows for one period ([decision 22](../decisions/engineering-decisions.md#22-check-fiscal-tags-against-the-companys-year-end)).
+
 ## Deriving quarters
 
 Two kinds of quarter can be derived:
@@ -198,18 +200,18 @@ Every withheld or questionable value has a row in `metric_quality_issues`. These
 | `METRIC_VALUE_CONFLICT` | Error | 5 | Occurrences of the same concept disagree; all five are Walmart's year-end cash balances, one per 10-K. The value is withheld |
 | `METRIC_ACCURACY_UNRESOLVED` | Error | 1 | Accuracy attributes couldn't support a trusted value |
 
-Issue rows describe individual metric choices, not failed filings.
+These counts predate the fiscal-tag checks, so `FISCAL_FOCUS_CONFLICT` and `DUPLICATE_FISCAL_PERIOD` aren't listed. Issue rows describe individual metric choices, not failed filings.
 
 ## Testing
 
 | Kind | What it checks |
 | --- | --- |
 | 57 SQL data tests in [`transform/tests/`](../../transform/tests/) | Grain and uniqueness of every model, eligibility, absence of ambiguity, lineage back to the active company and accession, issue shape, and reconciliation: every mart row traces to an intermediate row and back |
-| Unit tests in [`transform/models/`](../../transform/models/) | Each rule on small fixed inputs: concept priority, accuracy attributes, period labels, both derivations, filing status, the company tables and the insight tables (110 in all) |
+| Unit tests in [`transform/models/`](../../transform/models/) | Each rule on small fixed inputs: concept priority, accuracy attributes, period labels, both derivations, filing status, the fiscal-tag checks, the company tables and the insight tables (111 in all) |
 | 395 schema tests in [`properties.yml`](../../transform/models/properties.yml) | Not-null columns, accepted values for every status and code, relationships between models, and keys |
 | [Offline dbt check](../../scripts/ci/validate_offline_dbt.py) in CI | A synthetic company built from XML through Gold, with exact values, warnings and lineage asserted |
 
-The full cohort build runs 592 dbt nodes (29 models, one seed, 452 data tests and 110 unit tests), and all pass.
+The Gold project has 593 dbt nodes (29 models, one seed, 452 data tests and 111 unit tests), and all pass.
 
 ## Trade-offs and limits
 

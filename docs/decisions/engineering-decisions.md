@@ -25,6 +25,7 @@ This file explains the main choices behind the pipeline: what I picked, what I c
 | 19 | [Iceberg tables written from Python; Gold still built in DuckDB](#19-iceberg-tables-written-from-python-gold-still-built-in-duckdb) | Cloud |
 | 20 | [A nightly per-company check instead of a watermark](#20-a-nightly-per-company-check-instead-of-a-watermark) | Pipeline |
 | 21 | [Publish in batches during a long run](#21-publish-in-batches-during-a-long-run) | Pipeline |
+| 22 | [Check fiscal tags against the company's year end](#22-check-fiscal-tags-against-the-companys-year-end) | Gold |
 
 After the decisions come the [bugs that changed the design](#bugs-that-changed-the-design) and [what I would change next](#what-i-would-change-next).
 
@@ -220,7 +221,7 @@ After the decisions come the [bugs that changed the design](#bugs-that-changed-t
 
 ### 19. Iceberg tables written from Python; Gold still built in DuckDB
 
-**Context:** A lake of plain Parquet files has no atomic swaps or history, which is why Silver had its own active-pointer files (decision 5). The lake needed a table format. The Gold rules are 592 dbt nodes written and tested in DuckDB SQL.
+**Context:** A lake of plain Parquet files has no atomic swaps or history, which is why Silver had its own active-pointer files (decision 5). The lake needed a table format. The Gold rules are 593 dbt nodes written and tested in DuckDB SQL.
 
 **Decision:** `publish-lake` writes Iceberg tables with pyiceberg into the Glue catalog. Silver is published per filing: appended when new, deleted and appended in one commit when re-parsed, partitioned by CIK. Gold is still built in DuckDB on the VM, then each table is overwritten in Iceberg, so every night is a snapshot Athena can time-travel to.
 
@@ -247,6 +248,16 @@ After the decisions come the [bugs that changed the design](#bugs-that-changed-t
 **Alternatives:** Publish after every company (500 Gold builds, each over everything loaded so far). A separate timer that publishes while the sync runs (DuckDB allows one writer, so it would collide with the sync). Wait for the end (simplest, but days with nothing to see).
 
 **Trade-off:** Each checkpoint rebuilds Gold over everything loaded so far, so about 20 extra builds add roughly two hours to a backfill. On a normal weeknight the threshold is never reached, so nothing changes.
+
+### 22. Check fiscal tags against the company's year end
+
+**Context:** Gold places each filing in a fiscal year and period using the filing's own DEI tags (`DocumentFiscalYearFocus`, `DocumentFiscalPeriodFocus`). The 20-company cohort never contradicted them, but the first 45 S&P 500 companies did: some 10-Qs carried last year's fiscal year or the wrong quarter. Two filings then claimed the same period, and the test that `fct_company_financials` has one row per company and period failed the whole Gold build, with 8 duplicate periods.
+
+**Decision:** `int_reported_financial_periods` works out the period each filing should be from its period end and the fiscal year end in the company's SEC profile. A filing whose year disagrees with the company's usual naming, or a 10-Q whose quarter disagrees, gets `FISCAL_FOCUS_CONFLICT`. If two filings still claim the same period after that, both get `DUPLICATE_FISCAL_PERIOD`. In both cases the values are withheld with the reason, like any other period issue.
+
+**Alternatives:** Trust the tags and keep the newest filing per period (silently picks one, and the stale filing's numbers may land in the wrong year). Replace the tags with the computed period (52/53-week years and companies that name their fiscal year after its start make that a guess). Drop the grain test (the dashboard would show two rows for one quarter).
+
+**Trade-off:** The year is compared through each company's most common offset, because a retailer whose year ends in January may call it by the earlier year. A company with no fiscal year end on file isn't checked at all. Withholding both duplicates loses a correct value along with the wrong one, which is the same choice Gold makes for conflicting facts.
 
 ## Bugs that changed the design
 

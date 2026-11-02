@@ -1,5 +1,8 @@
 -- Label each selected reported row as annual, quarter, year-to-date or instant.
 -- Keep rows we cannot classify, with the reason; do not guess the fiscal year from the calendar.
+-- A filing's own fiscal tags are checked against the company's other filings: a year tag
+-- that breaks the company's usual convention, a quarter tag that disagrees with the period
+-- dates, or two filings claiming the same fiscal period are withheld, never corrected.
 with selected as (
     select
         metric_code, concept_priority, cik, accession_number,
@@ -52,6 +55,101 @@ with selected as (
         report_date, metadata_run_id, submissions_sha256, period_label,
         selection_rule_version, selection_reason, supporting_occurrence_count, supporting_occurrence_ids
     from {{ ref('int_reported_cash_flow_metrics') }}
+), fiscal_year_ends as (
+    -- The newest SEC profile's fiscal year end (MMDD) for each company.
+    select cik, arg_max(fiscal_year_end, submissions_retrieved_at) as fiscal_year_end
+    from {{ ref('stg_silver_company_profiles') }}
+    where regexp_full_match(fiscal_year_end, '(0[1-9]|1[0-2])(0[1-9]|[12][0-9]|3[01])')
+    group by cik
+), tagged as (
+    select
+        f.cik, f.accession_number, f.source_document_name, f.source_sha256, f.form,
+        f.fiscal_year_focus, f.fiscal_period_focus, f.document_period_end_date as period_end,
+        cast(substr(y.fiscal_year_end, 1, 2) as integer) as fye_month,
+        cast(substr(y.fiscal_year_end, 3, 2) as integer) as fye_day
+    from {{ ref('stg_silver_filing_fiscal_metadata') }} as f
+    left join fiscal_year_ends as y on f.cik = y.cik
+    where f.fiscal_year_focus is not null and f.fiscal_period_focus is not null
+        and f.document_period_end_date is not null
+), anniversaries as (
+    -- Fiscal year-end dates in the period's year and the two before; February 29 and
+    -- other short months use the month's last day. 52/53-week years drift by days.
+    select
+        t.*,
+        make_date(year(period_end) - k, fye_month,
+            least(fye_day, day(last_day(make_date(year(period_end) - k, fye_month, 1)))))
+            as anniversary,
+        k
+    from tagged as t, range(0, 3) as r(k)
+    where fye_month is not null
+), anchored as (
+    -- The fiscal year containing the period started at the latest year end more than
+    -- 15 days before the period end.
+    select
+        cik, accession_number, source_document_name, source_sha256,
+        arg_max(anniversary, anniversary) filter (
+            where anniversary + interval 15 day < period_end) as year_start
+    from anniversaries
+    group by cik, accession_number, source_document_name, source_sha256
+), expected as (
+    select
+        t.*,
+        year(a.year_start) + 1 as expected_year,
+        -- Quarters from the start of the fiscal year; NULL when no year end is on file.
+        -- least/greatest skip NULLs, so a missing year start is handled first.
+        case
+            when a.year_start is null then null
+            else case greatest(1, least(4,
+                    round(date_diff('day', a.year_start, t.period_end) / 91.31)))
+                when 4 then 'FY'
+                when 3 then 'Q3'
+                when 2 then 'Q2'
+                else 'Q1'
+            end
+        end as expected_focus
+    from tagged as t
+    left join anchored as a
+        on t.cik = a.cik and t.accession_number = a.accession_number
+        and t.source_document_name = a.source_document_name and t.source_sha256 = a.source_sha256
+), offsets as (
+    -- Companies name fiscal years differently (a retailer's year ending in January may
+    -- carry the earlier year), so the expected year is compared through the company's
+    -- most common offset, not directly.
+    select cik, fiscal_year_focus - expected_year as year_offset, count(*) as filings
+    from expected
+    where expected_year is not null
+    group by all
+), usual_offset as (
+    select cik, year_offset
+    from offsets
+    qualify row_number() over (
+        partition by cik order by filings desc, abs(year_offset), year_offset) = 1
+), checked_tags as (
+    select
+        e.*,
+        coalesce(
+            e.fiscal_year_focus - e.expected_year <> u.year_offset
+            or (e.form in ('10-Q', '10-Q/A') and e.fiscal_period_focus <> e.expected_focus),
+            false) as fiscal_focus_conflict
+    from expected as e
+    left join usual_offset as u on e.cik = u.cik
+), fiscal_checks as (
+    select
+        cik, accession_number, source_document_name, source_sha256,
+        fiscal_focus_conflict,
+        -- Two filings that pass the check above yet carry the same fiscal year and period
+        -- cannot both be right, so neither is used. Without a fiscal year end on file
+        -- there is nothing to check against and the tags are taken as filed.
+        expected_year is not null and not fiscal_focus_conflict
+            and count(distinct accession_number) filter (
+                where expected_year is not null and not fiscal_focus_conflict) over (
+                partition by cik, fiscal_year_focus, fiscal_period_focus) > 1
+            as duplicate_fiscal_period,
+        concat('tagged FY', fiscal_year_focus, ' ', fiscal_period_focus,
+            '; period ending ', period_end, ' implies ',
+            coalesce(cast(expected_year as varchar), '?'), ' ', coalesce(expected_focus, '?'),
+            ' under the fiscal year end on file') as fiscal_check_detail
+    from checked_tags
 ), attached as (
     select
         r.metric_code, r.concept_priority, r.cik, r.accession_number,
@@ -72,6 +170,9 @@ with selected as (
         f.metadata_run_id as fiscal_metadata_run_id,
         f.submissions_sha256 as fiscal_submissions_sha256,
         f.cik is not null as has_fiscal_metadata,
+        coalesce(fc.fiscal_focus_conflict, false) as fiscal_focus_conflict,
+        coalesce(fc.duplicate_fiscal_period, false) as duplicate_fiscal_period,
+        fc.fiscal_check_detail,
         f.form is distinct from r.form
             or f.report_date is distinct from r.report_date
             or f.metadata_run_id is distinct from r.metadata_run_id
@@ -105,6 +206,11 @@ with selected as (
         and r.accession_number = f.accession_number
         and r.source_document_name = f.source_document_name
         and r.source_sha256 = f.source_sha256
+    left join fiscal_checks as fc
+        on r.cik = fc.cik
+        and r.accession_number = fc.accession_number
+        and r.source_document_name = fc.source_document_name
+        and r.source_sha256 = fc.source_sha256
 ), checked as (
     select
         metric_code, concept_priority, cik, accession_number,
@@ -119,7 +225,7 @@ with selected as (
         selection_rule_version, selection_reason, supporting_occurrence_count, supporting_occurrence_ids,
         fiscal_year_focus, fiscal_period_focus, document_period_end_date, fiscal_metadata_status,
         fiscal_extraction_version, fiscal_metadata_run_id, fiscal_submissions_sha256, inclusive_days,
-        fiscal_lineage_detail,
+        fiscal_lineage_detail, fiscal_check_detail,
         -- Use the first failing check. An instant needs a report date, not a fiscal focus.
         case
             when not valid_reported_period then 'INVALID_REPORTED_PERIOD'
@@ -134,6 +240,8 @@ with selected as (
                 (form in ('10-K', '10-K/A') and fiscal_period_focus = 'FY')
                 or (form in ('10-Q', '10-Q/A') and fiscal_period_focus in ('Q1', 'Q2', 'Q3')),
                 false) then 'FISCAL_PERIOD_FORM_MISMATCH'
+            when fiscal_focus_conflict then 'FISCAL_FOCUS_CONFLICT'
+            when duplicate_fiscal_period then 'DUPLICATE_FISCAL_PERIOD'
             when not (
                 (fiscal_period_focus = 'FY' and inclusive_days between 350 and 380)
                 or (fiscal_period_focus in ('Q1', 'Q2', 'Q3') and inclusive_days between 80 and 100)
@@ -157,7 +265,7 @@ with selected as (
         selection_rule_version, selection_reason, supporting_occurrence_count, supporting_occurrence_ids,
         fiscal_year_focus, fiscal_period_focus, document_period_end_date, fiscal_metadata_status,
         fiscal_extraction_version, fiscal_metadata_run_id, fiscal_submissions_sha256, inclusive_days,
-        fiscal_lineage_detail, initial_issue_code,
+        fiscal_lineage_detail, fiscal_check_detail, initial_issue_code,
         case
             when initial_issue_code is not null then 'unclassified'
             when period_kind = 'instant' then 'instant'
@@ -222,6 +330,11 @@ select
             ' differs from verified report date ', p.report_date, '.')
         when p.initial_issue_code = 'FISCAL_PERIOD_FORM_MISMATCH'
             then concat('Form ', p.form, ' disagrees with fiscal focus ', p.fiscal_period_focus, '.')
+        when p.initial_issue_code = 'FISCAL_FOCUS_CONFLICT' then concat(
+            'Fiscal tags disagree with the company''s other filings: ', p.fiscal_check_detail, '.')
+        when p.initial_issue_code = 'DUPLICATE_FISCAL_PERIOD' then concat(
+            'Another filing from this company claims the same fiscal period: ',
+            p.fiscal_check_detail, '.')
         when p.initial_issue_code = 'UNSUPPORTED_DURATION' then concat(
             'No V1 range for form ', p.form, ', fiscal focus ', p.fiscal_period_focus,
             ' and inclusive duration ', p.inclusive_days, ' days (', p.period_start,
