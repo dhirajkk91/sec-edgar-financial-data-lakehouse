@@ -2,7 +2,8 @@
 # One weeknight run: sync new filings and build Gold, then publish to the lake.
 #
 # Publishing runs even when some filings failed (sync exit 2): what did succeed
-# is still worth publishing, and the failures retry tomorrow. It doesn't run when
+# is still worth publishing, and the failures retry tomorrow. If the Gold build
+# failed, publish-lake sends Bronze and Silver but keeps the lake's last good Gold. It doesn't run when
 # the sync couldn't start (exit 1), so a bad setup never overwrites the lake.
 set -u
 

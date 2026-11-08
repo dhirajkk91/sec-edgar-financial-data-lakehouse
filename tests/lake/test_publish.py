@@ -147,6 +147,58 @@ def test_publish_writes_every_layer_and_is_incremental(
     assert gold.scan(snapshot_id=first_night).to_arrow().num_rows == 2
 
 
+def test_failed_gold_build_keeps_the_last_good_gold(
+    root: Path, tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    target = lake.open_target(f"file://{tmp_path / 'lake'}")
+    lake.run_publish(root, target)
+    objects = tmp_path / "lake/objects"
+    served = (objects / lake.SNAPSHOT_KEY).read_bytes()
+    gold_snapshots = len(
+        target.catalog.load_table(("sec_gold", "dim_filings")).snapshots()
+    )
+    (root / "sync-runs").mkdir()
+    (root / "sync-runs/latest.json").write_text(
+        json.dumps({"status": "FAILED", "gold": {"status": "FAILED"}})
+    )
+    database = root / "query/sec_edgar.duckdb"
+    with duckdb.connect(str(database)) as connection:
+        connection.execute("DELETE FROM gold.dim_filings")
+
+    code = lake.main(
+        ["--data-root", str(root), "--lake", f"file://{tmp_path / 'lake'}"]
+    )
+
+    assert code == 0
+    assert "Gold not published" in capsys.readouterr().out
+    assert (objects / lake.SNAPSHOT_KEY).read_bytes() == served
+    gold = target.catalog.load_table(("sec_gold", "dim_filings"))
+    assert len(gold.snapshots()) == gold_snapshots
+    assert gold.scan().to_arrow().num_rows == 2
+    published = json.loads((objects / "runs/latest-publish.json").read_text())
+    assert published["status"] == "PARTIAL" and published["gold_rows"] == {}
+
+
+@pytest.mark.parametrize(
+    ("summary", "expected"),
+    [
+        (None, None),
+        ('{"gold": {"status": "COMPLETE"}}', "COMPLETE"),
+        ('{"gold": {"status": "SKIPPED"}}', "SKIPPED"),
+        ('{"gold": {"status": "FAILED"}}', "FAILED"),
+        ("not json", "FAILED"),
+        ('{"gold": "odd"}', "FAILED"),
+    ],
+)
+def test_last_gold_build_reads_the_sync_summary(
+    tmp_path: Path, summary: str | None, expected: str | None
+) -> None:
+    if summary is not None:
+        (tmp_path / "sync-runs").mkdir()
+        (tmp_path / "sync-runs/latest.json").write_text(summary)
+    assert lake.last_gold_build(tmp_path) == expected
+
+
 def test_nothing_to_publish_without_a_catalog(tmp_path: Path) -> None:
     target = lake.open_target(f"file://{tmp_path / 'lake'}")
 

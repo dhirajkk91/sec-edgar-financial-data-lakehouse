@@ -38,7 +38,7 @@ Public companies report their financials to the SEC in XBRL. The raw data is mes
 | **Data (cohort)** | 601,103 XBRL facts into 4,310 financial values (3,576 reported, 734 derived), each linked to its source facts; 557 quality issues recorded with a reason instead of a guessed number |
 | **Performance** | Full Gold rebuild cut from 34 minutes to 18 seconds; Bronze cut from ~25 MB to ~3.5 MB a filing |
 | **Cost** | Free compute on Oracle's free tier; AWS estimated at under $1 a month after my credits run out, with a budget alarm |
-| **Testing** | 972 Python tests, 593 dbt nodes, six CI jobs on every change, none of which call the SEC |
+| **Testing** | 981 Python tests, 595 dbt nodes, six CI jobs on every change, none of which call the SEC |
 | **Stack** | Python · DuckDB · dbt · Apache Iceberg · S3 · Glue · Athena · Terraform · Docker · systemd · Streamlit · GitHub Actions |
 
 ## Architecture
@@ -169,7 +169,7 @@ Every pull request and push to `main` runs six jobs. None of them call the SEC: 
 
 | Job | What it proves |
 | --- | --- |
-| **Python checks** (Linux and macOS) | Ruff, mypy and all 972 tests pass, including the notebook run and a publish to a local Iceberg catalog |
+| **Python checks** (Linux and macOS) | Ruff, mypy and all 981 tests pass, including the notebook run and a publish to a local Iceberg catalog |
 | **Offline dbt** | A synthetic company goes from XML files through Bronze, Silver and the catalog to a full dbt build, and the exact Gold values, warnings and lineage match |
 | **Built wheel** | The package installs and works without dbt, Streamlit or the lake packages, outside the checkout, and every `sec-edgar` command starts |
 | **Hosted demo** (Python 3.12) | The live app's entry point opens all three views with only its pinned packages, the committed demo matches its checksum, and a downloaded snapshot is checked against its manifest |

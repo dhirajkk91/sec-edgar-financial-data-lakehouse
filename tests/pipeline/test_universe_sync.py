@@ -155,6 +155,39 @@ def test_next_night_reads_only_recent_and_skips_gold_when_nothing_is_new(
     assert summary["status"] == "COMPLETE"
 
 
+def test_a_failed_gold_build_is_retried_on_a_quiet_night(
+    tmp_path: Path, fakes: Fakes
+) -> None:
+    def failing_build(root: Path, **kwargs: Any) -> dict[str, Any]:
+        fakes.builds += 1
+        return {"status": "FAILED", "error_message": "a data test failed"}
+
+    first = sync.run_sync(
+        [ISSUER],
+        root=tmp_path,
+        user_agent="Tests contact@example.org",
+        since=SINCE,
+        builder=failing_build,
+    )
+    assert first["status"] == "FAILED" and fakes.builds == 1
+
+    # No new filings tonight, but the last build failed, so Gold is built again.
+    second = run(tmp_path, fakes)
+
+    assert len(fakes.runs) == 1 and fakes.builds == 2
+    assert second["gold"] == {
+        "status": "COMPLETE",
+        "reason": "retrying the last failed build",
+    }
+    state = json.loads((tmp_path / sync.STATE_FILE).read_text())
+    assert state["gold_needs_build"] is False
+
+    # Once a build has passed, a quiet night skips Gold again.
+    third = run(tmp_path, fakes)
+    assert fakes.builds == 2
+    assert third["gold"] == {"status": "SKIPPED", "reason": "no new filings"}
+
+
 def test_a_new_filing_is_the_only_one_processed(tmp_path: Path, fakes: Fakes) -> None:
     run(tmp_path, fakes)
     fakes.listing = discovery(
