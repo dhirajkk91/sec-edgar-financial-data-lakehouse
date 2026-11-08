@@ -315,6 +315,10 @@ def run_sync(
     With ``publish_every`` and a ``publisher``, Gold is also built and published
     after every that many companies with new filings. A failed checkpoint is
     recorded and the run goes on; the final build and publish still happen.
+
+    A failed Gold build is remembered in the state file, and the next run builds
+    Gold again even when it finds no new filings, until a build passes. Without
+    that, a quiet night would leave the half-built Gold of a failed night in place.
     """
     started = datetime.now(UTC)
     state = _read_state(root)
@@ -404,14 +408,16 @@ def run_sync(
                 companies_since_checkpoint = 0
                 if checkpoint["gold_status"] == "COMPLETE":
                     filings_since_build = 0
+                state["gold_needs_build"] = checkpoint["gold_status"] != "COMPLETE"
+    retry_gold = bool(state.get("gold_needs_build"))
     gold: dict[str, Any] = {"status": "SKIPPED", "reason": "no new filings"}
     if dry_run:
         gold = {"status": "SKIPPED", "reason": "dry run"}
     elif stopped:
         gold = {"status": "SKIPPED", "reason": "run stopped early"}
-    elif build and totals["new_done"] and not filings_since_build:
+    elif build and totals["new_done"] and not filings_since_build and not retry_gold:
         gold = {"status": "COMPLETE", "reason": "built at the last checkpoint"}
-    elif build and totals["new_done"]:
+    elif build and (totals["new_done"] or retry_gold):
         try:
             gold = builder(root, timeout_seconds=dbt_timeout)
         except (DbtBuildError, OSError, ValueError) as exc:
@@ -419,6 +425,11 @@ def run_sync(
                 "status": "FAILED",
                 "error_message": _safe_error(str(exc), user_agent),
             }
+        if retry_gold and not totals["new_done"]:
+            gold = {**gold, "reason": "retrying the last failed build"}
+    if not dry_run and gold["status"] in ("COMPLETE", "FAILED"):
+        state["gold_needs_build"] = gold["status"] == "FAILED"
+        _write_json(root / STATE_FILE, state)
     status = (
         "FAILED"
         if stopped or gold["status"] == "FAILED"

@@ -100,6 +100,10 @@ Gold is built at the end of the run by [`build_gold`](../../src/sec_edgar_lakeho
 
 With `--publish-every N` and a lake (the weeknight script uses 25 and `SEC_EDGAR_LAKE`), the sync builds Gold and runs the same publish as `publish-lake` after every N companies that got new filings. Without this, a five-year backfill of the S&P 500 would show nothing in the lake or on the dashboard for days, then everything at once. A checkpoint only publishes after a successful build, and a failed build or publish is recorded and the run continues. If the last checkpoint already covered every new filing, the final build is skipped. On a normal weeknight, with a handful of companies filing, no checkpoint is reached and the run behaves as before ([decision 21](../decisions/engineering-decisions.md#21-publish-in-batches-during-a-long-run)).
 
+### When Gold fails
+
+A failed Gold build is written to the sync state, and the next run builds Gold again even if it finds no new filings, until a build passes. Meanwhile `publish-lake` still sends Bronze and Silver, but leaves the lake's Gold tables and the dashboard snapshot as they were: dbt skips everything downstream of a failed test, so the local Gold is part new and part old until then.
+
 ### Publishing
 
 `publish-lake` writes in four steps, each incremental where it can be: new Bronze filings are gzipped to S3 once, Silver goes to Iceberg only for filings whose active version changed, the seven Gold tables are overwritten (one Iceberg snapshot per night), and the Gold-only snapshot file goes to S3 for the dashboard. The [cloud architecture](cloud-lakehouse.md#publishing-to-the-lake) has the details.

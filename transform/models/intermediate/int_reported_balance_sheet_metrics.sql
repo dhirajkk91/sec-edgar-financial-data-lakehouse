@@ -55,12 +55,17 @@ with eligible as (
         count(distinct precision) + case when count(precision) < count(*) then 1 else 0 end
             as precision_count,
         -- With value_count = 1 this is the one agreed value of the selected concept.
-        min(value_decimal) as agreed_value
+        min(value_decimal) as agreed_value,
+        -- With decimals_count = 1 and precision_count = 1 these are its one stated accuracy.
+        min(decimals) as agreed_decimals,
+        min(precision) as agreed_precision
     from top_concept
     group by cik, accession_number, metric_code, report_date, period_instant
 ), support as (
     -- Evidence for the selected value: every usable occurrence of any mapped concept
-    -- that reports exactly that value, so agreeing duplicates keep their lineage.
+    -- that reports exactly that value with the same stated accuracy, so agreeing
+    -- duplicates keep their lineage. A lower-priority concept that rounds the same
+    -- amount differently (decimals -6 against -5) is not identical evidence.
     select
         e.cik,
         e.accession_number,
@@ -78,6 +83,8 @@ with eligible as (
     where a.invalid_accuracy_count = 0
         and a.value_count = 1 and a.decimals_count = 1 and a.precision_count = 1
         and e.value_decimal = a.agreed_value
+        and e.decimals is not distinct from a.agreed_decimals
+        and e.precision is not distinct from a.agreed_precision
         and e.accuracy_is_usable
     group by e.cik, e.accession_number, e.metric_code, e.period_instant
 ), agreeing_occurrences as (

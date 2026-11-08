@@ -49,6 +49,8 @@ I left out Spark, EMR and Airflow on purpose. At about 15 million facts the work
 3. **Gold.** The seven Gold tables go through the same export as the hosted demo first (it rewrites my local paths and refuses to publish anything that looks like a home folder or an email), then each table is overwritten.
 4. **Snapshot.** The Gold-only DuckDB file goes to `serving/` for the dashboard, and the night's run summaries go to `runs/`.
 
+If the night's Gold build failed, steps 3 and 4 are skipped. dbt skips every model downstream of a failed test, so the local Gold could be part new and part old; the lake and the site keep the last good Gold until a build passes. That isn't hypothetical: the first full S&P 500 night failed one lineage test, and before this rule the job re-published the previous 256-company Gold as that night's "live data".
+
 Because every publish is an Iceberg snapshot, the lake keeps its own history. For example, [this query](../../infra/aws/queries/05_what_changed_since_last_week.sql) uses `FOR TIMESTAMP AS OF` to list the filings that are new since last week.
 
 With `--lake file:///some/folder` the same code writes to a local folder with a SQLite catalog instead of S3 and Glue. That's how the [tests](../../tests/lake/test_publish.py) check it without an AWS account, and `make lake-local` does it on real data.
@@ -67,7 +69,7 @@ The bucket is private and encrypted. The VM uses an IAM user that can only touch
 
 ## Trade-offs
 
-- **Gold is built in DuckDB and copied to Iceberg.** I didn't want to rewrite 593 dbt nodes for Athena's SQL dialect and lose the offline CI build. The cost is that Athena reads last night's copy, not the build itself.
+- **Gold is built in DuckDB and copied to Iceberg.** I didn't want to rewrite 595 dbt nodes for Athena's SQL dialect and lose the offline CI build. The cost is that Athena reads last night's copy, not the build itself.
 - **pyiceberg instead of Spark.** No cluster to run, and it works against a local catalog in tests. It can't compact small files yet, so that's an occasional `OPTIMIZE` in Athena.
 - **Checking every company every night** (about 500 requests, four minutes at my pacing) instead of using the SEC's daily index. More requests, but a missed night or a failed filing just gets picked up the next time, without me tracking a watermark.
 - **Two clouds.** More setup, and the VM uses a long-lived access key instead of a role. In exchange, compute is free.

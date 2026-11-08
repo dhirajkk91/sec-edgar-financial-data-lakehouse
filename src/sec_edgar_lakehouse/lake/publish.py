@@ -21,6 +21,10 @@ everyone else. Each run does four things, in this order:
 4. **Dashboard snapshot.** The same Gold-only DuckDB file goes to
    ``serving/sec_edgar_gold.duckdb`` with its manifest, for the hosted dashboard.
 
+Steps 3 and 4 are skipped when the latest sync's Gold build failed. dbt skips
+every model downstream of a failed test, so the local Gold could then be part new
+and part old; the lake and the site keep the last good Gold until a build passes.
+
 With ``s3://`` the catalog is AWS Glue and Athena can query every table. With
 ``file://`` a SQLite catalog and a local folder stand in for both, so the whole
 publish runs offline, which is what the tests use.
@@ -374,10 +378,32 @@ def publish_gold(snapshot: Path, target: LakeTarget) -> dict[str, int]:
     return rows
 
 
+def last_gold_build(root: Path) -> str | None:
+    """The Gold status the latest sync recorded, or None when no sync has run here.
+
+    An unreadable summary counts as FAILED: a run that could not even record its
+    result is no reason to replace the Gold the site is serving.
+    """
+    path = root / "sync-runs" / "latest.json"
+    if not path.is_file():
+        return None
+    try:
+        gold = json.loads(path.read_text()).get("gold")
+    except (OSError, ValueError, AttributeError):
+        return "FAILED"
+    status = gold.get("status") if isinstance(gold, dict) else None
+    return status if isinstance(status, str) else "FAILED"
+
+
 def run_publish(
     root: Path, target: LakeTarget, *, skip_bronze: bool = False
 ) -> dict[str, Any]:
-    """Publish Bronze, Silver, Gold and the dashboard snapshot; save the ledger after each."""
+    """Publish Bronze, Silver, Gold and the dashboard snapshot; save the ledger after each.
+
+    When the latest sync's Gold build failed, Gold and the snapshot are left as they
+    are in the lake: dbt skips every model downstream of a failure, so the local Gold
+    tables could be a mix of new and old. Bronze and Silver are still published.
+    """
     root = root.resolve()
     database = root / "query" / "sec_edgar.duckdb"
     if not database.is_file():
@@ -391,6 +417,22 @@ def run_publish(
     _write_json(ledger_path, ledger)
     silver = publish_silver(database, target, ledger)
     _write_json(ledger_path, ledger)
+
+    if last_gold_build(root) == "FAILED":
+        summary = {
+            "schema_version": "1",
+            "status": "PARTIAL",
+            "lake": target.store.describe(),
+            "started_at": started.isoformat(),
+            "completed_at": datetime.now(UTC).isoformat(),
+            "bronze_filings_uploaded": bronze,
+            "silver_rows_written": silver,
+            "gold_rows": {},
+            "snapshot_sha256": None,
+            "gold_skipped": "the latest Gold build failed; the lake keeps the last good Gold",
+        }
+        _publish_summaries(root, work, target, summary)
+        return summary
 
     snapshot = work / "sec_edgar_gold.duckdb"
     try:
@@ -417,6 +459,14 @@ def run_publish(
         "gold_rows": gold,
         "snapshot_sha256": exported.sha256,
     }
+    _publish_summaries(root, work, target, summary)
+    return summary
+
+
+def _publish_summaries(
+    root: Path, work: Path, target: LakeTarget, summary: dict[str, Any]
+) -> None:
+    """Save the publish summary, and put both run summaries in the lake."""
     _write_json(work / "publish-runs" / "latest.json", summary)
     # Run summaries go to the lake too, as public-safe evidence of the last night.
     sync_summary = root / "sync-runs" / "latest.json"
@@ -425,7 +475,6 @@ def run_publish(
     target.store.put_file(
         "runs/latest-publish.json", work / "publish-runs" / "latest.json", {}
     )
-    return summary
 
 
 def main(arguments: Sequence[str] | None = None) -> int:
@@ -458,9 +507,16 @@ def main(arguments: Sequence[str] | None = None) -> int:
         print(f"FAILED: {exc}", file=sys.stderr)
         return 1
     silver = sum(summary["silver_rows_written"].values())
-    print(
+    published = (
         f"Lake {summary['lake']}: {summary['bronze_filings_uploaded']} Bronze filings, "
-        f"{silver:,} Silver rows, {sum(summary['gold_rows'].values()):,} Gold rows, "
+        f"{silver:,} Silver rows, "
+    )
+    if summary["snapshot_sha256"] is None:
+        # Not an error of the publish: the sync already exits 2 for the failed build.
+        print(published + "Gold not published: " + summary["gold_skipped"])
+        return 0
+    print(
+        published + f"{sum(summary['gold_rows'].values()):,} Gold rows, "
         f"snapshot {summary['snapshot_sha256'][:12]}"
     )
     return 0

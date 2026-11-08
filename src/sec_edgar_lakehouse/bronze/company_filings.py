@@ -377,15 +377,13 @@ def _parse_rows(
         filing_date = _date(filed, "filingDate")
         report_date = None if reported == "" else _date(reported, "reportDate")
         filing_form = _text(form, "form")
-        # Old SEC rows can have no primary document. They cannot be selected,
-        # but a later, in-scope financial row still needs a safe document path.
-        if (
-            document == ""
-            and source_listing_name is not None
-            and (
-                filing_form not in {"10-K", "10-Q"}
-                or (history_since is not None and filing_date < history_since)
-            )
+        # Some SEC rows have no primary document, in the recent listing as well as
+        # older history files (NiSource has one). A row that can never be selected,
+        # another form or one filed before the history window, is skipped; an
+        # in-scope 10-K or 10-Q still needs a safe document path, so it still fails.
+        if document == "" and (
+            filing_form not in {"10-K", "10-Q"}
+            or (history_since is not None and filing_date < history_since)
         ):
             continue
         primary_document = _document_path(document)

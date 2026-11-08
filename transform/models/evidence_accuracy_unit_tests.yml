@@ -1,0 +1,147 @@
+unit_tests:
+  - name: evidence_requires_the_selected_accuracy_income
+    model: int_reported_income_metrics
+    description: >-
+      Found in the S&P 500 build: a lower-priority concept reported the same net income rounded
+      to a different number of decimals. Evidence lists only facts with the selected value and
+      the same stated accuracy; the selected value itself does not change.
+    given:
+      - input: ref('int_financial_metric_candidate_accuracy')
+        rows:
+          - &income_occurrence
+            metric_code: net_income
+            concept_priority: 1
+            cik: '0001478242'
+            accession_number: 0001478242-25-000106
+            source_occurrence_id: net-income
+            source_document_name: filing.xml
+            source_sha256: checksum
+            source_ordinal: 1
+            processing_run_id: silver-run
+            parser_version: '3'
+            schema_version: '1'
+            concept_namespace: http://fasb.org/us-gaap/2025
+            concept_local_name: NetIncomeLoss
+            raw_value: '266000000'
+            value_decimal: '266000000'
+            decimals: '-5'
+            precision: null
+            unit_ref: USD
+            unit_expression: '{http://www.xbrl.org/2003/iso4217}USD'
+            context_ref: context
+            entity_scheme: http://www.sec.gov/CIK
+            entity_identifier: '1478242'
+            period_kind: duration
+            period_start: '2025-04-01'
+            period_end: '2025-06-30'
+            period_instant: null
+            dimension_count: 0
+            has_dimensions: false
+            duration_days: 91
+            accuracy_is_usable: true
+            accuracy_issue_code: null
+            accuracy_issue_details: null
+            is_usd: true
+          - <<: *income_occurrence
+            source_occurrence_id: profit-loss-same-accuracy
+            source_ordinal: 2
+            concept_priority: 2
+            concept_local_name: ProfitLoss
+          - <<: *income_occurrence
+            source_occurrence_id: profit-loss-rounded
+            source_ordinal: 3
+            concept_priority: 2
+            concept_local_name: ProfitLoss
+            decimals: '-6'
+      - input: ref('stg_silver_filing_metadata')
+        rows:
+          - cik: '0001478242'
+            accession_number: 0001478242-25-000106
+            form: 10-Q
+            filing_date: '2025-07-22'
+            report_date: '2025-06-30'
+            primary_document: filing.htm
+            metadata_run_id: metadata-run
+            run_record_path: /verified/run.json
+            submissions_path: /verified/submissions.json
+            submissions_url: https://data.sec.gov/submissions/CIK0001478242.json
+            submissions_retrieved_at: '2025-08-01T00:00:00+00:00'
+            submissions_size_bytes: 100
+            submissions_sha256: snapshot-checksum
+    expect:
+      rows:
+        - source_occurrence_id: net-income
+          value_decimal: '266000000'
+          decimals: '-5'
+          supporting_occurrence_ids: [net-income, profit-loss-same-accuracy]
+          supporting_occurrence_count: 2
+
+  - name: evidence_requires_the_selected_accuracy_revenue
+    model: int_reported_revenue
+    description: >-
+      The same rule for revenue: a lower-priority concept with the selected amount but a
+      different stated accuracy is not evidence, and it does not block the selection.
+    given:
+      - input: ref('int_financial_metric_candidate_accuracy')
+        rows:
+          - &revenue_occurrence
+            metric_code: revenue
+            concept_priority: 1
+            cik: '0000075362'
+            accession_number: 0000950170-23-037133
+            source_occurrence_id: revenues
+            source_document_name: filing.xml
+            source_sha256: checksum
+            source_ordinal: 1
+            processing_run_id: silver-run
+            parser_version: '3'
+            schema_version: '1'
+            concept_namespace: http://fasb.org/us-gaap/2023
+            concept_local_name: Revenues
+            raw_value: '16800000000'
+            value_decimal: '16800000000'
+            decimals: '-6'
+            precision: null
+            unit_ref: USD
+            unit_expression: '{http://www.xbrl.org/2003/iso4217}USD'
+            context_ref: context
+            entity_scheme: http://www.sec.gov/CIK
+            entity_identifier: '75362'
+            period_kind: duration
+            period_start: '2023-01-01'
+            period_end: '2023-06-30'
+            period_instant: null
+            dimension_count: 0
+            has_dimensions: false
+            duration_days: 181
+            accuracy_is_usable: true
+            accuracy_issue_code: null
+            accuracy_issue_details: null
+            is_usd: true
+          - <<: *revenue_occurrence
+            source_occurrence_id: contract-revenue-rounded
+            source_ordinal: 2
+            concept_priority: 2
+            concept_local_name: RevenueFromContractWithCustomerExcludingAssessedTax
+            decimals: '-5'
+      - input: ref('stg_silver_filing_metadata')
+        rows:
+          - cik: '0000075362'
+            accession_number: 0000950170-23-037133
+            form: 10-Q
+            filing_date: '2023-08-04'
+            report_date: '2023-06-30'
+            primary_document: filing.htm
+            metadata_run_id: metadata-run
+            run_record_path: /verified/run.json
+            submissions_path: /verified/submissions.json
+            submissions_url: https://data.sec.gov/submissions/CIK0000075362.json
+            submissions_retrieved_at: '2023-09-01T00:00:00+00:00'
+            submissions_size_bytes: 100
+            submissions_sha256: snapshot-checksum
+    expect:
+      rows:
+        - source_occurrence_id: revenues
+          value_decimal: '16800000000'
+          supporting_occurrence_ids: [revenues]
+          supporting_occurrence_count: 1

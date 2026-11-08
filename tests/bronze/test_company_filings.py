@@ -371,6 +371,15 @@ def test_invalid_recent_values(field: str, value: Any) -> None:
         discover(data)
 
 
+def test_blank_document_on_another_form_is_skipped() -> None:
+    data = payload()
+    data["filings"]["recent"]["primaryDocument"][3] = ""
+
+    filings = discover(data).recent_filings
+
+    assert [f.form for f in filings] == ["10-Q", "10-K", "10-Q"]
+
+
 def test_duplicate_accessions_and_empty_recent() -> None:
     data = payload()
     data["filings"]["recent"]["accessionNumber"][1] = data["filings"]["recent"][
